@@ -1,8 +1,10 @@
 # Catálogo de métricas
 
-Fonte de verdade semântica das métricas da V1 ampliada. Alinha-se a `docs/mcp-tool-contract.md`, `docs/generation-strategies.md` e aos ADRs `0001` e `0002`.
+**Navegação:** [← Brief (índice)](brief.md) · [README](../README.md)
 
-Para **interpretação em linguagem simples**, **o que cada métrica observa** e **exemplos de uso** por nome, ver `docs/metric-glossary.md` (complemento pedagógico; fórmulas e versões permanecem aqui).
+Fonte de verdade semântica das métricas da V1 ampliada. Alinha-se a [mcp-tool-contract.md](mcp-tool-contract.md), [generation-strategies.md](generation-strategies.md) e aos ADRs [0001](adrs/0001-fechamento-semantico-e-determinismo-v1.md) e [0002](adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md).
+
+Para **interpretação em linguagem simples**, **o que cada métrica observa** e **exemplos de uso** por nome, ver [metric-glossary.md](metric-glossary.md) (complemento pedagógico; fórmulas e versões permanecem aqui).
 
 ## Convenções
 

@@ -6,13 +6,29 @@ Projeto para análise e políticas relacionadas à Lotofácil.
 
 | Caminho | Descrição |
 |---------|-----------|
-| `docs/brief.md` | Brief e escopo do projeto |
-| `docs/metric-catalog.md` | Catálogo de métricas |
-| `docs/vertical-slice.md` | Fatia vertical mínima e critérios de aceite |
-| `docs/contract-test-plan.md` | Plano de testes de contrato e fixtures douradas |
+| [docs/brief.md](docs/brief.md) | Brief e escopo do projeto (índice da documentação em `docs/`) |
+| [docs/metric-catalog.md](docs/metric-catalog.md) | Catálogo de métricas |
+| [docs/vertical-slice.md](docs/vertical-slice.md) | Fatia vertical mínima e critérios de aceite |
+| [docs/contract-test-plan.md](docs/contract-test-plan.md) | Plano de testes de contrato e fixtures douradas |
 | `src/LotofacilMcp/` | Esqueleto do serviço MCP (`Core`, `EntryPoints`, `Providers`, …) |
-| `tests/fixtures/` | Dados e fixtures de teste (convênio em `contract-test-plan.md`) |
+| `tests/fixtures/` | Dados e fixtures de teste (convênio em [contract-test-plan.md](docs/contract-test-plan.md)) |
 
 ## Documentação
 
-Consulte `docs/brief.md` para o contexto do projeto e `docs/metric-catalog.md` para as métricas definidas. Para implementação incremental, use `docs/vertical-slice.md` e `docs/contract-test-plan.md`.
+O ponto de entrada da pasta **`docs/`** é o [**brief**](docs/brief.md): escopo, restrições e links para os demais artefatos. Em qualquer outro `.md` dessa pasta há navegação de volta ao brief e ao README.
+
+| Documento | Conteúdo |
+|-----------|------------|
+| [brief.md](docs/brief.md) | Contexto, escopo e mapa da documentação |
+| [metric-catalog.md](docs/metric-catalog.md) | Métricas (tipagem e fórmulas) |
+| [metric-glossary.md](docs/metric-glossary.md) | Glossário pedagógico das métricas |
+| [mcp-tool-contract.md](docs/mcp-tool-contract.md) | Contrato das ferramentas MCP |
+| [generation-strategies.md](docs/generation-strategies.md) | Estratégias de geração |
+| [project-guide.md](docs/project-guide.md) | Estrutura e convenções do projeto |
+| [vertical-slice.md](docs/vertical-slice.md) | Fatia vertical mínima (V0) |
+| [contract-test-plan.md](docs/contract-test-plan.md) | Plano de testes de contrato |
+| [test-plan.md](docs/test-plan.md) | Plano de testes do domínio |
+| [prompt-catalog.md](docs/prompt-catalog.md) | Catálogo de prompts para testes |
+| [adrs/](docs/adrs/) | Decisões arquiteturais (ADRs) |
+
+Para implementação incremental, use [vertical-slice.md](docs/vertical-slice.md) e [contract-test-plan.md](docs/contract-test-plan.md).

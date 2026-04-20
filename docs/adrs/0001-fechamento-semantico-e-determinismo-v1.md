@@ -1,11 +1,13 @@
 # ADR 0001 — Fechamento semântico e determinismo da V1
 
+**Navegação:** [← Brief (índice)](../brief.md) · [README](../../README.md)
+
 - **Status:** Aceito
 - **Data:** 2026-04-20
-- **Escopo:** `docs/brief.md`, `docs/project-guide.md`, `docs/metric-catalog.md`, `docs/generation-strategies.md`, `docs/mcp-tool-contract.md`
+- **Escopo:** [brief.md](../brief.md), [project-guide.md](../project-guide.md), [metric-catalog.md](../metric-catalog.md), [generation-strategies.md](../generation-strategies.md), [mcp-tool-contract.md](../mcp-tool-contract.md)
 - **Contexto de revisão:** análise crítica cruzada dos documentos-base antes da primeira implementação
 
-> Nota: a ampliação da V1 para composições dinâmicas, associações entre indicadores, séries estruturais adicionais, filtros estruturais e catálogo de prompts foi registrada separadamente em `docs/adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md`. Este ADR permanece como a base do fechamento semântico e do determinismo inicial.
+> Nota: a ampliação da V1 para composições dinâmicas, associações entre indicadores, séries estruturais adicionais, filtros estruturais e catálogo de prompts foi registrada separadamente em [ADR 0002](0002-composicao-analitica-e-filtros-estruturais-v1.md). Este ADR permanece como a base do fechamento semântico e do determinismo inicial.
 
 ## Contexto
 
@@ -119,7 +121,7 @@ Este ADR consolida as decisões tomadas. Em versões futuras, decisões estrutur
 
 **Decisão:** `MetricValue` ganha `shape ∈ { "scalar", "series", "vector_by_dezena", "count_vector[5]", "count_matrix[25x15]", "count_pair", "dezena_list[10]", "count_list_by_dezena", "dimensionless_pair" }`. `value` é tipado conforme `shape`. Em `analyze_indicator_stability`, se o indicador é vetorial ou matricial (`vector_by_dezena`, `count_vector[5]`, `count_matrix[25x15]`, `count_list_by_dezena`, `count_pair`, `dezena_list[10]`, `dimensionless_pair`), o input **deve** declarar `aggregation ∈ { "mean", "max", "l2_norm", "per_component" }`; caso contrário, erro `UNSUPPORTED_AGGREGATION` antes de calcular.
 
-**Nota de rastreabilidade:** a revisão do ADR manteve o enum alinhado ao contrato MCP (`docs/mcp-tool-contract.md`). A versão inicial deste ADR listava apenas `{ scalar, series, vector_by_dezena, matrix_dezena_slot }`; foi expandida para refletir todos os shapes reais emitidos por métricas canônicas do catálogo (`count_vector[5]` para distribuição linha/coluna, `count_pair` para pares/ímpares e runs, `dezena_list[10]` para os tops, `count_list_by_dezena` para blocos, `dimensionless_pair` para `hhi_concentracao`). `matrix_dezena_slot` foi renomeado para `count_matrix[25x15]` para eliminar o alias informal.
+**Nota de rastreabilidade:** a revisão do ADR manteve o enum alinhado ao contrato MCP ([mcp-tool-contract.md](../mcp-tool-contract.md)). A versão inicial deste ADR listava apenas `{ scalar, series, vector_by_dezena, matrix_dezena_slot }`; foi expandida para refletir todos os shapes reais emitidos por métricas canônicas do catálogo (`count_vector[5]` para distribuição linha/coluna, `count_pair` para pares/ímpares e runs, `dezena_list[10]` para os tops, `count_list_by_dezena` para blocos, `dimensionless_pair` para `hhi_concentracao`). `matrix_dezena_slot` foi renomeado para `count_matrix[25x15]` para eliminar o alias informal.
 
 **Justificativa:** o contrato aceitava indicadores vetoriais e os excluía em runtime — isso é contrato permissivo com descoberta tardia. IA consumidora paga um round-trip para aprender a restrição. Validação em schema elimina a classe inteira.
 
@@ -137,7 +139,7 @@ Este ADR consolida as decisões tomadas. Em versões futuras, decisões estrutur
 
 **Decisão:** adiciona `UNAUTHORIZED`, `RATE_LIMITED`, `QUOTA_EXCEEDED`, `DATASET_UNAVAILABLE`, `PLAN_BUDGET_EXCEEDED`, `UNSUPPORTED_AGGREGATION`, `INTERNAL_ERROR`. Cada ferramenta declara explicitamente o subconjunto de códigos que pode emitir.
 
-**Justificativa:** `docs/project-guide.md` já previa autenticação e throttling. O contrato não listava nenhum código correspondente — inconsistência entre guide e contrato.
+**Justificativa:** [project-guide.md](../project-guide.md) já previa autenticação e throttling. O contrato não listava nenhum código correspondente — inconsistência entre guide e contrato.
 
 **Arquivos alterados:** `mcp-tool-contract.md`.
 
@@ -151,7 +153,7 @@ Este ADR consolida as decisões tomadas. Em versões futuras, decisões estrutur
 
 ### D14 — Default explícito de `metrics` em `compute_window_metrics`
 
-**Decisão:** `metrics` é **obrigatório** no input. Omissão retorna `INVALID_REQUEST` com `details.missing_field = "metrics"`. Não existe "conjunto default implícito" nem código dedicado `MISSING_METRICS`; a validação de schema é tratada uniformemente por `INVALID_REQUEST`, conforme tabela de códigos em `docs/mcp-tool-contract.md`.
+**Decisão:** `metrics` é **obrigatório** no input. Omissão retorna `INVALID_REQUEST` com `details.missing_field = "metrics"`. Não existe "conjunto default implícito" nem código dedicado `MISSING_METRICS`; a validação de schema é tratada uniformemente por `INVALID_REQUEST`, conforme tabela de códigos em [mcp-tool-contract.md](../mcp-tool-contract.md).
 
 **Justificativa:** default implícito obriga IA a inferir quais métricas "sempre fazem sentido" — fonte típica de drift. Forçar a escolha torna cada chamada autodocumentada.
 
@@ -175,7 +177,7 @@ Este ADR consolida as decisões tomadas. Em versões futuras, decisões estrutur
 
 ### D17 — `row_entropy_balance` com entropia como filtro, não objetivo
 
-**Decisão:** entropia normalizada `H_norm(linhas) ≥ 0.95` vira filtro de qualificação; score primário passa a ser `freq_alignment` entre o jogo e o `top10_mais_sorteados` da janela. Tie-break: menor `hhi_concentracao.hhi_coluna` (fonte canônica do desempate: `docs/generation-strategies.md`, estratégia `row_entropy_balance`); se empatar, ordem lexicográfica do jogo ordenado ascendente.
+**Decisão:** entropia normalizada `H_norm(linhas) ≥ 0.95` vira filtro de qualificação; score primário passa a ser `freq_alignment` entre o jogo e o `top10_mais_sorteados` da janela. Tie-break: menor `hhi_concentracao.hhi_coluna` (fonte canônica do desempate: [generation-strategies.md](../generation-strategies.md), estratégia `row_entropy_balance`); se empatar, ordem lexicográfica do jogo ordenado ascendente.
 
 **Justificativa:** maximizar `H_norm` de 5 bins tem ótimo único em `3-3-3-3-3`, o que **colapsa** a diversidade do conjunto retornado — problema contrário ao objetivo da estratégia. Transformar em filtro preserva diversidade; score primário torna a estratégia discriminativa.
 
@@ -199,8 +201,8 @@ Este ADR consolida as decisões tomadas. Em versões futuras, decisões estrutur
 
 ### D20 — Ajustes em `brief.md` e `project-guide.md`
 
-- Remover qualificador ambíguo em `docs/brief.md` sobre validação explícita.
-- Ajustar `project-guide.md` referenciando `docs/metric-catalog.md` (nome correto) e `docs/decisions.md` movido para `docs/adrs/`.
+- Remover qualificador ambíguo em [brief.md](../brief.md) sobre validação explícita.
+- Ajustar [project-guide.md](../project-guide.md) referenciando [metric-catalog.md](../metric-catalog.md) (nome correto) e `decisions.md` movido para [adrs/](../adrs/).
 - Adicionar nota em `project-guide.md` sobre responsabilidade do `Core/` de normalizar (ordenar) entrada canônica — fecha a fronteira com `Providers/` e sustenta a invariante do `slot`.
 
 ## Alternativas consideradas e rejeitadas

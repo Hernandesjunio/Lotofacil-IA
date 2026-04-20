@@ -1,10 +1,12 @@
 # Plano de testes de contrato e fixtures douradas (execução)
 
-Complementa [`docs/test-plan.md`](test-plan.md) com **ordem de implementação**, **layout de fixtures** e **matriz mínima** para a fatia vertical e para a suíte completa. A especificação normativa continua sendo o contrato MCP e o catálogo de métricas.
+**Navegação:** [← Brief (índice)](brief.md) · [README](../README.md)
+
+Complementa [test-plan.md](test-plan.md) com **ordem de implementação**, **layout de fixtures** e **matriz mínima** para a fatia vertical e para a suíte completa. A especificação normativa continua sendo o contrato MCP e o catálogo de métricas.
 
 ## Ordem sugerida (dependências)
 
-1. **Fase A — Fatia V0** (bloqueia o restante): fixture sintética mínima + `frequencia_por_dezena` + tools `get_draw_window` e `compute_window_metrics` + `deterministic_hash` + erro `UNKNOWN_METRIC`. Ver [`docs/vertical-slice.md`](vertical-slice.md).
+1. **Fase A — Fatia V0** (bloqueia o restante): fixture sintética mínima + `frequencia_por_dezena` + tools `get_draw_window` e `compute_window_metrics` + `deterministic_hash` + erro `UNKNOWN_METRIC`. Ver [vertical-slice.md](vertical-slice.md).
 2. **Fase B — Testes de contrato por tool**: expandir validação de schema/códigos de erro conforme tabela “Cobertura por tool” em `test-plan.md`.
 3. **Fase C — Golden por métrica**: para cada linha das tabelas de métricas em `test-plan.md`, associar fixture e valores esperados congelados.
 4. **Fase D — Integração e E2E**: janela real curta/longa, prompts de `prompt-catalog.md`, determinismo repetido (seção “Cobertura de determinismo” em `test-plan.md`).
@@ -30,12 +32,12 @@ Cada arquivo deve listar `draws` no formato canônico do contrato (`numbers` ord
 **Regras:**
 
 - Atualização de golden só em PR que também altere contrato, catálogo de métricas ou semântica intencional (revisão humana obrigatória).
-- Incluir nos testes a asserção de `metric_version` / versão da métrica conforme [`docs/metric-catalog.md`](metric-catalog.md).
+- Incluir nos testes a asserção de `metric_version` / versão da métrica conforme [metric-catalog.md](metric-catalog.md).
 - Para `deterministic_hash`, o golden pode armazenar apenas o hash esperado (string) ou a resposta completa — preferir hash + amostra parcial se o payload for grande.
 
 ## Matriz mínima — testes de contrato (tool × invariante)
 
-Documentação de referência: [`docs/mcp-tool-contract.md`](mcp-tool-contract.md).
+Documentação de referência: [mcp-tool-contract.md](mcp-tool-contract.md).
 
 | Tool | Invariante de contrato a validar no teste |
 |------|---------------------------------------------|
@@ -60,7 +62,7 @@ Métricas `pendente de detalhamento` (`estabilidade_ranking`): apenas teste nega
 
 ## Ligação com prompts
 
-Cada família de [`docs/prompt-catalog.md`](prompt-catalog.md) deve mapear para pelo menos um teste E2E (já exigido em `test-plan.md`). A Fase D não inicia antes da Fase B estar verde para as tools usadas naquele prompt.
+Cada família de [prompt-catalog.md](prompt-catalog.md) deve mapear para pelo menos um teste E2E (já exigido em [test-plan.md](test-plan.md)). A Fase D não inicia antes da Fase B estar verde para as tools usadas naquele prompt.
 
 ## Sumário
 

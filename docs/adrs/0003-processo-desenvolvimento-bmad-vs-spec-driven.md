@@ -1,12 +1,14 @@
 # ADR 0003 — Processo de desenvolvimento: spec-driven como padrão; BMAD opcional
 
+**Navegação:** [← Brief (índice)](../brief.md) · [README](../../README.md)
+
 ## Status
 
 Aceito — orientação de processo para o repositório.
 
 ## Contexto
 
-O projeto possui especificação densa e versionada: [`metric-catalog.md`](../metric-catalog.md), [`mcp-tool-contract.md`](../mcp-tool-contract.md), ADRs 0001 e 0002, [`generation-strategies.md`](../generation-strategies.md), [`test-plan.md`](../test-plan.md). Surge a dúvida se frameworks de orquestração de agentes (ex.: BMad Method) devem ser adotados como processo obrigatório ou se o fluxo spec-first + issues/PRs é suficiente.
+O projeto possui especificação densa e versionada: [`metric-catalog.md`](../metric-catalog.md), [`mcp-tool-contract.md`](../mcp-tool-contract.md), [ADR 0001](0001-fechamento-semantico-e-determinismo-v1.md) e [ADR 0002](0002-composicao-analitica-e-filtros-estruturais-v1.md), [`generation-strategies.md`](../generation-strategies.md), [`test-plan.md`](../test-plan.md). Surge a dúvida se frameworks de orquestração de agentes (ex.: BMad Method) devem ser adotados como processo obrigatório ou se o fluxo spec-first + issues/PRs é suficiente.
 
 ## Decisão
 
@@ -37,7 +39,7 @@ O projeto possui especificação densa e versionada: [`metric-catalog.md`](../me
 ## Consequências
 
 - Issues e PRs devem referenciar métricas e tools pelos **nomes versionados** do catálogo e do contrato.
-- Se alguém usar BMAD para gerar PRD ou épicos, o output deve ser **reconciliado** com `docs/` antes de virar escopo implementável.
+- Se alguém usar BMAD para gerar PRD ou épicos, o output deve ser **reconciliado** com a [documentação versionada](../brief.md) antes de virar escopo implementável.
 - Revisão desta decisão: se o time crescer e faltar padronização de *gestão* de backlog além do Git, reavaliar integração mínima com um workflow externo — sem mudar a fonte de verdade semântica.
 
 ## Referências internas

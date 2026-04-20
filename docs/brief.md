@@ -1,5 +1,9 @@
 # Brief do projeto
 
+**Navegação:** [README do repositório](../README.md)
+
+Este arquivo é o **índice** da pasta `docs/`: a seção **Referências** (no fim deste arquivo) aponta para os demais documentos.
+
 ## Objetivo
 
 Construir um sistema educacional para engenharia de IA aplicado a Lotofácil, capaz de:
@@ -60,7 +64,7 @@ Formato esperado:
 - "Resuma qual perfil estrutural cobriu pelo menos 80% dos últimos 20 sorteios em slots, vizinhos e top 10."
 - "Gere jogos candidatos eliminando sequências longas demais, baixa entropia de linha e aderência de slot muito fraca."
 
-Exemplos adicionais de prompts de teste ficam em `docs/prompt-catalog.md`.
+Exemplos adicionais de prompts de teste ficam em [prompt-catalog.md](prompt-catalog.md).
 
 ## Restrições técnicas
 
@@ -91,14 +95,14 @@ Exemplos adicionais de prompts de teste ficam em `docs/prompt-catalog.md`.
 
 ## Referências
 
-- `docs/metric-catalog.md` — métricas utilizadas (tipagem, fórmulas, consumidores)
-- `docs/metric-glossary.md` — definição em linguagem simples, o que cada métrica observa e exemplos de uso (complemento pedagógico)
-- `docs/mcp-tool-contract.md` — contrato das ferramentas MCP
-- `docs/generation-strategies.md` — estratégias e filtros de geração
-- `docs/prompt-catalog.md` — prompts cobertos pelo MCP para testes
-- `docs/test-plan.md` — matriz de cobertura de testes do domínio
-- `docs/vertical-slice.md` — primeira fatia de implementação (dados → métrica única → MCP)
-- `docs/contract-test-plan.md` — ordem de execução, fixtures douradas e matriz de testes de contrato
-- `docs/adrs/0001-fechamento-semantico-e-determinismo-v1.md` — decisões de fechamento base da V1
-- `docs/adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md` — ampliação da V1 para composições dinâmicas, correlações e filtros
-- `docs/adrs/0003-processo-desenvolvimento-bmad-vs-spec-driven.md` — spec-driven como padrão; BMAD opcional
+- [metric-catalog.md](metric-catalog.md) — métricas utilizadas (tipagem, fórmulas, consumidores)
+- [metric-glossary.md](metric-glossary.md) — definição em linguagem simples, o que cada métrica observa e exemplos de uso (complemento pedagógico)
+- [mcp-tool-contract.md](mcp-tool-contract.md) — contrato das ferramentas MCP
+- [generation-strategies.md](generation-strategies.md) — estratégias e filtros de geração
+- [prompt-catalog.md](prompt-catalog.md) — prompts cobertos pelo MCP para testes
+- [test-plan.md](test-plan.md) — matriz de cobertura de testes do domínio
+- [vertical-slice.md](vertical-slice.md) — primeira fatia de implementação (dados → métrica única → MCP)
+- [contract-test-plan.md](contract-test-plan.md) — ordem de execução, fixtures douradas e matriz de testes de contrato
+- [adrs/0001-fechamento-semantico-e-determinismo-v1.md](adrs/0001-fechamento-semantico-e-determinismo-v1.md) — decisões de fechamento base da V1
+- [adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md](adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md) — ampliação da V1 para composições dinâmicas, correlações e filtros
+- [adrs/0003-processo-desenvolvimento-bmad-vs-spec-driven.md](adrs/0003-processo-desenvolvimento-bmad-vs-spec-driven.md) — spec-driven como padrão; BMAD opcional

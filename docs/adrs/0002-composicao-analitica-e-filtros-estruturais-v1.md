@@ -1,8 +1,10 @@
 # ADR 0002 — Composição analítica e filtros estruturais na V1
 
+**Navegação:** [← Brief (índice)](../brief.md) · [README](../../README.md)
+
 - **Status:** Aceito
 - **Data:** 2026-04-20
-- **Escopo:** `docs/brief.md`, `docs/metric-catalog.md`, `docs/mcp-tool-contract.md`, `docs/generation-strategies.md`
+- **Escopo:** [brief.md](../brief.md), [metric-catalog.md](../metric-catalog.md), [mcp-tool-contract.md](../mcp-tool-contract.md), [generation-strategies.md](../generation-strategies.md)
 
 ## Contexto
 
@@ -75,7 +77,7 @@ O contrato anterior cobria bem métricas por janela, estabilidade e quatro estra
 
 ### D9 — Prompt catalog e test plan passam a ser artefatos obrigatórios
 
-**Decisão:** o repositório passa a ter `docs/prompt-catalog.md` e `docs/test-plan.md` como parte da definição funcional da V1.
+**Decisão:** o repositório passa a ter [prompt-catalog.md](../prompt-catalog.md) e [test-plan.md](../test-plan.md) como parte da definição funcional da V1.
 
 **Justificativa:** o MCP será consumido por IA; logo, cobertura por prompts e cobertura de cálculo precisam ser explícitas e auditáveis.
 

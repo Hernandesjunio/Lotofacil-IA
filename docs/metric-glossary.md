@@ -1,6 +1,8 @@
 # Glossário de métricas (definição, interpretação e exemplos)
 
-Documento pedagógico complementar ao catálogo técnico em `docs/metric-catalog.md`. Aqui cada métrica tem **definição**, **o que observa** (interpretação em linguagem simples) e **exemplo de uso**. Fórmulas detalhadas, tipagem e versões permanecem no catálogo.
+**Navegação:** [← Brief (índice)](brief.md) · [README](../README.md)
+
+Documento pedagógico complementar ao catálogo técnico em [metric-catalog.md](metric-catalog.md). Aqui cada métrica tem **definição**, **o que observa** (interpretação em linguagem simples) e **exemplo de uso**. Fórmulas detalhadas, tipagem e versões permanecem no catálogo.
 
 **Nota sobre predição:** todas descrevem padrões no histórico ou estrutura de um jogo; nenhuma implica acerto futuro.
 
@@ -344,5 +346,5 @@ Documento pedagógico complementar ao catálogo técnico em `docs/metric-catalog
 
 ## Manutenção
 
-- Alterações de fórmula, versão ou tipo: editar primeiro `docs/metric-catalog.md`, depois alinhar entradas aqui se a interpretação mudar.
+- Alterações de fórmula, versão ou tipo: editar primeiro [metric-catalog.md](metric-catalog.md), depois alinhar entradas aqui se a interpretação mudar.
 - Métricas novas: adicionar linha nas tabelas do catálogo e seção correspondente neste glossário.

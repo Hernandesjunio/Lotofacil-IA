@@ -1,5 +1,7 @@
 # Estratégias de geração
 
+**Navegação:** [← Brief (índice)](brief.md) · [README](../README.md)
+
 ## Objetivo
 
 Separar a semântica das estratégias de geração do contrato MCP e da implementação do motor. Cada estratégia é um contrato formal testável.

@@ -1,8 +1,10 @@
 # Fatia vertical mínima (V0)
 
+**Navegação:** [← Brief (índice)](brief.md) · [README](../README.md)
+
 Objetivo: provar **dado bruto → modelo canônico → uma métrica → resposta MCP válida e determinística**, antes de expandir para o catálogo completo.
 
-Referências: [`docs/mcp-tool-contract.md`](mcp-tool-contract.md), [`docs/metric-catalog.md`](metric-catalog.md), [`docs/project-guide.md`](project-guide.md).
+Referências: [mcp-tool-contract.md](mcp-tool-contract.md), [metric-catalog.md](metric-catalog.md), [project-guide.md](project-guide.md).
 
 ## Escopo da fatia
 
@@ -45,7 +47,7 @@ sequenceDiagram
 
 ## Critérios de aceite (recomendados na mesma PR)
 
-- Teste automatizado de fórmula (valores esperados à mão) para a janela sintética mínima definida em [`docs/contract-test-plan.md`](contract-test-plan.md).
+- Teste automatizado de fórmula (valores esperados à mão) para a janela sintética mínima definida em [contract-test-plan.md](contract-test-plan.md).
 - Teste de contrato que valida o JSON de resposta contra os campos obrigatórios listados em (1).
 
 ## Definição de “pronto” para encerrar a V0

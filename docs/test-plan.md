@@ -1,5 +1,7 @@
 # Plano de testes do domínio
 
+**Navegação:** [← Brief (índice)](brief.md) · [README](../README.md)
+
 Este documento define o que significa cobertura de testes "100%" para o domínio documentado neste repositório.
 
 ## Princípio de cobertura total
@@ -8,7 +10,7 @@ Considera-se cobertura total quando todos os itens abaixo têm pelo menos:
 
 1. um teste positivo determinístico;
 2. um teste de borda ou negativo;
-3. um vínculo rastreável com ao menos um prompt de `docs/prompt-catalog.md`.
+3. um vínculo rastreável com ao menos um prompt de [prompt-catalog.md](prompt-catalog.md).
 
 Os itens obrigatórios são:
 
@@ -190,7 +192,7 @@ Filtros:
 
 ## Cobertura dos erros
 
-Todos os erros documentados em `docs/mcp-tool-contract.md` precisam ter pelo menos um teste que:
+Todos os erros documentados em [mcp-tool-contract.md](mcp-tool-contract.md) precisam ter pelo menos um teste que:
 
 1. provoque o erro;
 2. valide `code`, `message` e `details`;
@@ -198,7 +200,7 @@ Todos os erros documentados em `docs/mcp-tool-contract.md` precisam ter pelo men
 
 ## Cobertura E2E por prompt
 
-Todos os prompts de `docs/prompt-catalog.md` devem ter:
+Todos os prompts de [prompt-catalog.md](prompt-catalog.md) devem ter:
 
 - 1 teste E2E de roteamento correto para a tool ou combinação de tools;
 - 1 teste semântico validando que a resposta não usa linguagem preditiva indevida;

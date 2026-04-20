@@ -1,5 +1,7 @@
 # Proposta de Estrutura e Documentação
 
+**Navegação:** [← Brief (índice)](brief.md) · [README](../README.md)
+
 ## Objetivo
 
 Definir uma estrutura de projeto e um conjunto mínimo de documentos para um MCP HTTP focado em insights da Lotofácil, geração determinística de jogos candidatos, análise de estabilidade de indicadores, autenticação por API Key, throttling e consumo por agentes de IA.
@@ -245,7 +247,7 @@ Apenas se houver uma unica metrica trivial, o que nao e o seu caso.
 - `Qual problema isso resolve?`
 Registra decisoes arquiteturais e semanticas de forma versionada e rastreavel: escolha da fonte de dados, semantica canonica de metricas, formato de erro, criterio de throttling, politica de determinismo.
 - `Em que momento do projeto isso se torna necessario?`
-Neste projeto, ja no inicio — a primeira rodada de fechamento da V1 produziu volume suficiente (ver `docs/adrs/0001-fechamento-semantico-e-determinismo-v1.md`) para justificar um ADR consolidado em vez de um `decisions.md` solto.
+Neste projeto, ja no inicio — a primeira rodada de fechamento da V1 produziu volume suficiente (ver [ADR 0001](adrs/0001-fechamento-semantico-e-determinismo-v1.md)) para justificar um ADR consolidado em vez de um `decisions.md` solto.
 - `Quem consome isso?`
 Mantenedor, revisores, IA consumidora que precise justificar comportamento do contrato sem reler todos os documentos.
 - `Qual o risco de NAO ter isso?`
@@ -535,15 +537,15 @@ Se eu tivesse que otimizar para aprendizado e velocidade, eu começaria com este
 6. `src/LotofacilMcp/Program.cs` (minimo)
 7. `tests/`
 8. `LotofacilMcp.csproj` e `Directory.Build.props`
-9. `docs/brief.md`
-10. `docs/metric-catalog.md`
-11. `docs/mcp-tool-contract.md`
-12. `docs/generation-strategies.md`
-13. `docs/prompt-catalog.md`
-14. `docs/test-plan.md`
-15. `docs/adrs/0001-fechamento-semantico-e-determinismo-v1.md`
-16. `docs/adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md`
-17. `docs/vertical-slice.md`
-18. `docs/contract-test-plan.md`
-19. `docs/adrs/0003-processo-desenvolvimento-bmad-vs-spec-driven.md`
+9. [brief.md](brief.md)
+10. [metric-catalog.md](metric-catalog.md)
+11. [mcp-tool-contract.md](mcp-tool-contract.md)
+12. [generation-strategies.md](generation-strategies.md)
+13. [prompt-catalog.md](prompt-catalog.md)
+14. [test-plan.md](test-plan.md)
+15. [adrs/0001-fechamento-semantico-e-determinismo-v1.md](adrs/0001-fechamento-semantico-e-determinismo-v1.md)
+16. [adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md](adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md)
+17. [vertical-slice.md](vertical-slice.md)
+18. [contract-test-plan.md](contract-test-plan.md)
+19. [adrs/0003-processo-desenvolvimento-bmad-vs-spec-driven.md](adrs/0003-processo-desenvolvimento-bmad-vs-spec-driven.md)
 

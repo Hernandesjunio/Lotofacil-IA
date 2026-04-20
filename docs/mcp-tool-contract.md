@@ -1,5 +1,7 @@
 # Contrato das ferramentas MCP
 
+**Navegação:** [← Brief (índice)](brief.md) · [README](../README.md)
+
 ## Objetivo
 
 Definir um contrato explicável, testável e determinístico para um MCP que permita:
@@ -338,7 +340,7 @@ Gerar jogos candidatos a partir de estratégias nomeadas e filtros declarados.
 - `seed` é obrigatória sempre que houver qualquer estratégia `sampled` ou `greedy_topk`.
 - `MAX_COUNT_PER_STRATEGY = 100`; `MAX_TOTAL_COUNT = 250`.
 - Estratégia desconhecida retorna `UNKNOWN_STRATEGY`.
-- `declared_composite_profile` só aceita componentes listados em `docs/generation-strategies.md`.
+- `declared_composite_profile` só aceita componentes listados em [generation-strategies.md](generation-strategies.md).
 - `structural_exclusions` são opcionais, mas quando presentes tornam-se parte do determinismo do request.
 - O servidor continua não aceitando "pesos soltos" fora de um schema explícito.
 
@@ -370,7 +372,7 @@ Explicar por que os jogos foram gerados e por que outros perfis foram descartado
 
 ## Estratégias V1
 
-Definição canônica em `docs/generation-strategies.md`.
+Definição canônica em [generation-strategies.md](generation-strategies.md).
 
 Estratégias V1:
 
@@ -403,7 +405,7 @@ Formato sugerido:
 | `INVALID_CONTEST_ID` | `end_contest_id` ausente do dataset | tools com janela |
 | `INVALID_REFERENCE_WINDOW` | janela de referência incompatível | composição, padrões, associações |
 | `UNKNOWN_METRIC` | métrica não listada no catálogo | métricas, estabilidade, composição, associações |
-| `UNKNOWN_STRATEGY` | estratégia não listada em `docs/generation-strategies.md` | geração |
+| `UNKNOWN_STRATEGY` | estratégia não listada em [generation-strategies.md](generation-strategies.md) | geração |
 | `UNSUPPORTED_AGGREGATION` | agregação obrigatória ausente ou inválida | estabilidade, composição, associações, padrões |
 | `UNSUPPORTED_TRANSFORM` | transformação de composição não suportada | composição, geração |
 | `UNSUPPORTED_NORMALIZATION_METHOD` | método incompatível com a série | estabilidade |
@@ -441,7 +443,7 @@ O contrato exige:
 7. `generate_candidate_games` respeita orçamento, seed, filtros estruturais e estratégia composta declarada.
 8. `explain_candidate_games` retorna ranking de estratégias e detalhamento de exclusões.
 9. `divergencia_kl` nunca retorna `+∞` ou `NaN` para janelas `N >= 5`.
-10. Toda família de prompt documentada em `docs/prompt-catalog.md` deve ter ao menos um teste positivo e um negativo em `docs/test-plan.md`.
+10. Toda família de prompt documentada em [prompt-catalog.md](prompt-catalog.md) deve ter ao menos um teste positivo e um negativo em [test-plan.md](test-plan.md).
 
 ## Avaliação de viabilidade
 

@@ -1,6 +1,8 @@
 # Catálogo de prompts cobertos pelo MCP
 
-Este documento lista prompts de referência para testes funcionais, E2E e validação por IA. Cada prompt deve poder ser respondido apenas com as tools documentadas em `docs/mcp-tool-contract.md`.
+**Navegação:** [← Brief (índice)](brief.md) · [README](../README.md)
+
+Este documento lista prompts de referência para testes funcionais, E2E e validação por IA. Cada prompt deve poder ser respondido apenas com as tools documentadas em [mcp-tool-contract.md](mcp-tool-contract.md).
 
 ## Regras de uso
 
