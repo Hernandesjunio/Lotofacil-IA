@@ -45,9 +45,12 @@ lotofacil-mcp/
     generation-strategies.md
     prompt-catalog.md
     test-plan.md
+    vertical-slice.md
+    contract-test-plan.md
     adrs/
       0001-fechamento-semantico-e-determinismo-v1.md
       0002-composicao-analitica-e-filtros-estruturais-v1.md
+      0003-processo-desenvolvimento-bmad-vs-spec-driven.md
 ```
 
 ### Diagrama de fronteiras (sem implementacao)
@@ -540,4 +543,7 @@ Se eu tivesse que otimizar para aprendizado e velocidade, eu começaria com este
 14. `docs/test-plan.md`
 15. `docs/adrs/0001-fechamento-semantico-e-determinismo-v1.md`
 16. `docs/adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md`
+17. `docs/vertical-slice.md`
+18. `docs/contract-test-plan.md`
+19. `docs/adrs/0003-processo-desenvolvimento-bmad-vs-spec-driven.md`
 

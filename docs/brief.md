@@ -97,5 +97,8 @@ Exemplos adicionais de prompts de teste ficam em `docs/prompt-catalog.md`.
 - `docs/generation-strategies.md` — estratégias e filtros de geração
 - `docs/prompt-catalog.md` — prompts cobertos pelo MCP para testes
 - `docs/test-plan.md` — matriz de cobertura de testes do domínio
+- `docs/vertical-slice.md` — primeira fatia de implementação (dados → métrica única → MCP)
+- `docs/contract-test-plan.md` — ordem de execução, fixtures douradas e matriz de testes de contrato
 - `docs/adrs/0001-fechamento-semantico-e-determinismo-v1.md` — decisões de fechamento base da V1
 - `docs/adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md` — ampliação da V1 para composições dinâmicas, correlações e filtros
+- `docs/adrs/0003-processo-desenvolvimento-bmad-vs-spec-driven.md` — spec-driven como padrão; BMAD opcional
