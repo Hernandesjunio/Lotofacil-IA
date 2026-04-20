@@ -3,14 +3,16 @@
 - **Status:** Aceito
 - **Data:** 2026-04-20
 - **Escopo:** `docs/brief.md`, `docs/project-guide.md`, `docs/metric-catalog.md`, `docs/generation-strategies.md`, `docs/mcp-tool-contract.md`
-- **Contexto de revisão:** análise crítica cruzada dos cinco documentos antes da primeira implementação
+- **Contexto de revisão:** análise crítica cruzada dos documentos-base antes da primeira implementação
+
+> Nota: a ampliação da V1 para composições dinâmicas, associações entre indicadores, séries estruturais adicionais, filtros estruturais e catálogo de prompts foi registrada separadamente em `docs/adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md`. Este ADR permanece como a base do fechamento semântico e do determinismo inicial.
 
 ## Contexto
 
 Antes de escrever qualquer linha de código da V1, os documentos foram revisados com dois critérios:
 
-1. **Determinismo operacional** — o brief promete "mesma entrada ⇒ mesma saída" (`brief.md:54, 67`), mas nem todos os insumos para garantir isso estavam declarados.
-2. **Rigor estatístico** — métricas com fórmula incompleta ou ambígua tornam o sistema dependente de escolhas implícitas de implementação, o que invalida o invariante 1 do contrato MCP (`mcp-tool-contract.md:83`).
+1. **Determinismo operacional** — o brief promete "mesma entrada ⇒ mesma saída", mas nem todos os insumos para garantir isso estavam declarados.
+2. **Rigor estatístico** — métricas com fórmula incompleta ou ambígua tornam o sistema dependente de escolhas implícitas de implementação, o que invalida o invariante principal do contrato MCP.
 
 A revisão encontrou 3 classes de problemas:
 
@@ -26,7 +28,7 @@ Este ADR consolida as decisões tomadas. Em versões futuras, decisões estrutur
 
 **Decisão:** toda ferramenta com componente estocástico ou de desempate aceita `seed: uint64` como entrada. Toda resposta retorna `deterministic_hash = SHA256(canonical_json({input, dataset_version, tool_version}))`, onde `canonical_json` segue RFC 8785 (JCS).
 
-**Justificativa:** sem `seed`, `generate_candidate_games` com qualquer tie-break não-trivial pode divergir entre execuções, violando `brief.md:67`. Sem regra de hash, duas implementações corretas geram hashes diferentes para o mesmo output — o hash vira decorativo.
+**Justificativa:** sem `seed`, `generate_candidate_games` com qualquer tie-break não-trivial pode divergir entre execuções, violando a promessa de reprodutibilidade do brief. Sem regra de hash, duas implementações corretas geram hashes diferentes para o mesmo output — o hash vira decorativo.
 
 **Evidência de impacto:** `C(25,15) = 3.268.760` combinações; qualquer estratégia que amostre do espaço sem seed tem entropia de saída suficiente para gerar jogos distintos em execuções consecutivas.
 
@@ -44,9 +46,11 @@ Este ADR consolida as decisões tomadas. Em versões futuras, decisões estrutur
 
 **Decisão:** todo contrato de estratégia declara `search_method ∈ { "exhaustive", "sampled", "greedy_topk" }`. Para `sampled`, declarar `n_samples` e consumir `seed`. `exhaustive` é preferido sempre que o score for O(1) por jogo candidato e couber em orçamento de latência.
 
+**Reclassificação em revisão (pós-ADR 0001):** `slot_weighted` foi revisto de `greedy_topk` para `exhaustive`. Como o score `analise_slot = (1/15) · Σ_s p_smooth(g_s, s)` é separável por slot e a única restrição é `g_1 < g_2 < … < g_15` com `g_i ∈ [1..25]`, o ótimo global é computável por programação dinâmica em `O(25² · 15) ≈ 9.375` operações — trivialmente dentro do orçamento. Fica dentro da preferência declarada nesta decisão. `seed` deixa de ser obrigatória para a estratégia (ADR 0001 D3 não exige `seed` em `exhaustive`); determinismo é garantido pela DP + `tie_break_rule` lexicográfico.
+
 **Justificativa:** duas implementações corretas da mesma estratégia, mas com métodos diferentes de busca, produzem saídas diferentes com o mesmo `seed`. Fixar o método é condição necessária para o invariante 1.
 
-**Arquivos alterados:** `generation-strategies.md`.
+**Arquivos alterados:** `generation-strategies.md`, `mcp-tool-contract.md` (exemplo de `generate_candidate_games.summary.strategies`).
 
 ### D4 — CV sai como default de estabilidade
 
@@ -62,7 +66,9 @@ Este ADR consolida as decisões tomadas. Em versões futuras, decisões estrutur
 
 ### D5 — Smoothing obrigatório em log-probabilidades (KL, surpresa_slot)
 
-**Decisão:** toda métrica baseada em `log p` aplica **add-α smoothing com α = 1/|support|** (Laplace ajustado). Suporte é declarado na métrica: para KL entre distribuições de frequência, `|support| = 25`; para `surpresa_slot`, `|support| = 25 × 15 = 375`.
+**Decisão:** toda métrica baseada em `log p` aplica **add-α smoothing com α = 1/|support|** (Laplace ajustado). Suporte é declarado na métrica e descreve a cardinalidade do espaço amostral da distribuição sobre a qual o `log` é aplicado:
+- `divergencia_kl` entre distribuições de frequência por dezena: `|support| = 25`, `α = 1/25`.
+- `surpresa_slot`: há **15 distribuições independentes, uma por slot**, cada uma com espaço amostral de 25 dezenas. Cada distribuição aplica `α = 1/25` isoladamente (`p_smooth(d,s) = (M[d,s] + α) / (Σ_d M[d,s] + 25α)`). Não há suporte conjunto `25 × 15`; o produto `Π_s p_smooth(g_s, s)` é a composição de 15 probabilidades condicionadas ao slot.
 
 **Justificativa estatística:** em janela típica de `N=20`, a probabilidade de pelo menos uma dezena ter frequência 0 é praticamente 1 (só seria zero se as 15 dezenas sorteadas fossem exatamente as mesmas 15 em todos os 20 concursos, o que equivale a repetição total — cenário de probabilidade desprezível). Sem smoothing, `D_KL = +∞` é regra, não exceção.
 
@@ -111,9 +117,11 @@ Este ADR consolida as decisões tomadas. Em versões futuras, decisões estrutur
 
 ### D10 — `MetricValue.shape` explícito e validação de entrada
 
-**Decisão:** `MetricValue` ganha `shape ∈ { "scalar", "series", "vector_by_dezena", "matrix_dezena_slot" }`. `value` é tipado conforme `shape`. Em `analyze_indicator_stability`, se o indicador é vetorial (`vector_by_dezena` ou `matrix_dezena_slot`), o input **deve** declarar `aggregation ∈ { "mean", "max", "l2_norm", "per_component" }`; caso contrário, erro `UNSUPPORTED_AGGREGATION` antes de calcular.
+**Decisão:** `MetricValue` ganha `shape ∈ { "scalar", "series", "vector_by_dezena", "count_vector[5]", "count_matrix[25x15]", "count_pair", "dezena_list[10]", "count_list_by_dezena", "dimensionless_pair" }`. `value` é tipado conforme `shape`. Em `analyze_indicator_stability`, se o indicador é vetorial ou matricial (`vector_by_dezena`, `count_vector[5]`, `count_matrix[25x15]`, `count_list_by_dezena`, `count_pair`, `dezena_list[10]`, `dimensionless_pair`), o input **deve** declarar `aggregation ∈ { "mean", "max", "l2_norm", "per_component" }`; caso contrário, erro `UNSUPPORTED_AGGREGATION` antes de calcular.
 
-**Justificativa:** hoje o contrato aceita indicadores vetoriais e os exclui em runtime (`mcp-tool-contract.md:256-258`) — isso é contrato permissivo com descoberta tardia. IA consumidora paga um round-trip para aprender a restrição. Validação em schema elimina a classe inteira.
+**Nota de rastreabilidade:** a revisão do ADR manteve o enum alinhado ao contrato MCP (`docs/mcp-tool-contract.md`). A versão inicial deste ADR listava apenas `{ scalar, series, vector_by_dezena, matrix_dezena_slot }`; foi expandida para refletir todos os shapes reais emitidos por métricas canônicas do catálogo (`count_vector[5]` para distribuição linha/coluna, `count_pair` para pares/ímpares e runs, `dezena_list[10]` para os tops, `count_list_by_dezena` para blocos, `dimensionless_pair` para `hhi_concentracao`). `matrix_dezena_slot` foi renomeado para `count_matrix[25x15]` para eliminar o alias informal.
+
+**Justificativa:** o contrato aceitava indicadores vetoriais e os excluía em runtime — isso é contrato permissivo com descoberta tardia. IA consumidora paga um round-trip para aprender a restrição. Validação em schema elimina a classe inteira.
 
 **Arquivos alterados:** `mcp-tool-contract.md` (modelo `MetricValue`, `analyze_indicator_stability`, códigos de erro).
 
@@ -129,7 +137,7 @@ Este ADR consolida as decisões tomadas. Em versões futuras, decisões estrutur
 
 **Decisão:** adiciona `UNAUTHORIZED`, `RATE_LIMITED`, `QUOTA_EXCEEDED`, `DATASET_UNAVAILABLE`, `PLAN_BUDGET_EXCEEDED`, `UNSUPPORTED_AGGREGATION`, `INTERNAL_ERROR`. Cada ferramenta declara explicitamente o subconjunto de códigos que pode emitir.
 
-**Justificativa:** `project-guide.md:114-121` prevê autenticação e throttling. O contrato não listava nenhum código correspondente — inconsistência entre guide e contrato.
+**Justificativa:** `docs/project-guide.md` já previa autenticação e throttling. O contrato não listava nenhum código correspondente — inconsistência entre guide e contrato.
 
 **Arquivos alterados:** `mcp-tool-contract.md`.
 
@@ -143,7 +151,7 @@ Este ADR consolida as decisões tomadas. Em versões futuras, decisões estrutur
 
 ### D14 — Default explícito de `metrics` em `compute_window_metrics`
 
-**Decisão:** `metrics` é **obrigatório** no input. Omissão retorna `INVALID_REQUEST` (novo código auxiliar dentro de validação de schema, mapeado de `MISSING_METRICS`). Não existe "conjunto default implícito".
+**Decisão:** `metrics` é **obrigatório** no input. Omissão retorna `INVALID_REQUEST` com `details.missing_field = "metrics"`. Não existe "conjunto default implícito" nem código dedicado `MISSING_METRICS`; a validação de schema é tratada uniformemente por `INVALID_REQUEST`, conforme tabela de códigos em `docs/mcp-tool-contract.md`.
 
 **Justificativa:** default implícito obriga IA a inferir quais métricas "sempre fazem sentido" — fonte típica de drift. Forçar a escolha torna cada chamada autodocumentada.
 
@@ -167,7 +175,7 @@ Este ADR consolida as decisões tomadas. Em versões futuras, decisões estrutur
 
 ### D17 — `row_entropy_balance` com entropia como filtro, não objetivo
 
-**Decisão:** entropia normalizada `H_norm(linhas) ≥ 0.95` vira filtro de qualificação; score primário passa a ser `freq_alignment` entre o jogo e o `top10_mais_sorteados` da janela. Tie-break: `hhi_concentracao` ascendente.
+**Decisão:** entropia normalizada `H_norm(linhas) ≥ 0.95` vira filtro de qualificação; score primário passa a ser `freq_alignment` entre o jogo e o `top10_mais_sorteados` da janela. Tie-break: menor `hhi_concentracao.hhi_coluna` (fonte canônica do desempate: `docs/generation-strategies.md`, estratégia `row_entropy_balance`); se empatar, ordem lexicográfica do jogo ordenado ascendente.
 
 **Justificativa:** maximizar `H_norm` de 5 bins tem ótimo único em `3-3-3-3-3`, o que **colapsa** a diversidade do conjunto retornado — problema contrário ao objetivo da estratégia. Transformar em filtro preserva diversidade; score primário torna a estratégia discriminativa.
 
@@ -185,13 +193,13 @@ Este ADR consolida as decisões tomadas. Em versões futuras, decisões estrutur
 
 **Decisão:** tabela principal de `metric-catalog.md` ganha duas colunas. `Versão` segue SemVer por métrica e é propagada para `MetricValue.version` no output. Mudança de fórmula exige bump de major; mudança de apresentação, minor.
 
-**Justificativa:** `MetricValue.unit` e `MetricValue.version` já são campos mínimos no contrato (`mcp-tool-contract.md:63, 66`); não estavam no catálogo. Alinha contrato e catálogo.
+**Justificativa:** `MetricValue.unit` e `MetricValue.version` já eram campos mínimos no contrato; não estavam no catálogo. Alinha contrato e catálogo.
 
 **Arquivos alterados:** `metric-catalog.md`.
 
 ### D20 — Ajustes em `brief.md` e `project-guide.md`
 
-- Remover qualificador "sem validação explícita" em `brief.md:29` (ambiguidade desnecessária).
+- Remover qualificador ambíguo em `docs/brief.md` sobre validação explícita.
 - Ajustar `project-guide.md` referenciando `docs/metric-catalog.md` (nome correto) e `docs/decisions.md` movido para `docs/adrs/`.
 - Adicionar nota em `project-guide.md` sobre responsabilidade do `Core/` de normalizar (ordenar) entrada canônica — fecha a fronteira com `Providers/` e sustenta a invariante do `slot`.
 
@@ -234,7 +242,7 @@ Este ADR consolida as decisões tomadas. Em versões futuras, decisões estrutur
 |----|-------------------|----------------|
 | D1 | contract, strategies, brief | `generate_candidate_games`, invariantes, premissas |
 | D2 | contract | persistência, output de `get_draw_window` |
-| D3 | strategies | cabeçalho, todas as 4 estratégias |
+| D3 | strategies | cabeçalho, todas as 4 estratégias-base |
 | D4 | contract, catalog | `analyze_indicator_stability`, observações |
 | D5 | catalog, contract | `divergencia_kl`, `surpresa_slot`, observações |
 | D6 | catalog | `entropia_linha`, `entropia_coluna` |

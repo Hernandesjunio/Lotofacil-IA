@@ -43,8 +43,11 @@ lotofacil-mcp/
     metric-catalog.md
     mcp-tool-contract.md
     generation-strategies.md
+    prompt-catalog.md
+    test-plan.md
     adrs/
       0001-fechamento-semantico-e-determinismo-v1.md
+      0002-composicao-analitica-e-filtros-estruturais-v1.md
 ```
 
 ### Diagrama de fronteiras (sem implementacao)
@@ -423,6 +426,32 @@ Os nomes das estrategias passam a esconder regras diferentes ao longo do tempo.
 - `Em que cenario isso seria desnecessario ou poderia ser removido?`
 Se o projeto abandonar completamente a geracao de jogos candidatos.
 
+### `docs/prompt-catalog.md`
+
+- `Qual problema isso resolve?`
+Transforma perguntas reais do dominio em uma suite de prompts rastreavel, cobrindo o que a IA deve conseguir perguntar ao MCP sem ambiguidade.
+- `Em que momento do projeto isso se torna necessario?`
+Assim que o MCP passar a ser testado ou consumido por agentes de IA de forma recorrente.
+- `Quem consome isso?`
+Mantenedor, testes E2E, evals e qualquer agente que precise validar cobertura funcional.
+- `Qual o risco de NAO ter isso?`
+Voce acha que o contrato esta claro, mas nao consegue provar se as perguntas reais do dominio estao de fato cobertas.
+- `Em que cenario isso seria desnecessario ou poderia ser removido?`
+Se o MCP nunca for consumido por IA e todas as chamadas forem manuais e triviais.
+
+### `docs/test-plan.md`
+
+- `Qual problema isso resolve?`
+Fecha a definicao do que significa cobertura total do dominio: metricas, ferramentas, erros, filtros, estrategias e prompts.
+- `Em que momento do projeto isso se torna necessario?`
+Neste projeto, no momento em que o dominio passa a depender de composicao dinamica, correlacao e filtros estruturais.
+- `Quem consome isso?`
+Mantenedor, CI futura, testes automatizados e revisoes semanticas.
+- `Qual o risco de NAO ter isso?`
+A cobertura fica subjetiva; partes importantes do dominio deixam de ser testadas mesmo com documentacao aparentemente madura.
+- `Em que cenario isso seria desnecessario ou poderia ser removido?`
+Se o projeto for apenas exploratorio e sem compromisso de validacao continuada.
+
 ### `Contrato de API ou OpenAPI`
 
 Use quando o contrato deixar de ser informal. Se houver consumidores automatizados, isso passa a ter alto valor.
@@ -507,5 +536,8 @@ Se eu tivesse que otimizar para aprendizado e velocidade, eu começaria com este
 10. `docs/metric-catalog.md`
 11. `docs/mcp-tool-contract.md`
 12. `docs/generation-strategies.md`
-13. `docs/adrs/0001-fechamento-semantico-e-determinismo-v1.md`
+13. `docs/prompt-catalog.md`
+14. `docs/test-plan.md`
+15. `docs/adrs/0001-fechamento-semantico-e-determinismo-v1.md`
+16. `docs/adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md`
 
