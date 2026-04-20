@@ -204,7 +204,7 @@ Todos os prompts de `docs/prompt-catalog.md` devem ter:
 - 1 teste semântico validando que a resposta não usa linguagem preditiva indevida;
 - 1 assertiva de determinismo quando houver payload equivalente.
 
-Prompts 35 a 38 do catálogo são obrigatórios como testes negativos.
+Prompts 37 a 41 do catálogo são obrigatórios como testes negativos.
 
 ## Cobertura de determinismo
 

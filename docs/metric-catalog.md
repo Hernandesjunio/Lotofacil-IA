@@ -2,6 +2,8 @@
 
 Fonte de verdade semântica das métricas da V1 ampliada. Alinha-se a `docs/mcp-tool-contract.md`, `docs/generation-strategies.md` e aos ADRs `0001` e `0002`.
 
+Para **interpretação em linguagem simples**, **o que cada métrica observa** e **exemplos de uso** por nome, ver `docs/metric-glossary.md` (complemento pedagógico; fórmulas e versões permanecem aqui).
+
 ## Convenções
 
 | Campo | Descrição |

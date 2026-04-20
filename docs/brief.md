@@ -20,7 +20,7 @@ O sistema existe para apoiar estudo, análise e tomada de decisão assistida. El
 - estruturação dos dados para consumo analítico e por IA;
 - composição dinâmica de indicadores com pesos, transformações e filtros declarativos;
 - análise de estabilidade, persistência, associação, divergência e faixas típicas;
-- análise histórica de linhas, colunas, pares/ímpares, vizinhos, repetição, top-k e slots;
+- análise histórica de linhas, colunas, pares/ímpares, vizinhos, repetição, top 10 e slots;
 - geração determinística de jogos candidatos com critérios escolhidos;
 - filtros estruturais para excluir padrões raros ou pouco úteis para geração;
 - explicação dos critérios, pesos e filtros usados em cada análise;
@@ -57,7 +57,7 @@ Formato esperado:
 - "Analise os últimos 20 sorteios e identifique quais indicadores tiveram maior estabilidade estatística."
 - "Quais dezenas parecem mais persistentes nos últimos 100 concursos quando combino frequência, atraso, blocos de presença e ausência?"
 - "Quais correlações entre quantidade de vizinhos, repetição, entropia de linha e pares apresentaram maior coesão na janela recente?"
-- "Resuma qual perfil estrutural cobriu pelo menos 80% dos últimos 20 sorteios em slots, vizinhos e top-k."
+- "Resuma qual perfil estrutural cobriu pelo menos 80% dos últimos 20 sorteios em slots, vizinhos e top 10."
 - "Gere jogos candidatos eliminando sequências longas demais, baixa entropia de linha e aderência de slot muito fraca."
 
 Exemplos adicionais de prompts de teste ficam em `docs/prompt-catalog.md`.
@@ -91,7 +91,8 @@ Exemplos adicionais de prompts de teste ficam em `docs/prompt-catalog.md`.
 
 ## Referências
 
-- `docs/metric-catalog.md` — métricas utilizadas
+- `docs/metric-catalog.md` — métricas utilizadas (tipagem, fórmulas, consumidores)
+- `docs/metric-glossary.md` — definição em linguagem simples, o que cada métrica observa e exemplos de uso (complemento pedagógico)
 - `docs/mcp-tool-contract.md` — contrato das ferramentas MCP
 - `docs/generation-strategies.md` — estratégias e filtros de geração
 - `docs/prompt-catalog.md` — prompts cobertos pelo MCP para testes
