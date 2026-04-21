@@ -1,1 +1,5 @@
 .cursor/rules/staff-review.md
+
+# Chaves e ambientes locais (ex.: OPENAI_API_KEY para testes LiveOpenAI)
+.env
+.env.local

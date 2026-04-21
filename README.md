@@ -28,6 +28,7 @@ O ponto de entrada da pasta **`docs/`** é o [**brief**](docs/brief.md): escopo,
 | [vertical-slice.md](docs/vertical-slice.md) | Fatia vertical mínima (V0) |
 | [contract-test-plan.md](docs/contract-test-plan.md) | Plano de testes de contrato |
 | [test-plan.md](docs/test-plan.md) | Plano de testes do domínio |
+| [live-openai-integration-pipeline.md](docs/live-openai-integration-pipeline.md) | Integração real com ChatGPT (OpenAI), suíte L1–L5 e workflow manual no GitHub |
 | [prompt-catalog.md](docs/prompt-catalog.md) | Catálogo de prompts para testes |
 | [adrs/](docs/adrs/) | Decisões arquiteturais (ADRs) |
 

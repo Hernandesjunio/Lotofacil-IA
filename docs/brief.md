@@ -102,6 +102,7 @@ Exemplos adicionais de prompts de teste ficam em [prompt-catalog.md](prompt-cata
 - [generation-strategies.md](generation-strategies.md) — estratégias e filtros de geração
 - [prompt-catalog.md](prompt-catalog.md) — prompts cobertos pelo MCP para testes
 - [test-plan.md](test-plan.md) — matriz de cobertura de testes do domínio
+- [live-openai-integration-pipeline.md](live-openai-integration-pipeline.md) — integração real com API OpenAI, suíte mínima L1–L5 e esteira GitHub dedicada
 - [vertical-slice.md](vertical-slice.md) — primeira fatia de implementação (dados → métrica única → MCP)
 - [contract-test-plan.md](contract-test-plan.md) — ordem de execução, fixtures douradas e matriz de testes de contrato
 - [adrs/0001-fechamento-semantico-e-determinismo-v1.md](adrs/0001-fechamento-semantico-e-determinismo-v1.md) — decisões de fechamento base da V1

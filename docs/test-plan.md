@@ -47,6 +47,12 @@ Validam que os prompts documentados podem ser mapeados para as tools corretas e 
 
 Validam invariantes como determinismo, ordenação, monotonicidade, ranges, finitude e não regressão semântica.
 
+### 6. Integração real com API OpenAI (ChatGPT)
+
+Valida fluxo **agente → tool MCP** com **modelo real** (tool calling), usando prompts naturais alinhados ao [prompt-catalog.md](prompt-catalog.md). Por **custo** e **não determinismo do LLM**, esta camada roda em **esteira separada** no GitHub Actions e **não** substitui testes de fórmula, contrato ou propriedades.
+
+Requisitos e suíte mínima de **cinco** cenários (**L1–L5**): [live-openai-integration-pipeline.md](live-openai-integration-pipeline.md).
+
 ## Cobertura por métrica
 
 ### Base, por_transformacao e apoio por janela
