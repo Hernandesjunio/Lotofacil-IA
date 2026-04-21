@@ -2,6 +2,37 @@
 
 Projeto para análise e políticas relacionadas à Lotofácil.
 
+## Metodologia de desenvolvimento
+
+Este repositório segue **spec-driven development**: a implementação não começa pelo código “livre”, mas pelos artefatos normativos em `docs/`.
+
+Isso significa que:
+
+- a **fonte de verdade semântica** está na documentação versionada;
+- cada entrega nasce de um **recorte explícito do spec**;
+- cada recorte precisa de **teste correspondente**;
+- mudanças de semântica exigem atualização coordenada de **docs + testes + código**;
+- o trabalho é executado em **fatias verticais pequenas**, começando pela V0;
+- a implementação segue **TDD**, com foco em contrato, fórmula, determinismo e erros.
+
+Em termos práticos, a ordem de trabalho é:
+
+1. definir ou confirmar o spec aplicável;
+2. escolher a próxima fatia;
+3. escrever os testes do recorte;
+4. implementar o mínimo necessário;
+5. validar contrato e determinismo;
+6. só então avançar para a próxima fatia.
+
+Os documentos centrais dessa metodologia são:
+
+- [docs/brief.md](docs/brief.md) — contexto e mapa da documentação
+- [docs/adrs/0003-processo-desenvolvimento-bmad-vs-spec-driven.md](docs/adrs/0003-processo-desenvolvimento-bmad-vs-spec-driven.md) — spec-driven como padrão
+- [docs/adrs/0004-estrutura-arquitetural-inicial-mcp-dotnet10.md](docs/adrs/0004-estrutura-arquitetural-inicial-mcp-dotnet10.md) — arquitetura inicial congelada
+- [docs/vertical-slice.md](docs/vertical-slice.md) — primeira fatia obrigatória
+- [docs/contract-test-plan.md](docs/contract-test-plan.md) — ordem inicial de execução
+- [docs/spec-driven-execution-guide.md](docs/spec-driven-execution-guide.md) — passo a passo operacional
+
 ## Estrutura
 
 | Caminho | Descrição |
