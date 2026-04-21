@@ -15,6 +15,27 @@ Isso significa que:
 - o trabalho é executado em **fatias verticais pequenas**, começando pela V0;
 - a implementação segue **TDD**, com foco em contrato, fórmula, determinismo e erros.
 
+### Fluxo da aplicação (visão geral)
+
+O serviço expõe ferramentas MCP/HTTP; o cliente (host ou agente) envia parâmetros alinhados ao contrato. O servidor delega a casos de uso, que combinam regras do domínio com dados versionados da infraestrutura e devolvem JSON determinístico e explicável.
+
+```mermaid
+flowchart TD
+  Host["Cliente: host MCP / agente de IA"]
+  Server["Servidor HTTP/MCP"]
+  App["Aplicação: orquestração e validação"]
+  Domain["Domínio: métricas, janelas, estratégias, candidatos"]
+  Infra["Infraestrutura: snapshot, dataset_version, JSON canônico"]
+
+  Host <-->|tools / JSON| Server
+  Server --> App
+  App --> Domain
+  App --> Infra
+  Infra -->|concursos e metadados| App
+  Domain -->|cálculos e composições| App
+  App -->|resposta com rastreabilidade| Server
+```
+
 Em termos práticos, a ordem de trabalho é:
 
 1. definir ou confirmar o spec aplicável;
@@ -65,6 +86,9 @@ O ponto de entrada da pasta **`docs/`** é o [**brief**](docs/brief.md): escopo,
 | [test-plan.md](docs/test-plan.md) | Plano de testes do domínio |
 | [live-openai-integration-pipeline.md](docs/live-openai-integration-pipeline.md) | Integração real com ChatGPT (OpenAI), suíte L1–L5 e workflow manual no GitHub |
 | [prompt-catalog.md](docs/prompt-catalog.md) | Catálogo de prompts para testes |
-| [adrs/](docs/adrs/) | Decisões arquiteturais (ADRs) |
+| [0001-fechamento-semantico-e-determinismo-v1.md](docs/adrs/0001-fechamento-semantico-e-determinismo-v1.md) | ADR: fechamento semântico e determinismo (v1) |
+| [0002-composicao-analitica-e-filtros-estruturais-v1.md](docs/adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md) | ADR: composição analítica e filtros estruturais (v1) |
+| [0003-processo-desenvolvimento-bmad-vs-spec-driven.md](docs/adrs/0003-processo-desenvolvimento-bmad-vs-spec-driven.md) | ADR: processo de desenvolvimento (BMAD vs spec-driven) |
+| [0004-estrutura-arquitetural-inicial-mcp-dotnet10.md](docs/adrs/0004-estrutura-arquitetural-inicial-mcp-dotnet10.md) | ADR: estrutura arquitetural inicial (MCP, .NET 10) |
 
 Para implementação incremental, use [vertical-slice.md](docs/vertical-slice.md) e [contract-test-plan.md](docs/contract-test-plan.md). A V0/V1 inicial assume servidor HTTP único, sem IA embarcada no servidor, e com autenticação/throttling mantidos como capacidade contratual reservada que pode permanecer desligada por configuração.
