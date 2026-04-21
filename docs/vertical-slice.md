@@ -34,6 +34,7 @@ sequenceDiagram
 
 ## Fora da V0 (próximas fatias)
 
+- A V0 é uma fatia isolada e fixture-controlada, feita para validar semântica e determinismo antes da primeira exposição externa completa.
 - Demais métricas, tools (`analyze_*`, `generate_*`, `explain_*`), composição, associações, geração.
 - Autenticação, throttling, persistência, fontes diferentes do arquivo fixture.
 

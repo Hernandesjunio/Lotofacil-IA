@@ -39,6 +39,7 @@ lotofacil-mcp/
   tests/
     LotofacilMcp.Tests/
       LotofacilMcp.Tests.csproj
+    fixtures/
   docs/
     brief.md
     project-guide.md
@@ -125,7 +126,7 @@ Se todos os dados estiverem embutidos em memoria para um prototipo de curtissima
 - `Qual problema isso resolve?`
 Agrupa autenticacao por API Key, throttling, quotas e politicas de acesso sem contaminar a logica de insights.
 - `Em que momento do projeto isso se torna necessario?`
-Desde a primeira exposicao externa. No seu caso, e requisito de origem, entao entra no inicio.
+Desde a primeira exposicao externa. Na V0 isolada/local descrita em [vertical-slice.md](vertical-slice.md), isso pode ficar fora da fatia inicial; passa a ser obrigatorio quando a superficie MCP/HTTP deixar de ser apenas fixture-controlada.
 - `Quem consome isso?`
 `EntryPoints/`, operacao do servico e qualquer consumidor que precise entender erros de acesso ou limite.
 - `Qual o risco de NAO ter isso?`
@@ -138,7 +139,7 @@ Se o servico for 100% local, sem rede e sem usuarios externos.
 - `Qual problema isso resolve?`
 Centraliza configuracoes operacionais: origem dos dados, timeouts, limites de throttling, modo de ambiente e chaves de feature.
 - `Em que momento do projeto isso se torna necessario?`
-Desde o inicio, porque API Key, throttling e provider de dados nao devem nascer espalhados em handlers.
+Desde o inicio como ponto unico de configuracao, mas os blocos de API Key e throttling so se tornam obrigatorios quando a exposicao externa entrar no escopo da entrega.
 - `Quem consome isso?`
 `EntryPoints/`, `Access/`, `Providers/` e deploys locais ou remotos.
 - `Qual o risco de NAO ter isso?`

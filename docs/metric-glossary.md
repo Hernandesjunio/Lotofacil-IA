@@ -258,7 +258,7 @@ Documento pedagógico complementar ao catálogo técnico em [metric-catalog.md](
 
 ## `coeficiente_variacao`
 
-- **Definição:** razão σ/μ (com restrições e fallbacks para séries não positivas, ver ADR/catálogo).
+- **Definição:** razão σ/μ, disponível apenas para séries estritamente positivas e com `μ > ε_cv`; fora disso, a normalização deve ser rejeitada conforme ADR/catálogo.
 - **O que observa:** variabilidade relativa à escala da série — comparável entre magnitudes diferentes.
 - **Exemplo de uso:** “Comparar estabilidade relativa entre duas métricas de escalas diferentes.”
 
@@ -314,7 +314,7 @@ Documento pedagógico complementar ao catálogo técnico em [metric-catalog.md](
 
 ## `persistencia_atraso_extremo`
 
-- **Definição:** conta quantas dezenas têm atraso acima de um limiar de referência (ex.: P95 de um baseline), conforme catálogo.
+- **Definição:** conta quantas dezenas têm atraso acima de um limiar extremo de referência (ex.: P95 de um baseline), com `reference` e `baseline_version` declarados explicitamente no request.
 - **O que observa:** quantidade de números simultaneamente “muito atrasados” — stress de cauda na malha de atrasos.
 - **Exemplo de uso:** “Medir se o sistema de atrasos está com muitas dezenas em extremo simultâneo.”
 

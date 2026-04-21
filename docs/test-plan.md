@@ -53,7 +53,7 @@ Validam invariantes como determinismo, ordenação, monotonicidade, ranges, fini
 
 | Métrica | Teste positivo obrigatório | Teste de borda / negativo |
 |---|---|---|
-| `frequencia_por_dezena` | contagem exata em janela sintética | empate resolvido por dezena ascendente |
+| `frequencia_por_dezena` | contagem exata em janela sintética | soma dos 25 contadores = `15 × window_size` |
 | `top10_mais_sorteados` | ranking correto do top 10 | ties estáveis |
 | `top10_menos_sorteados` | ranking correto do bottom 10 | ties estáveis |
 | `atraso_por_dezena` | atraso exato ao fim da janela | dezena nunca observada satura corretamente |
@@ -62,7 +62,7 @@ Validam invariantes como determinismo, ordenação, monotonicidade, ranges, fini
 | `estado_atual_dezena` | mapeia saída recente para `0` | atraso coerente quando não sai |
 | `matriz_numero_slot` | contagem correta em `dezena x slot` | ordenação prévia obrigatória |
 | `assimetria_blocos` | razão correta por dezena e mediana da janela | divisão protegida em casos degenerados |
-| `persistencia_atraso_extremo` | contagem correta acima do percentil de referência | warning ou fallback para referência circular |
+| `persistencia_atraso_extremo` | contagem correta acima do percentil de referência declarado | erro se `reference` ou `baseline_version` estiver ausente |
 
 ### Séries por concurso
 
@@ -104,7 +104,7 @@ Validam invariantes como determinismo, ordenação, monotonicidade, ranges, fini
 |---|---|---|
 | `media_janela` | média correta | série constante |
 | `desvio_padrao_janela` | desvio amostral correto | `N < 2` tratado corretamente |
-| `coeficiente_variacao` | CV correto em série positiva | fallback em média próxima de zero |
+| `coeficiente_variacao` | CV correto em série estritamente positiva com `μ > ε_cv` | erro `UNSUPPORTED_NORMALIZATION_METHOD` para série com valores `<= 0` ou `μ <= ε_cv` |
 | `madn_janela` | MADN correto | fallback robusto quando mediana é zero |
 | `mad_janela` | MAD correto | série constante |
 | `tendencia_linear` | inclinação correta | série constante com slope zero |

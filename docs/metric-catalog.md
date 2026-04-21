@@ -113,14 +113,14 @@ Para **interpretação em linguagem simples**, **o que cada métrica observa** e
 | `intersecao_conjunto_referencia` | Interseção com conjunto externo declarado. | `|jogo ∩ referencia|`. | Jogo + conjunto | MCP / composição / geração |
 | `media_janela` | Média temporal de uma série. | `μ = (1/N) Σ x_i`. | Série | MCP / estabilidade |
 | `desvio_padrao_janela` | Desvio padrão amostral da série. | `σ = sqrt((1/(N-1)) Σ(x_i-μ)^2)`. | Série | MCP / estabilidade |
-| `coeficiente_variacao` | Variação relativa. | `CV = σ / μ` apenas se `μ > ε_cv` e série positiva; caso contrário, fallback documentado. | Série | MCP / estabilidade |
+| `coeficiente_variacao` | Variação relativa. | `CV = σ / μ` apenas se a série for estritamente positiva e `μ > ε_cv`; caso contrário, erro `UNSUPPORTED_NORMALIZATION_METHOD`. | Série | MCP / estabilidade |
 | `madn_janela` | Dispersão robusta normalizada pela mediana. | `MADN = median(|x_i - median(x)|) / median(x)` com fallback robusto quando necessário. | Série | MCP / estabilidade |
 | `mad_janela` | Dispersão robusta absoluta. | `MAD = median(|x_i - median(x)|)`. | Série | MCP / estabilidade |
 | `tendencia_linear` | Inclinação linear canônica da série. | `x = 0..N-1`; `slope = Σ(x-x̄)(y-ȳ) / Σ(x-x̄)^2`. | Série | MCP / estabilidade |
 | `estabilidade_ranking` | Persistência de posição relativa entre sub-janelas. | Pendente de detalhamento. | Séries | MCP / estabilidade |
 | `divergencia_kl` | Mudança entre distribuições observadas em janelas distintas. | `D_KL(p||q)` com add-α smoothing. | Distribuições derivadas | MCP / estabilidade |
 | `zscore_repeticao` | Distância padronizada da repetição observada. | `Z = (R - μ_ref) / σ_ref`, com `reference` e `baseline_version` explícitos. | Histórico | MCP / estabilidade |
-| `persistencia_atraso_extremo` | Quantas dezenas estão acima do atraso extremo de referência. | `Σ_d I(atraso[d] > P95_ref)`. | Histórico | MCP / estabilidade |
+| `persistencia_atraso_extremo` | Quantas dezenas estão acima do atraso extremo de referência. | `Σ_d I(atraso[d] > P95_ref(reference, baseline_version))`, com `reference` e `baseline_version` explícitos. | Histórico | MCP / estabilidade |
 | `assimetria_blocos` | Desequilíbrio entre presença e ausência. | Por dezena: `(pres-aus)/(pres+aus)`; agregação padrão: mediana das dezenas. | Histórico | MCP / estabilidade / composição |
 | `estatistica_runs` | Resumo dos runs do jogo. | `runs = (sequencia_maxima_vizinhos, quantidade_vizinhos)`. | Jogo candidato | MCP / geração |
 | `outlier_score` | Distância do jogo ao centroide da janela. | Distância de Mahalanobis regularizada sobre 5 features canônicas. | Histórico + jogo | MCP / geração |

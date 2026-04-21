@@ -440,7 +440,7 @@ Executar composições dinâmicas e declarativas entre indicadores para produzir
 
 #### Regras
 
-- `target` aceito: `dezena | draw | candidate_game | indicator`.
+- `target` aceito: `dezena | candidate_game | indicator`.
 - `operator` aceito: `weighted_rank | threshold_filter | joint_profile | stability_rank`.
 - Pesos são obrigatórios em `weighted_rank` e devem somar `1.0 ± 1e-9`.
 - Transformações aceitas: `normalize_max`, `invert_normalize_max`, `rank_percentile`, `identity_unit_interval`, `one_minus_unit_interval`, `shift_scale_unit_interval`.
@@ -586,6 +586,7 @@ Gerar jogos candidatos a partir de estratégias nomeadas e filtros declarados.
     {
       "strategy_name": "declared_composite_profile",
       "count": 3,
+      "search_method": "sampled",
       "profile": {
         "components": [
           { "name": "freq_alignment", "weight": 0.35 },
@@ -616,6 +617,7 @@ Gerar jogos candidatos a partir de estratégias nomeadas e filtros declarados.
 - `seed` é obrigatória sempre que houver qualquer estratégia `sampled` ou `greedy_topk`.
 - `MAX_COUNT_PER_STRATEGY = 100`; `MAX_TOTAL_COUNT = 250`.
 - Estratégia desconhecida retorna `UNKNOWN_STRATEGY`.
+- Quando a estratégia admitir mais de um `search_method` no contrato da própria estratégia, o item correspondente em `plan` deve declarar `search_method` explicitamente.
 - `declared_composite_profile` só aceita componentes listados em [generation-strategies.md](generation-strategies.md).
 - `structural_exclusions` são opcionais, mas quando presentes tornam-se parte do determinismo do request.
 - O servidor continua não aceitando "pesos soltos" fora de um schema explícito.
@@ -623,6 +625,7 @@ Gerar jogos candidatos a partir de estratégias nomeadas e filtros declarados.
 #### Semântica e validação
 
 - **`plan`:** fila de estratégias com `count` cada; a soma dos `count` está limitada por `MAX_TOTAL_COUNT`; cada estratégia por `MAX_COUNT_PER_STRATEGY`.
+- **`plan[].search_method`:** só aparece no request quando o contrato da estratégia permite múltiplos métodos de busca. Em `declared_composite_profile`, é obrigatório e deve ser `sampled` ou `greedy_topk`; nas estratégias com método fixo em [generation-strategies.md](generation-strategies.md), o request não repete esse campo.
 - **`seed`:** obrigatória se qualquer passo for estocástico ou `greedy_topk`; validar reprodutibilidade com a mesma semente e dataset.
 - **`global_constraints`:** `unique_games` evita duplicatas no lote; `sorted_numbers` padroniza representação dos jogos.
 - **`structural_exclusions`:** filtros duros no espaço de jogos; quando presentes, fazem parte do input canônico do hash determinístico e devem aparecer no output (metadados ou explicação).

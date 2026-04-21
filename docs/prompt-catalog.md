@@ -66,12 +66,12 @@ Este documento lista prompts de referência para testes funcionais, E2E e valida
 19. "Quais são os top 10 menos sorteados da janela de 100 concursos?"
     - Tools esperadas: `compute_window_metrics`
 20. "Quantos números do concurso atual estavam no top 10 da janela anterior?"
-    - Tools esperadas: `compute_window_metrics`, `compose_indicator_analysis` ou `summarize_window_patterns`
+    - Tools esperadas: `get_draw_window`, `compute_window_metrics`
 
 ## 7. Repetição e interseções
 
-21. "Quantos números do jogo atual saíram no jogo passado e qual é a variância histórica disso nos últimos 100 concursos?"
-    - Tools esperadas: `compute_window_metrics`, `summarize_window_patterns`
+21. "Quantos números do concurso atual saíram no concurso passado e qual é a variância histórica disso nos últimos 100 concursos?"
+    - Tools esperadas: `get_draw_window`, `compute_window_metrics`, `summarize_window_patterns`
 22. "Me dê a média, MAD, desvio padrão e range típico da repetição entre concursos consecutivos."
     - Tools esperadas: `summarize_window_patterns`
 23. "Analise interseções com lag 2 e lag 3 nos últimos 60 concursos."
