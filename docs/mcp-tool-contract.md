@@ -729,9 +729,11 @@ Estratégias V1:
 
 ## Erros de contrato
 
-Os códigos abaixo são parte do contrato público: clientes e testes devem poder asserções sobre eles. O campo `message` é texto humano (pode variar); `code` e `details` são o contrato estável para automação.
+Os códigos abaixo são parte do contrato público: clientes e testes devem poder fazer asserções sobre eles. O campo `message` é texto humano (pode variar); `code` e `details` são o contrato estável para automação.
 
-**Validação geral:** para cada código, existir pelo menos um teste negativo que provoque o código e um caminho feliz que não o emita; `details` deve carregar pistas estruturadas (`missing_field`, `metric_name`, etc.) sem vazar segredos.
+**Nota operacional — feature toggles de acesso:** `UNAUTHORIZED`, `RATE_LIMITED` e `QUOTA_EXCEEDED` permanecem no contrato mesmo quando autenticação, throttling e quotas estiverem desabilitados na V0/V1 inicial. Nessa fase, esses códigos são **reservados**; a obrigatoriedade de testes negativos para eles passa a valer quando o respectivo mecanismo estiver habilitado por configuração.
+
+**Validação geral:** para cada código **ativo na configuração do ambiente**, existir pelo menos um teste negativo que provoque o código e um caminho feliz que não o emita; `details` deve carregar pistas estruturadas (`missing_field`, `metric_name`, etc.) sem vazar segredos. Para códigos reservados por `feature toggle`, a documentação e a configuração devem deixar explícito que o mecanismo está desligado.
 
 Formato sugerido:
 

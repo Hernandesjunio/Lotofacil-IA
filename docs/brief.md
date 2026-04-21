@@ -68,6 +68,7 @@ Exemplos adicionais de prompts de teste ficam em [prompt-catalog.md](prompt-cata
 
 ## Restrições técnicas
 
+- **Stack (implementação MCP):** C# / **.NET 10**.
 - Dados históricos obtidos inicialmente via arquivo da CEF.
 - Atualizações futuras via API a ser definida.
 - Processamento deve ser determinístico (mesmo input => mesmo output). Isso exige: (a) `seed` explícito em toda chamada com componente estocástico, (b) `dataset_version` rastreável por hash do snapshot, (c) `deterministic_hash` canônico por resposta.
@@ -102,9 +103,11 @@ Exemplos adicionais de prompts de teste ficam em [prompt-catalog.md](prompt-cata
 - [generation-strategies.md](generation-strategies.md) — estratégias e filtros de geração
 - [prompt-catalog.md](prompt-catalog.md) — prompts cobertos pelo MCP para testes
 - [test-plan.md](test-plan.md) — matriz de cobertura de testes do domínio
+- [spec-driven-execution-guide.md](spec-driven-execution-guide.md) — ordem prática de execução, passos atômicos e uso dos specs na implementação
 - [live-openai-integration-pipeline.md](live-openai-integration-pipeline.md) — integração real com API OpenAI, suíte mínima L1–L5 e esteira GitHub dedicada
 - [vertical-slice.md](vertical-slice.md) — primeira fatia de implementação (dados → métrica única → MCP)
 - [contract-test-plan.md](contract-test-plan.md) — ordem de execução, fixtures douradas e matriz de testes de contrato
 - [adrs/0001-fechamento-semantico-e-determinismo-v1.md](adrs/0001-fechamento-semantico-e-determinismo-v1.md) — decisões de fechamento base da V1
 - [adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md](adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md) — ampliação da V1 para composições dinâmicas, correlações e filtros
 - [adrs/0003-processo-desenvolvimento-bmad-vs-spec-driven.md](adrs/0003-processo-desenvolvimento-bmad-vs-spec-driven.md) — spec-driven como padrão; BMAD opcional
+- [adrs/0004-estrutura-arquitetural-inicial-mcp-dotnet10.md](adrs/0004-estrutura-arquitetural-inicial-mcp-dotnet10.md) — estrutura arquitetural inicial congelada para V0/V1 em .NET 10

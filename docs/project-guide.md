@@ -4,7 +4,7 @@
 
 ## Objetivo
 
-Definir uma estrutura de projeto e um conjunto mínimo de documentos para um MCP HTTP focado em insights da Lotofácil, geração determinística de jogos candidatos, análise de estabilidade de indicadores, autenticação por API Key, throttling e consumo por agentes de IA.
+Definir uma estrutura de projeto e um conjunto mínimo de documentos para um MCP HTTP focado em insights da Lotofácil, geração determinística de jogos candidatos, análise de estabilidade de indicadores e consumo por agentes de IA.
 
 A proposta parte de uma premissa simples: o ativo principal deste projeto nao e "o servidor", e a semantica das metricas e das estrategias. O papel da arquitetura e proteger essa semantica, tornar o servico operavel e evitar que IA ou humanos confundam insight com previsao.
 
@@ -17,6 +17,7 @@ A proposta parte de uma premissa simples: o ativo principal deste projeto nao e 
 5. `Evidencia antes de sofisticacao`: so adicionar camadas, diagramas e processos quando a dor aparecer.
 6. `Determinismo e escopo descritivo`: mesmo input => mesmo output; o sistema entrega indicadores e recortes (nao recomendacao de apostas, nem previsao).
 7. `Explicabilidade por contrato`: toda analise e todo jogo candidato precisam informar criterios, janela, pesos e estrategia usada.
+8. `Servidor sem IA embarcada`: o servidor MCP/HTTP nao orquestra LLM, nao interpreta prompt livre e nao depende de bibliotecas de IA para cumprir o contrato; qualquer cliente inteligente fica fora deste processo.
 
 ## Estrutura proposta
 
@@ -26,19 +27,46 @@ lotofacil-mcp/
   LotofacilMcp.sln
   Directory.Build.props
   src/
-    LotofacilMcp/
-      LotofacilMcp.csproj
+    LotofacilMcp.Domain/
+      LotofacilMcp.Domain.csproj
+      Models/
+      Errors/
+      Metrics/
+      Strategies/
+      Windows/
+      Candidates/
+      Composition/
+      Associations/
+      Patterns/
+      Normalization/
+      Determinism/
+      Ports/
+    LotofacilMcp.Application/
+      LotofacilMcp.Application.csproj
+      UseCases/
+      Validation/
+      Mapping/
+    LotofacilMcp.Infrastructure/
+      LotofacilMcp.Infrastructure.csproj
+      Providers/
+      DatasetVersioning/
+      CanonicalJson/
+      Observability/
+    LotofacilMcp.Server/
+      LotofacilMcp.Server.csproj
       Program.cs
       appsettings.json
       appsettings.Development.json
-      EntryPoints/
-      Core/
-      Providers/
+      Http/
+      Tools/
+      DependencyInjection/
       Access/
-      Observability/
   tests/
-    LotofacilMcp.Tests/
-      LotofacilMcp.Tests.csproj
+    LotofacilMcp.Domain.Tests/
+    LotofacilMcp.Application.Tests/
+    LotofacilMcp.ContractTests/
+    LotofacilMcp.IntegrationTests/
+    LotofacilMcp.E2E.Tests/
     fixtures/
   docs/
     brief.md
@@ -60,13 +88,11 @@ lotofacil-mcp/
 
 ```mermaid
 flowchart TD
-  Client[Client_MCP_HTTP] --> EntryPoints
-  EntryPoints --> Access
-  EntryPoints --> Core
-  Core --> Providers
-  EntryPoints --> Observability
-  Providers --> Observability
-  Access --> Observability
+  Client[Client_HTTP_MCP] --> Server
+  Server --> Application
+  Application --> Domain
+  Application --> Infrastructure
+  Server --> Infrastructure
 ```
 
 
@@ -80,68 +106,81 @@ flowchart TD
 3. Gerar jogos candidatos a partir de estrategias declaradas, como repeticao/frequencia, slot, distribuicao/entropia e outlier.
 4. Explicar por que cada jogo foi gerado, quais filtros foram aplicados e qual o score obtido.
 
-### `src/LotofacilMcp/EntryPoints/`
+### `src/LotofacilMcp.Server/`
 
 - `Qual problema isso resolve?`
-Define a superficie publica do sistema: endpoints MCP/HTTP, validacao de entrada, traducao entre contratos externos (request/response) e casos de uso internos.
+Define a superficie publica do sistema: endpoints HTTP/MCP, binding de request, validacao estrutural, traducao entre contratos externos (request/response) e chamada dos casos de uso.
 - `Em que momento do projeto isso se torna necessario?`
 Desde o primeiro dia, porque sem essa fronteira o dominio nasce acoplado ao transporte.
 - `Quem consome isso?`
 Cliente MCP via HTTP, testes de contrato e voce mesmo ao evoluir o contrato.
 - `Qual o risco de NAO ter isso?`
-Misturar regra de negocio com autenticacao, serializacao e tratamento de erro; em ASP.NET isso costuma virar handlers/endpoints que acumulam responsabilidade e geram retrabalho quando o contrato muda.
+Misturar regra de negocio com serializacao, transporte e tratamento de erro; em ASP.NET isso costuma virar handlers/endpoints que acumulam responsabilidade e geram retrabalho quando o contrato muda.
 - `Em que cenario isso seria desnecessario ou poderia ser removido?`
 Se o projeto deixar de ser um servico e virar apenas uma biblioteca local de analise.
 
-### `src/LotofacilMcp/Core/`
+### `src/LotofacilMcp.Domain/`
 
 - `Qual problema isso resolve?`
-Centraliza definicoes canonicas de insight: atraso, frequencia, Top10 dinamico, repeticao, pares/impares, vizinhos, janelas e invariantes.
+Centraliza a semantica canonica do dominio: metricas, estrategias, janelas, candidatos, composicao, associacoes, padroes, erros e invariantes.
 - `Em que momento do projeto isso se torna necessario?`
 Desde o inicio; sem isso a semantica fica espalhada entre endpoints, validacao e camada de entrega.
 - `Quem consome isso?`
-`EntryPoints/`, `tests/`, futuros jobs offline e qualquer adaptador de dados.
+`Application/`, `tests/`, futuros jobs offline e qualquer adaptador de dados.
 - `Qual o risco de NAO ter isso?`
 O projeto vira um amontoado de handlers com calculos duplicados e nomes ambiguos; o maior risco e expor metricas inconsistentes para IA.
 - `Em que cenario isso seria desnecessario ou poderia ser removido?`
 Praticamente nunca, a menos que o projeto seja um experimento descartavel de poucas horas.
 
-**Responsabilidade de normalização canônica (ADR 0001 D20):** o `Core/` recebe qualquer saída de `Providers/` como "potencialmente não-normalizada" e aplica, em um único ponto de entrada, as normalizações canônicas — principalmente a ordenação crescente das dezenas do concurso (requisito da definição de `slot` em `metric-catalog.md`). Essa barreira é o que sustenta o anti-padrão #6 (Provider infiltrado no dominio) na prática, não só no texto.
+**Responsabilidade de normalização canônica (ADR 0001 D20):** o `Domain/` recebe qualquer saída de `Infrastructure/Providers/` como "potencialmente não-normalizada" e aplica, em um único ponto de entrada, as normalizações canônicas — principalmente a ordenação crescente das dezenas do concurso (requisito da definição de `slot` em `metric-catalog.md`). Essa barreira é o que sustenta o anti-padrão #6 (Provider infiltrado no dominio) na prática, não só no texto.
 
-### `src/LotofacilMcp/Providers/`
+### `src/LotofacilMcp.Application/`
 
 - `Qual problema isso resolve?`
-Isola a origem dos concursos e historicos: arquivo (CEF), banco, API externa ou snapshot local. Tambem evita que o Core saiba de SQL, HTTP ou formato fisico.
+Orquestra casos de uso sem colocar regra estatistica no transporte: resolve janela, chama o dominio, aplica validacoes cross-field, monta respostas explicaveis e coordena metadados operacionais.
+- `Em que momento do projeto isso se torna necessario?`
+Desde o inicio, porque o contrato MCP ja pede regras de orquestracao que nao pertencem nem ao transporte nem ao calculo puro.
+- `Quem consome isso?`
+`Server/`, testes de aplicacao e futuros adaptadores nao HTTP.
+- `Qual o risco de NAO ter isso?`
+O transporte passa a conhecer detalhe demais do dominio, e o dominio passa a receber responsabilidades de fluxo que nao sao matematicas nem semanticas.
+- `Em que cenario isso seria desnecessario ou poderia ser removido?`
+Se o projeto se reduzisse a uma biblioteca local de calculo puro, sem tools nem contrato externo.
+
+### `src/LotofacilMcp.Infrastructure/`
+
+- `Qual problema isso resolve?`
+Isola a origem dos concursos e historicos, a implementacao concreta de `dataset_version`, `canonical_json`, hashing, IO e observabilidade. Tambem evita que o dominio saiba de arquivo, banco, API externa ou formato fisico.
 - `Em que momento do projeto isso se torna necessario?`
 Assim que houver uma segunda origem de dados, necessidade de teste reproduzivel ou risco de trocar a forma de carga.
 - `Quem consome isso?`
-Casos de uso do `Core/` e testes com fixtures.
+`Application/`, `Server/` e testes com fixtures.
 - `Qual o risco de NAO ter isso?`
 O servico fica preso a uma fonte unica e a semantica das metricas passa a depender de detalhes de infraestrutura.
 - `Em que cenario isso seria desnecessario ou poderia ser removido?`
 Se todos os dados estiverem embutidos em memoria para um prototipo de curtissima vida util.
 
-### `src/LotofacilMcp/Access/`
+### `src/LotofacilMcp.Server/Access/`
 
 - `Qual problema isso resolve?`
 Agrupa autenticacao por API Key, throttling, quotas e politicas de acesso sem contaminar a logica de insights.
 - `Em que momento do projeto isso se torna necessario?`
-Desde a primeira exposicao externa. Na V0 isolada/local descrita em [vertical-slice.md](vertical-slice.md), isso pode ficar fora da fatia inicial; passa a ser obrigatorio quando a superficie MCP/HTTP deixar de ser apenas fixture-controlada.
+Quando a exposicao externa exigir controles operacionais reais. Na V0 e na V1 inicial, essa area pode existir apenas como casca de configuracao, com validacoes desabilitadas por `feature toggle`, mantendo o contrato documentado sem tornar a funcionalidade obrigatoria antes da hora.
 - `Quem consome isso?`
-`EntryPoints/`, operacao do servico e qualquer consumidor que precise entender erros de acesso ou limite.
+`Server/`, operacao do servico e qualquer consumidor que precise entender erros de acesso ou limite.
 - `Qual o risco de NAO ter isso?`
-Regras de seguranca ficam espalhadas, inconsistentes e dificeis de auditar; throttling tende a surgir como remendo.
+Quando esses controles forem ativados, o risco de nao ter essa fronteira e espalhar seguranca pelo transporte. Antes disso, o risco maior e implementar auth/throttling cedo demais e atrasar a validacao da semantica do dominio.
 - `Em que cenario isso seria desnecessario ou poderia ser removido?`
-Se o servico for 100% local, sem rede e sem usuarios externos.
+Se o servico permanecer sem exposicao externa ou se a politica de acesso continuar explicitamente desligada por configuracao.
 
-### `src/LotofacilMcp/appsettings*.json` (configuracao)
+### `src/LotofacilMcp.Server/appsettings*.json` (configuracao)
 
 - `Qual problema isso resolve?`
 Centraliza configuracoes operacionais: origem dos dados, timeouts, limites de throttling, modo de ambiente e chaves de feature.
 - `Em que momento do projeto isso se torna necessario?`
 Desde o inicio como ponto unico de configuracao, mas os blocos de API Key e throttling so se tornam obrigatorios quando a exposicao externa entrar no escopo da entrega.
 - `Quem consome isso?`
-`EntryPoints/`, `Access/`, `Providers/` e deploys locais ou remotos.
+`Server/`, `Infrastructure/` e deploys locais ou remotos.
 - `Qual o risco de NAO ter isso?`
 Configuracoes se multiplicam em lugares errados, dificultando reproducao, auditoria e mudanca de ambiente.
 - `Em que cenario isso seria desnecessario ou poderia ser removido?`
@@ -152,10 +191,10 @@ Notas importantes para .NET:
 1. Evite commitar segredos (API keys). Use variaveis de ambiente e, em desenvolvimento, user-secrets.
 2. Em .NET, a padronizacao costuma ser via Options Pattern (conceitualmente): valores tipados em vez de ler string solta em varios lugares.
 
-### `src/LotofacilMcp/Program.cs`
+### `src/LotofacilMcp.Server/Program.cs`
 
 - `Qual problema isso resolve?`
-Define o ciclo de vida do host HTTP: bootstrap de configuracao, injecao de dependencias e registro das fronteiras (EntryPoints/Access/Providers).
+Define o ciclo de vida do host HTTP: bootstrap de configuracao, injecao de dependencias e registro das fronteiras (`Server`/`Application`/`Infrastructure`).
 - `Em que momento do projeto isso se torna necessario?`
 Desde o inicio. O ganho aqui e manter esse arquivo pequeno e “sem semantica”.
 - `Quem consome isso?`
@@ -170,7 +209,7 @@ Se o projeto deixar de ser um servico HTTP.
 - `Qual problema isso resolve?`
 Protege a semantica das metricas, o contrato de acesso e os casos limite que IA tende a explicar bem, mas nem sempre valida bem.
 - `Em que momento do projeto isso se torna necessario?`
-Desde o inicio, mas com foco cirurgico: testes de metricas canonicas, ordenacao temporal, janelas e politicas de throttling.
+Desde o inicio, mas com foco cirurgico: testes de metricas canonicas, ordenacao temporal, janelas, determinismo, contrato e explainability minima.
 - `Quem consome isso?`
 Voce, CI futura e qualquer agente que precise validar regressao.
 - `Qual o risco de NAO ter isso?`
@@ -191,7 +230,7 @@ Cada leitura recomeca do zero; o projeto vira refem de contexto oral ou de infer
 - `Em que cenario isso seria desnecessario ou poderia ser removido?`
 Quase nunca. O mais comum nao e remover, e manter enxuto.
 
-### `LotofacilMcp.csproj` e `Directory.Build.props`
+### `LotofacilMcp.*.csproj` e `Directory.Build.props`
 
 - `Qual problema isso resolve?`
 Declara dependencias, alvo do framework, configuracoes de build e o modo padrao de compilar e executar o servico.
@@ -217,14 +256,14 @@ Baixo tecnicamente, mas aumenta friccao para evoluir para multiplos projetos e p
 - `Em que cenario isso seria desnecessario ou poderia ser removido?`
 Se o projeto for estritamente um unico projeto e voce optar por manter tudo sem solution (na pratica, raramente vale remover).
 
-### `src/LotofacilMcp/Observability/` (opcional, mas geralmente barato)
+### `src/LotofacilMcp.Infrastructure/Observability/` (opcional, mas geralmente barato)
 
 - `Qual problema isso resolve?`
-Evita telemetria espalhada e inconsistente. Centraliza padroes de logging, correlacao e convencoes de metrica sem poluir o Core.
+Evita telemetria espalhada e inconsistente. Centraliza padroes de logging, correlacao e convencoes de metrica sem poluir o dominio.
 - `Em que momento do projeto isso se torna necessario?`
 Assim que existir qualquer necessidade de diagnostico ou quando voce começar a limitar (throttling) e precisar explicar “por que bloqueou”.
 - `Quem consome isso?`
-Operacao e debugging; EntryPoints/Providers/Access se beneficiam sem duplicar criterio.
+Operacao e debugging; `Server/`, `Infrastructure/Providers/` e `Server/Access/` se beneficiam sem duplicar criterio.
 - `Qual o risco de NAO ter isso?`
 Cada area loga de um jeito; quando der problema, voce coleta muito ruido e pouca informacao acionavel.
 - `Em que cenario isso seria desnecessario ou poderia ser removido?`
@@ -276,29 +315,27 @@ O contrato vira "o que o codigo faz hoje", dificultando compatibilidade e valida
 - `Em que cenario isso seria desnecessario ou poderia ser removido?`
 Se o unico consumidor for voce, de forma manual, e o contrato ainda estiver mudando diariamente.
 
-### Multiplos projetos .NET (so quando doer)
+### Quatro projetos .NET desde o inicio (e nao mais do que isso)
 
 - `Qual problema isso resolve?`
-Permite evoluir de um monolito modular (pastas) para separacao por assemblies (projetos) quando houver acoplamento real, reuso do dominio ou necessidade de isolamento de dependencias.
+Estabelece fronteiras suficientes para proteger a semantica do dominio, a orquestracao dos casos de uso, a infraestrutura e o host HTTP sem cair em estrutura cenografica.
 - `Em que momento do projeto isso se torna necessario?`
-Quando pelo menos um destes eventos acontecer:
-  1. O `Core/` precisar ser consumido fora do host HTTP (ex.: job offline, CLI, pipeline).
-  2. `Providers/` ganhar 2+ implementacoes reais e dependencias que voce nao quer “vazar” para o dominio.
-  3. O contrato publico exigir versionamento e testes de compatibilidade mais rigidos.
+Ja no inicio desta implementacao, porque o projeto tem contrato MCP fechado, catalogo de metricas, estrategias de geracao, regras de determinismo e fronteira explicita entre cliente inteligente e servidor stateless.
 - `Quem consome isso?`
-Mantenedor (organiza dependencia), CI (build mais previsivel), e futuros consumidores do `Core` fora do host.
+Mantenedor, CI, testes de contrato e qualquer evolucao futura que reutilize o `Domain` ou o `Application`.
 - `Qual o risco de NAO ter isso?`
-No inicio, pouco. O risco real e adiar demais e acabar com dependencia de infraestrutura “infiltrada” no `Core`.
+Misturar host HTTP, transporte MCP, orquestracao de use case e semantica estatistica em um unico assembly, tornando mais facil a infiltracao de infraestrutura no nucleo.
 - `Qual o risco de criar cedo demais?`
-“Estrutura cenografica”: multiplos `.csproj` vazios, DI duplicada e navegacao ruim sem ganho de clareza.
+Ir alem desses quatro projetos e cair em “estrutura cenografica”: assemblies vazios, DI duplicada e navegacao pior sem ganho de clareza.
 - `Em que cenario isso seria desnecessario ou poderia ser removido?`
-Se o projeto permanecer pequeno e o monolito modular continuar simples de navegar.
+Se o projeto recuasse para uma biblioteca local de calculo sem servidor, sem contrato externo e sem cliente consumindo tools.
 
-Sugestao de extracao (nao crie antes da hora):
+Estrutura recomendada:
 
-1. `src/LotofacilMcp.Core/` (metricas, modelos e invariantes)
-2. `src/LotofacilMcp.Infrastructure/` (providers, IO, integracoes)
-3. `src/LotofacilMcp.Web/` (EntryPoints/Access/host HTTP)
+1. `src/LotofacilMcp.Domain/` (metricas, modelos, invariantes, estrategias, erros, normalizacao)
+2. `src/LotofacilMcp.Application/` (casos de uso, validacao cross-field, mapping interno)
+3. `src/LotofacilMcp.Infrastructure/` (providers, dataset versioning, canonical JSON, observabilidade)
+4. `src/LotofacilMcp.Server/` (host HTTP, tools, DI, feature toggles operacionais)
 
 ### `evals/`
 
@@ -530,14 +567,14 @@ Adicionar telemetria e tracing porque "todo sistema moderno precisa", sem saber 
 
 Se eu tivesse que otimizar para aprendizado e velocidade, eu começaria com estes ativos de verdade:
 
-1. `src/LotofacilMcp/EntryPoints/`
-2. `src/LotofacilMcp/Core/`
-3. `src/LotofacilMcp/Providers/`
-4. `src/LotofacilMcp/Access/`
-5. `src/LotofacilMcp/appsettings*.json`
-6. `src/LotofacilMcp/Program.cs` (minimo)
+1. `src/LotofacilMcp.Domain/`
+2. `src/LotofacilMcp.Application/`
+3. `src/LotofacilMcp.Infrastructure/`
+4. `src/LotofacilMcp.Server/`
+5. `src/LotofacilMcp.Server/appsettings*.json`
+6. `src/LotofacilMcp.Server/Program.cs` (minimo)
 7. `tests/`
-8. `LotofacilMcp.csproj` e `Directory.Build.props`
+8. `LotofacilMcp.*.csproj`, `LotofacilMcp.sln` e `Directory.Build.props`
 9. [brief.md](brief.md)
 10. [metric-catalog.md](metric-catalog.md)
 11. [mcp-tool-contract.md](mcp-tool-contract.md)
