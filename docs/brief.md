@@ -48,7 +48,7 @@ O sistema deve gerar:
 - resumos de padrões típicos, faixas prováveis no sentido descritivo e eventos raros;
 - jogos candidatos com justificativa de geração e de exclusão.
 
-Métricas "por concurso isolado" continuam não sendo um escopo independente de `MetricValue.scope`; quando necessário, elas aparecem como séries históricas derivadas de concursos dentro de uma janela. O contrato MCP continua usando `scope = window | series | candidate_game`.
+Métricas "por concurso isolado" continuam não sendo um escopo independente de `MetricValue.scope`; quando necessário, elas aparecem como séries históricas agregadas a partir dos concursos dentro de uma janela. O contrato MCP continua usando `scope = window | series | candidate_game`.
 
 Formato esperado:
 - JSON estruturado ou equivalente;

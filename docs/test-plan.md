@@ -49,7 +49,7 @@ Validam invariantes como determinismo, ordenação, monotonicidade, ranges, fini
 
 ## Cobertura por métrica
 
-### Base e derivadas por janela
+### Base, por_transformacao e apoio por janela
 
 | Métrica | Teste positivo obrigatório | Teste de borda / negativo |
 |---|---|---|

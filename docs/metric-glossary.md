@@ -2,7 +2,7 @@
 
 **Navegação:** [← Brief (índice)](brief.md) · [README](../README.md)
 
-Documento pedagógico complementar ao catálogo técnico em [metric-catalog.md](metric-catalog.md). Aqui cada métrica tem **definição**, **o que observa** (interpretação em linguagem simples) e **exemplo de uso**. Fórmulas detalhadas, tipagem e versões permanecem no catálogo.
+Documento pedagógico complementar ao catálogo técnico em [metric-catalog.md](metric-catalog.md). Aqui cada métrica tem **definição**, **o que observa** (interpretação em linguagem simples) e **exemplo de uso**. Fórmulas detalhadas, tipagem, versões e **léxico das colunas da Tabela 1** (Categoria, Status, Shape etc.) permanecem no catálogo.
 
 **Nota sobre predição:** todas descrevem padrões no histórico ou estrutura de um jogo; nenhuma implica acerto futuro.
 

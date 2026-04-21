@@ -6,42 +6,120 @@ Fonte de verdade semântica das métricas da V1 ampliada. Alinha-se a [mcp-tool-
 
 Para **interpretação em linguagem simples**, **o que cada métrica observa** e **exemplos de uso** por nome, ver [metric-glossary.md](metric-glossary.md) (complemento pedagógico; fórmulas e versões permanecem aqui).
 
+## Linguagem ubíqua (vocabulário da Tabela 1)
+
+Este catálogo é a **fonte de verdade** dos termos do subdomínio **Medição e indicadores** (alinhado a ideias de *ubiquitous language* em DDD): nomes estáveis, sem sinônimos soltos no código e no contrato MCP. A Tabela 1 combina **dois eixos independentes** — *o que a métrica representa no domínio* (**Categoria**) e *como a especificação está amarrada no catálogo* (**Status**). Os valores de enum **não** se repetem entre colunas: **Categoria** `por_transformacao` ≠ **Status** `satelite`.
+
+### Categoria — papel da métrica no modelo
+
+Classifica **para que serve** no fluxo analítico (leitura humana, documentação e navegação); **não** altera `Nome`, fórmula, `Shape` nem contrato MCP.
+
+| Valor | Definição |
+|-------|-----------|
+| **base** | **Medição primitiva** sobre o histórico (ou estrutura canônica única): entrada natural para composições — ex.: `frequencia_por_dezena`, `repeticao_concurso_anterior`, `matriz_numero_slot`. |
+| **por_transformacao** | **Indicador obtido por transformação determinística** de insumos já definidos neste catálogo (outra(s) métrica(s), ordenação ou seleção sobre vetores) — ex.: `top10_mais_sorteados` a partir de `frequencia_por_dezena`. |
+| **apoio** | **Vetor, série auxiliar ou agregado estruturado** que descreve o histórico para padrões, correlações ou composições; não é regra de estabilidade nem foco exclusivo no candidato — ex.: `pares_no_concurso`, `entropia_linha_por_concurso`, `estado_atual_dezena`. |
+| **geração** | Métrica cujo **objeto central** é o **jogo candidato** (ou o cruzamento explícito **candidato × janela** para pontuação/filtro) — ex.: `pares_impares`, `analise_slot`, `outlier_score`. |
+| **estabilidade** | **Resumo estatístico ou comparativo** sobre séries ou distribuições em janela(s): dispersão, tendência, divergência, extremos — ex.: `madn_janela`, `divergencia_kl`. |
+| **composição** | **Reservado**: valor do enum para métricas cuja **razão de existência** seja predominantemente ser **nó nomeado** em pipeline de composição declarativa ([ADR 0002](adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md)); na Tabela 1 atual **nenhuma linha** usa este rótulo — consumidores do contrato e a implementação não devem inferir comportamento até haver métrica listada. |
+
+### Status — maturidade da especificação
+
+| Valor | Definição |
+|-------|-----------|
+| **canonica** | Especificação **fechada** para a `Versão` indicada: Tabelas 1–2 + referências a ADRs são o critério de conformidade. |
+| **satelite** | Especificação **válida e versionada**, porém com **prioridade ou estabilidade editorial** de segunda linha: pode depender de parâmetro extra, agregação sobre listas por dezena ou políticas com maior chance de *minor* documental — implementar conforme Tabela 2 e notas. Uma métrica pode ser **Categoria** `apoio` e **Status** `satelite` (ex.: `frequencia_blocos`). |
+| **pendente de detalhamento** | **Sem fechamento** de fórmula ou contrato suficiente para conformidade total — ex.: `estabilidade_ranking`; uso apenas com flag explícita de *preview* se o contrato MCP permitir. |
+
+### Janela — texto da coluna
+
+| Valor / padrão | Definição |
+|----------------|-----------|
+| **configurável** | O recorte temporal (tamanho, limites de concurso) vem **do request**; não existe default invisível. |
+| **não se aplica** | O cálculo **não** parametrizado por janela (ex.: propriedades só do jogo candidato). |
+| **histórico acumulado ou janela declarada** | Política de atraso/contagem depende de regra explícita no request (acumulado global vs janela). |
+| **comparação entre 2 janelas** | Requer **duas** janelas definidas no pedido — ex.: `divergencia_kl`. |
+| *(texto livre)* | Qualquer outra frase na coluna é **normativa** para aquela métrica (regra especial). |
+
+### Scope — escopo do valor (alinhado ao contrato MCP)
+
+| Valor | Definição |
+|-------|-----------|
+| **window** | Um **único agregado** referente à janela (ou ao último estado nela contido, conforme métrica). |
+| **series** | **Série temporal** indexada por concurso (ou por passo dentro da janela), com regra de comprimento explícita na Tabela 2. |
+| **candidate_game** | Valor obtido sobre **um jogo candidato** (15 dezenas), possivelmente usando o histórico como referência declarada. |
+
+### Unidade
+
+| Valor | Definição |
+|-------|-----------|
+| **count** | Contagem inteira não negativa (ou política de saturação explícita na Tabela 2). |
+| **ratio** | Razão em \([0,1]\) ou escala declarada na métrica. |
+| **bits** | Informação em **base 2** (Shannon); pode acompanhar forma normalizada quando a métrica definir. |
+| **dimensionless** | Grandeza adimensional (índices, scores, Z-scores conforme definição). |
+| **herda do indicador** | A unidade é a **do indicador de entrada** da série ou composição (declarado no request). |
+
+### Shape — forma do `value` (tipagem lógica)
+
+| Valor | Definição |
+|-------|-----------|
+| **scalar** | Um número (ou par identificado na métrica). |
+| **series** | Sequência ao longo da janela (uma ordem canônica na Tabela 2). |
+| **vector_by_dezena** | Vetor indexado \(1..25\) por dezena. |
+| **count_vector[5]** | Vetor de 5 contagens (ex.: linhas ou colunas do volante). |
+| **series_of_count_vector[5]** | Série em que cada ponto é um `count_vector[5]`. |
+| **count_matrix[25x15]** | Matriz dezena × slot posicional (dezenas ordenadas no concurso). |
+| **count_pair** | Par ordenado de contagens com semântica fixa na Tabela 2 (ex.: pares e ímpares; runs). |
+| **dezena_list[10]** | Lista ordenada de dezenas com regra de empate na Tabela 2. |
+| **count_list_by_dezena** | Por dezena, lista de inteiros (ex.: comprimentos de blocos). |
+| **dimensionless_pair** | Par de valores adimensionais com papéis fixos (ex.: HHI linha e coluna). |
+
+### Versão
+
+SemVer **por métrica**: *major* se mudar fórmula ou semântica incompatível; *minor* se estender sem quebrar consumidores; *patch* se apenas clarificar documentação sem alterar resultado.
+
+---
+
 ## Convenções
 
-| Campo | Descrição |
-|-------|-----------|
-| **Nome** | Identificador estável (`snake_case`). |
-| **Categoria** | `base`, `derivada`, `apoio`, `geração`, `estabilidade` ou `composição`. |
-| **Janela** | `configurável`, `não se aplica` ou regra específica. |
-| **Scope** | `window`, `series` ou `candidate_game`. |
-| **Unidade** | `count`, `ratio`, `bits`, `dimensionless` ou `herda do indicador`. |
-| **Shape** | `scalar`, `series`, `vector_by_dezena`, `count_vector[5]`, `series_of_count_vector[5]`, `count_matrix[25x15]`, `count_pair`, `dezena_list[10]`, `count_list_by_dezena` ou `dimensionless_pair`. |
-| **Versão** | SemVer por métrica. |
-| **Status** | `canonica`, `derivada` ou `pendente de detalhamento`. |
+Os campos da Tabela 1 e seus valores controlados estão definidos na seção **Linguagem ubíqua (vocabulário da Tabela 1)** acima. Abaixo, **Objetivo principal** resume o papel de cada coluna no sistema (contrato MCP, validação e testes determinísticos).
+
+| Campo | Descrição | Objetivo principal |
+|-------|-----------|-------------------|
+| **Nome** | Identificador estável (`snake_case`). | Referência única em payloads, composições e prompts; evita drift por sinônimos. |
+| **Categoria** | `base`, `por_transformacao`, `apoio`, `geração`, `estabilidade` ou `composição`. | Organizar o domínio e orientar leitura; não altera semântica nem fórmula. |
+| **Janela** | `configurável`, `não se aplica` ou regra específica. | Deixar explícito se o cálculo depende de recorte temporal e qual tipo de janela. |
+| **Scope** | `window`, `series` ou `candidate_game`. | Separar agregado de janela, série temporal e avaliação sobre jogo candidato — evita misturar semânticas numa mesma métrica. |
+| **Unidade** | `count`, `ratio`, `bits`, `dimensionless` ou `herda do indicador`. | Impedir comparações e composições inválidas; documentar escala para explicação e agregação. |
+| **Shape** | `scalar`, `series`, `vector_by_dezena`, `count_vector[5]`, `series_of_count_vector[5]`, `count_matrix[25x15]`, `count_pair`, `dezena_list[10]`, `count_list_by_dezena` ou `dimensionless_pair`. | Tipar o `value`, exigir `aggregation` quando vetorial/matricial e alinhar ao contrato — sem descoberta tardia em runtime. |
+| **Versão** | SemVer por métrica. | Rastrear mudanças de fórmula ou semântica; permite fixtures e consumidores versionados. |
+| **Status** | `canonica`, `satelite` ou `pendente de detalhamento`. | Sinalizar o que é normativo na V1 versus especificação satélite ou ainda não fechada. |
 
 ## Regras de uso
 
-- Janela nunca é implícita.
-- Toda composição dinâmica deve declarar agregação, transformação e referência quando a métrica não for escalar.
-- Estabilidade descritiva usa `madn_janela` como default; `coeficiente_variacao` é opt-in e restrito a séries positivas.
-- Toda distribuição em `log` usa add-α smoothing com `α = 1 / |support|`.
-- Entropias são reportadas em bits e, quando aplicável, com `H_norm`.
-- "Persistência" significa regularidade observada na janela ou no histórico declarado; não implica previsão.
-- Séries derivadas de concursos continuam com `scope = "series"`; o catálogo não reintroduz `scope = "draw"`.
+| Regra | Objetivo principal |
+|-------|-------------------|
+| Janela nunca é implícita. | Reprodutibilidade e explicação auditável: todo resultado deve citar o mesmo recorte que o chamador pretendia. |
+| Toda composição dinâmica deve declarar agregação, transformação e referência quando a métrica não for escalar. | Evitar regras implícitas do modelo ou do código; o request documenta a semântica para IA e para o hash determinístico. |
+| Estabilidade descritiva usa `madn_janela` como default; `coeficiente_variacao` é opt-in e restrito a séries positivas. | Default robusto (evita explosão numérica perto de zero); CV só onde a razão σ/μ é válida (ver ADR 0001 D4). |
+| Toda distribuição em `log` usa add-α smoothing; `α` é o inverso da cardinalidade do suporte indicada na métrica. | Valores finitos comparáveis entre implementações; evita +∞ e NaN em janelas pequenas (ADR 0001 D5). |
+| Entropias são reportadas em bits e, quando aplicável, com `H_norm`. | Comparabilidade entre métricas e filtros; `H_norm ∈ [0,1]` facilita scores e limites declarados (ADR 0001 D6). |
+| "Persistência" significa regularidade observada na janela ou no histórico declarado; não implica previsão. | Alinha linguagem do projeto ao escopo não preditivo do [brief](brief.md). |
+| Séries temporais obtidas a partir dos concursos continuam com `scope = "series"`; o catálogo não reintroduz `scope = "draw"`. | Consistência com o contrato MCP até existir métrica canônica com escopo `draw` (ADR 0001 D13). |
 
 ## Tabela 1 — Identificação e tipagem
 
 | Nome | Categoria | Janela | Scope | Unidade | Shape | Versão | Status |
 |------|-----------|--------|-------|---------|-------|--------|--------|
 | `frequencia_por_dezena` | base | configurável | `window` | `count` | `vector_by_dezena` | 1.0.0 | canonica |
-| `top10_mais_sorteados` | derivada | configurável | `window` | `dimensionless` | `dezena_list[10]` | 1.0.0 | canonica |
-| `top10_menos_sorteados` | derivada | configurável | `window` | `dimensionless` | `dezena_list[10]` | 1.0.0 | canonica |
+| `top10_mais_sorteados` | por_transformacao | configurável | `window` | `dimensionless` | `dezena_list[10]` | 1.0.0 | canonica |
+| `top10_menos_sorteados` | por_transformacao | configurável | `window` | `dimensionless` | `dezena_list[10]` | 1.0.0 | canonica |
 | `repeticao_concurso_anterior` | base | configurável | `series` | `count` | `series` | 1.0.0 | canonica |
-| `intersecoes_multiplas` | apoio | configurável | `series` | `count` | `series` | 1.0.0 | derivada |
+| `intersecoes_multiplas` | apoio | configurável | `series` | `count` | `series` | 1.0.0 | satelite |
 | `atraso_por_dezena` | base | histórico acumulado ou janela declarada | `window` | `count` | `vector_by_dezena` | 1.0.0 | canonica |
-| `frequencia_blocos` | apoio | configurável | `window` | `count` | `count_list_by_dezena` | 1.0.0 | derivada |
-| `ausencia_blocos` | apoio | configurável | `window` | `count` | `count_list_by_dezena` | 1.0.0 | derivada |
-| `estado_atual_dezena` | apoio | configurável | `window` | `count` | `vector_by_dezena` | 1.0.0 | derivada |
+| `frequencia_blocos` | apoio | configurável | `window` | `count` | `count_list_by_dezena` | 1.0.0 | satelite |
+| `ausencia_blocos` | apoio | configurável | `window` | `count` | `count_list_by_dezena` | 1.0.0 | satelite |
+| `estado_atual_dezena` | apoio | configurável | `window` | `count` | `vector_by_dezena` | 1.0.0 | satelite |
 | `pares_impares` | geração | não se aplica | `candidate_game` | `count` | `count_pair` | 1.0.0 | canonica |
 | `pares_no_concurso` | apoio | configurável | `series` | `count` | `series` | 1.0.0 | canonica |
 | `quantidade_vizinhos` | geração | não se aplica | `candidate_game` | `count` | `scalar` | 1.0.0 | canonica |
@@ -73,7 +151,7 @@ Para **interpretação em linguagem simples**, **o que cada métrica observa** e
 | `divergencia_kl` | estabilidade | comparação entre 2 janelas | `window` | `bits` | `scalar` | 1.0.0 | canonica |
 | `zscore_repeticao` | estabilidade | configurável | `window` | `dimensionless` | `scalar` | 2.0.0 | canonica |
 | `persistencia_atraso_extremo` | estabilidade | configurável | `window` | `count` | `scalar` | 2.0.0 | canonica |
-| `assimetria_blocos` | estabilidade | configurável | `window` | `dimensionless` | `scalar` | 1.0.0 | derivada |
+| `assimetria_blocos` | estabilidade | configurável | `window` | `dimensionless` | `scalar` | 1.0.0 | satelite |
 | `estatistica_runs` | apoio | não se aplica | `candidate_game` | `count` | `count_pair` | 1.0.0 | canonica |
 | `outlier_score` | geração | configurável | `candidate_game` | `dimensionless` | `scalar` | 1.0.0 | canonica |
 
@@ -118,7 +196,7 @@ Para **interpretação em linguagem simples**, **o que cada métrica observa** e
 | `mad_janela` | Dispersão robusta absoluta. | `MAD = median(|x_i - median(x)|)`. | Série | MCP / estabilidade |
 | `tendencia_linear` | Inclinação linear canônica da série. | `x = 0..N-1`; `slope = Σ(x-x̄)(y-ȳ) / Σ(x-x̄)^2`. | Série | MCP / estabilidade |
 | `estabilidade_ranking` | Persistência de posição relativa entre sub-janelas. | Pendente de detalhamento. | Séries | MCP / estabilidade |
-| `divergencia_kl` | Mudança entre distribuições observadas em janelas distintas. | `D_KL(p||q)` com add-α smoothing. | Distribuições derivadas | MCP / estabilidade |
+| `divergencia_kl` | Mudança entre distribuições observadas em janelas distintas. | `D_KL(p||q)` com add-α smoothing. | Duas distribuições empíricas (janelas comparadas) | MCP / estabilidade |
 | `zscore_repeticao` | Distância padronizada da repetição observada. | `Z = (R - μ_ref) / σ_ref`, com `reference` e `baseline_version` explícitos. | Histórico | MCP / estabilidade |
 | `persistencia_atraso_extremo` | Quantas dezenas estão acima do atraso extremo de referência. | `Σ_d I(atraso[d] > P95_ref(reference, baseline_version))`, com `reference` e `baseline_version` explícitos. | Histórico | MCP / estabilidade |
 | `assimetria_blocos` | Desequilíbrio entre presença e ausência. | Por dezena: `(pres-aus)/(pres+aus)`; agregação padrão: mediana das dezenas. | Histórico | MCP / estabilidade / composição |
