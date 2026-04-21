@@ -65,9 +65,9 @@ Critério mínimo de aceite:
 
 - nenhum ponto estrutural crítico da V0 pode estar pendente ou contraditório.
 
-### Fase 1 — Preparar o repositório para execução
+### Fase 1 — Preparar o esqueleto mínimo do repositório
 
-Objetivo: criar o mínimo necessário para compilar, testar e organizar a V0.
+Objetivo: criar apenas o necessário para compilar, testar e organizar a V0 sem antecipar estrutura que ainda não gera valor.
 
 Passos atômicos:
 
@@ -77,12 +77,8 @@ Passos atômicos:
 - Criar `src/LotofacilMcp.Application/LotofacilMcp.Application.csproj`.
 - Criar `src/LotofacilMcp.Infrastructure/LotofacilMcp.Infrastructure.csproj`.
 - Criar `src/LotofacilMcp.Server/LotofacilMcp.Server.csproj`.
-- Criar `tests/LotofacilMcp.Domain.Tests/`.
-- Criar `tests/LotofacilMcp.Application.Tests/`.
-- Criar `tests/LotofacilMcp.ContractTests/`.
-- Criar `tests/LotofacilMcp.IntegrationTests/`.
-- Criar `tests/LotofacilMcp.E2E.Tests/`.
-- Criar `tests/fixtures/`.
+- Criar as suítes mínimas para a V0: `tests/LotofacilMcp.Domain.Tests/`, `tests/LotofacilMcp.ContractTests/` e `tests/fixtures/`.
+- Adiar `IntegrationTests` e `E2E` até existir superfície suficiente para validá-los de forma útil.
 
 Referências:
 
@@ -92,21 +88,23 @@ Referências:
 Critério mínimo de aceite:
 
 - a solution compila vazia;
-- as referências entre projetos refletem as fronteiras definidas.
+- as referências entre projetos refletem as fronteiras definidas;
+- não há projeto/pasta criado apenas por cenografia.
 
-### Fase 2 — Preparar a V0 por TDD
+### Fase 2 — Preparar fixture mínima e testes vermelhos da V0
 
-Objetivo: escrever primeiro os testes que materializam a fatia vertical mínima.
+Objetivo: escrever primeiro os testes que materializam a fatia vertical mínima por dentro e por fora.
 
 Passos atômicos:
 
 - Criar `tests/fixtures/synthetic_min_window.json` conforme [contract-test-plan.md](contract-test-plan.md).
+- Escrever teste da barreira de normalização com `Draw` de entrada potencialmente não normalizado.
+- Escrever teste de resolução de janela.
+- Escrever teste de fórmula de `frequencia_por_dezena@1.0.0`.
+- Escrever teste de propriedade da soma `15 × window_size`.
 - Escrever teste negativo de `compute_window_metrics` sem `metrics`.
 - Escrever teste negativo de métrica desconhecida com `UNKNOWN_METRIC`.
 - Escrever teste de ordenação de `get_draw_window`.
-- Escrever teste de fórmula de `frequencia_por_dezena@1.0.0`.
-- Escrever teste de propriedade da soma `15 × window_size`.
-- Escrever teste de determinismo para `deterministic_hash`.
 
 Referências:
 
@@ -115,23 +113,25 @@ Referências:
 - [test-plan.md](test-plan.md)
 - [mcp-tool-contract.md](mcp-tool-contract.md)
 - [metric-catalog.md](metric-catalog.md)
+- [ADR 0004](adrs/0004-estrutura-arquitetural-inicial-mcp-dotnet10.md)
 
 Critério mínimo de aceite:
 
-- os testes falham pelo motivo esperado antes da implementação.
+- os testes falham pelo motivo esperado antes da implementação;
+- já existe pelo menos um teste explícito para a barreira canônica de normalização.
 
-### Fase 3 — Materializar o núcleo canônico
+### Fase 3 — Materializar o núcleo canônico mínimo
 
-Objetivo: implementar apenas o necessário para o domínio suportar a V0.
+Objetivo: implementar apenas o necessário para o domínio suportar a V0 com semântica fechada.
 
 Passos atômicos:
 
 - Criar `Domain/Models/Draw`.
 - Criar `Domain/Models/Window`.
-- Criar `Domain/Errors/` com erros canônicos da V0.
 - Criar `Domain/Normalization/` com a barreira canônica de `Draw`.
 - Criar `Domain/Windows/` com a regra de resolução de janela.
 - Criar `Domain/Metrics/` com `frequencia_por_dezena@1.0.0`.
+- Criar apenas erros/invariantes semânticos que realmente pertençam ao domínio; não mover para `Domain` códigos de contrato que são responsabilidade de `Server`/`Application`.
 
 Referências:
 
@@ -142,9 +142,10 @@ Referências:
 
 Critério mínimo de aceite:
 
-- os testes de domínio da V0 passam sem depender de transporte HTTP.
+- os testes de normalização, janela e fórmula da V0 passam sem depender de transporte HTTP;
+- a métrica retorna `scope`, `shape`, `unit` e `version` coerentes com o catálogo.
 
-### Fase 4 — Materializar infraestrutura mínima
+### Fase 4 — Materializar infraestrutura determinística mínima
 
 Objetivo: ler fixture, versionar dataset e implementar determinismo técnico sem invadir a semântica do núcleo.
 
@@ -154,6 +155,8 @@ Passos atômicos:
 - Criar implementação de `dataset_version` em `Infrastructure/DatasetVersioning/`.
 - Criar implementação de JSON canônico em `Infrastructure/CanonicalJson/`.
 - Criar implementação de hashing SHA-256.
+- Escrever teste explícito de estabilidade de `dataset_version` para o mesmo snapshot.
+- Escrever teste explícito de estabilidade de `deterministic_hash` para o mesmo input canônico.
 
 Referências:
 
@@ -165,9 +168,10 @@ Referências:
 Critério mínimo de aceite:
 
 - o mesmo snapshot gera o mesmo `dataset_version`;
-- o mesmo input canônico gera o mesmo hash.
+- o mesmo input canônico gera o mesmo hash;
+- a política de determinismo já é verificável antes do host HTTP.
 
-### Fase 5 — Materializar casos de uso
+### Fase 5 — Materializar casos de uso da V0
 
 Objetivo: orquestrar a V0 sem mover regra estatística para fora do domínio.
 
@@ -186,11 +190,35 @@ Referências:
 
 Critério mínimo de aceite:
 
-- os casos de uso retornam payloads/objetos suficientes para o server serializar sem precisar “inventar semântica”.
+- os casos de uso resolvem a janela correta;
+- `ComputeWindowMetricsUseCase` consegue produzir `MetricValue` tipado sem depender de lógica no `Server`;
+- `dataset_version`, `tool_version` e insumos do `deterministic_hash` já ficam disponíveis para a camada de entrega.
 
-### Fase 6 — Materializar o servidor HTTP/MCP
+### Fase 6 — Preparar testes de contrato da V0
 
-Objetivo: expor a V0 sem colocar cálculo no host.
+Objetivo: explicitar o contrato mínimo que a primeira superfície pública deve cumprir.
+
+Passos atômicos:
+
+- Escrever teste de envelope mínimo de resposta com `dataset_version`, `tool_version` e `deterministic_hash`.
+- Escrever teste de `MetricValue` para `frequencia_por_dezena` com `metric_name`, `scope`, `shape`, `unit`, `version`, `window`, `value` e `explanation`.
+- Escrever teste do shape de erro para `UNKNOWN_METRIC`.
+- Escrever teste de contrato para `compute_window_metrics` sem `metrics` com `INVALID_REQUEST`.
+
+Referências:
+
+- [vertical-slice.md](vertical-slice.md)
+- [mcp-tool-contract.md](mcp-tool-contract.md)
+- [contract-test-plan.md](contract-test-plan.md)
+
+Critério mínimo de aceite:
+
+- a V0 já tem contrato mínimo descrito em testes objetivos;
+- nenhuma obrigação do envelope básico fica implícita.
+
+### Fase 7 — Materializar o servidor HTTP/MCP da V0
+
+Objetivo: expor a V0 sem colocar cálculo no host e sem deixar metadados contratuais para depois.
 
 Passos atômicos:
 
@@ -199,6 +227,7 @@ Passos atômicos:
 - Criar `Server/Tools/` ou endpoints equivalentes para `get_draw_window` e `compute_window_metrics`.
 - Implementar binding e validação estrutural no `Server`.
 - Implementar serialização de erros conforme o contrato.
+- Implementar o envelope mínimo de resposta com `dataset_version`, `tool_version` e `deterministic_hash`.
 - Adicionar toggles operacionais de acesso como desligados por padrão.
 
 Referências:
@@ -210,24 +239,26 @@ Referências:
 Critério mínimo de aceite:
 
 - a V0 responde pelos endpoints/tools previstos;
-- o server continua fino;
+- os testes de contrato do envelope mínimo passam;
+- `get_draw_window` retorna concursos em ordem crescente;
 - auth/throttle/quota ficam explicitamente desligados, não omitidos por acidente.
 
-### Fase 7 — Fechar a V0
+### Fase 8 — Fechar a V0 por evidência
 
-Objetivo: encerrar a primeira fatia vertical com evidência.
+Objetivo: encerrar a primeira fatia vertical com rastreabilidade objetiva.
 
 Passos atômicos:
 
-- Rodar testes de domínio.
-- Rodar testes de contrato.
-- Rodar testes de integração da V0.
-- Confirmar que os critérios obrigatórios de [vertical-slice.md](vertical-slice.md) estão cobertos.
-- Confirmar que a documentação continua coerente com o comportamento observado.
+- Rodar testes de domínio da V0.
+- Rodar testes de contrato da V0.
+- Rodar os testes mínimos de integração da V0.
+- Confirmar que os critérios obrigatórios de [vertical-slice.md](vertical-slice.md) estão cobertos por testes.
+- Confirmar que a documentação permanece alinhada ao comportamento observado.
 
 Critério mínimo de aceite:
 
-- a V0 está verde e rastreável por testes.
+- a V0 está verde e rastreável por testes;
+- a barreira de normalização, o envelope contratual mínimo e o determinismo já estão cobertos antes da próxima fatia.
 
 ## Como pedir implementação para IA
 
@@ -287,7 +318,7 @@ então ele ainda está grande demais.
 
 ## Regra de ouro para evolução após a V0
 
-Depois da V0, cada nova entrega deve seguir sempre esta ordem:
+Depois da V0, cada nova entrega deve seguir sempre esta ordem operacional:
 
 1. escolher a próxima fatia;
 2. localizar os specs normativos;
@@ -297,6 +328,28 @@ Depois da V0, cada nova entrega deve seguir sempre esta ordem:
 6. expor no server;
 7. validar contrato;
 8. atualizar docs se a semântica tiver mudado.
+
+Além dessa ordem operacional, a progressão de conteúdo deve ir do mais simples para o mais complexo:
+
+1. métricas base por janela e de fórmula fechada;
+2. métricas por transformação derivadas diretamente das bases;
+3. séries escalares simples por concurso;
+4. métricas de estabilidade sobre séries escalares;
+5. vetores e séries vetoriais com agregação explícita;
+6. composição declarativa, associações e padrões;
+7. métricas de `candidate_game` mais simples;
+8. métricas e estratégias mais sensíveis, como `slot`, `outlier` e perfis compostos.
+
+Ordem prática recomendada para evolução do catálogo:
+
+1. `frequencia_por_dezena`
+2. `top10_mais_sorteados` e `top10_menos_sorteados`
+3. `repeticao_concurso_anterior`, `pares_no_concurso`, `quantidade_vizinhos_por_concurso`
+4. `media_janela`, `desvio_padrao_janela`, `mad_janela`, `madn_janela`, `tendencia_linear`
+5. distribuições e séries vetoriais (`distribuicao_*`, `entropia_*`, `hhi_*`)
+6. `analyze_indicator_stability`, `compose_indicator_analysis`, `analyze_indicator_associations`, `summarize_window_patterns`
+7. métricas simples de `candidate_game`
+8. `matriz_numero_slot`, `analise_slot`, `surpresa_slot`, `outlier_score`, `generate_candidate_games` e perfis compostos
 
 ## Quando criar novos documentos
 
@@ -329,8 +382,10 @@ Criar novo documento apenas quando houver pergunta concreta que os atuais não r
 - [ ] Contrato inicial confirmado em [mcp-tool-contract.md](mcp-tool-contract.md)
 - [ ] Estrutura de projetos confirmada em [project-guide.md](project-guide.md)
 - [ ] Fixture mínima definida
+- [ ] Teste explícito da barreira de normalização escrito
 - [ ] Primeiro teste negativo escrito
 - [ ] Primeiro teste de fórmula escrito
+- [ ] Primeiro teste do envelope mínimo (`dataset_version`, `tool_version`, `deterministic_hash`) escrito
 - [ ] Primeiro teste de determinismo escrito
 
 ## Recomendação prática
@@ -338,14 +393,13 @@ Criar novo documento apenas quando houver pergunta concreta que os atuais não r
 Se houver dúvida sobre “qual passo pedir agora para a IA”, comece sempre por este recorte:
 
 1. fixture mínima;
-2. teste de contrato negativo;
-3. teste de fórmula da V0;
-4. tipos canônicos do domínio;
-5. provider de fixture;
-6. métrica `frequencia_por_dezena`;
-7. caso de uso;
+2. testes vermelhos de normalização, janela e fórmula;
+3. tipos canônicos do domínio;
+4. métrica `frequencia_por_dezena`;
+5. provider de fixture + `dataset_version` + `canonical_json` + hash determinístico;
+6. caso de uso;
+7. teste de contrato do envelope mínimo;
 8. tool/endpoint;
-9. hash determinístico;
-10. fechamento da V0.
+9. fechamento da V0.
 
 Essa ordem é a forma prática de usar spec-driven neste projeto: **spec → teste → implementação mínima → validação → próxima fatia**.
