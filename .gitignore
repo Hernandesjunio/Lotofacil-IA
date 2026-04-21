@@ -3,3 +3,31 @@
 # Chaves e ambientes locais (ex.: OPENAI_API_KEY para testes LiveOpenAI)
 .env
 .env.local
+
+# Build artifacts (.NET/C#)
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+
+# Test artifacts
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+coverage/
+coverage-report/
+
+# User-specific files (Visual Studio / Rider)
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.rsuser
+.idea/
+
+# NuGet / package caches
+packages/
+*.nupkg
+*.snupkg
