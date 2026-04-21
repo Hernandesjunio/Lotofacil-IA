@@ -51,6 +51,16 @@ sequenceDiagram
 4. **Ordenação**: `get_draw_window` devolve concursos em ordem crescente de `contest_id`.
 5. **Negativo**: métrica inexistente retorna erro `UNKNOWN_METRIC` com shape de erro do contrato.
 
+## Matriz de rastreabilidade (critério obrigatório -> teste)
+
+| Critério obrigatório (`vertical-slice`) | Teste(s) que evidenciam |
+|---|---|
+| (1) Contrato mínimo de `compute_window_metrics` para `frequencia_por_dezena` (envelope + `MetricValue`) | `tests/LotofacilMcp.ContractTests/V0Phase2ContractRedTests.cs` -> `ComputeWindowMetrics_ResponseContainsMinimalEnvelopeAndMetricValueContract` |
+| (2) Consistência: soma dos contadores = `15 x window_size` | `tests/LotofacilMcp.Domain.Tests/V0Phase2RedTests.cs` -> `FrequenciaPorDezena_HasConservationProperty_15TimesWindowSize` |
+| (3) Determinismo: mesmo input canônico + mesmo `dataset_version` produz mesmo `deterministic_hash` | `tests/LotofacilMcp.Infrastructure.Tests/Phase4DeterminismTests.cs` -> `SameCanonicalInput_GeneratesStableDeterministicHash`; `SameSnapshot_GeneratesStableDatasetVersion` |
+| (4) Ordenação: `get_draw_window` em ordem crescente de `contest_id` | `tests/LotofacilMcp.Domain.Tests/V0Phase2RedTests.cs` -> `WindowResolution_UsesWindowSizeAndEndContestId`; `tests/LotofacilMcp.Infrastructure.Tests/Phase5ApplicationUseCasesTests.cs` -> `GetDrawWindowUseCase_ResolvesExpectedWindow` |
+| (5) Negativo: métrica inexistente retorna `UNKNOWN_METRIC` com shape de erro de contrato | `tests/LotofacilMcp.ContractTests/V0Phase2ContractRedTests.cs` -> `ComputeWindowMetrics_WithUnknownMetric_ReturnsUnknownMetricErrorShape`; `tests/LotofacilMcp.Infrastructure.Tests/Phase5ApplicationUseCasesTests.cs` -> `ComputeWindowMetricsUseCase_WithUnknownMetric_ThrowsUnknownMetric` |
+
 ## Critérios de aceite (recomendados na mesma PR)
 
 - Teste automatizado de fórmula (valores esperados à mão) para a janela sintética mínima definida em [contract-test-plan.md](contract-test-plan.md).
