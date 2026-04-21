@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\LotofacilMcp.Application\LotofacilMcp.Application.csproj" />
     <ProjectReference Include="..\..\src\LotofacilMcp.Infrastructure\LotofacilMcp.Infrastructure.csproj" />
   </ItemGroup>
 
