@@ -1,29 +1,58 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using LotofacilMcp.Server.Tools;
 
 namespace LotofacilMcp.ContractTests;
 
-public class V0Phase2ContractRedTests
+public sealed class V0Phase6ContractTests
 {
     [Fact]
-    public void ComputeWindowMetrics_WithoutMetrics_ReturnsInvalidRequestContractError()
+    public void ComputeWindowMetrics_ResponseContainsMinimalEnvelopeAndMetricValueContract()
     {
         var sut = new V0Tools();
         var request = new ComputeWindowMetricsRequest(
             WindowSize: 3,
             EndContestId: 1003,
-            Metrics: null);
+            Metrics: [new MetricRequest("frequencia_por_dezena")]);
 
         var response = sut.ComputeWindowMetrics(request);
 
-        var error = Assert.IsType<ContractErrorEnvelope>(response).Error;
-        Assert.Equal("INVALID_REQUEST", error.Code);
-        Assert.Equal("metrics", error.Details["missing_field"]);
+        var payload = Assert.IsType<ComputeWindowMetricsResponse>(response);
+        Assert.False(string.IsNullOrWhiteSpace(payload.DatasetVersion));
+        Assert.False(string.IsNullOrWhiteSpace(payload.ToolVersion));
+        Assert.False(string.IsNullOrWhiteSpace(payload.DeterministicHash));
+
+        var metric = Assert.Single(payload.Metrics);
+        Assert.Equal("frequencia_por_dezena", metric.MetricName);
+        Assert.Equal("window", metric.Scope);
+        Assert.Equal("vector_by_dezena", metric.Shape);
+        Assert.Equal("count", metric.Unit);
+        Assert.Equal("1.0.0", metric.Version);
+        Assert.NotNull(metric.Window);
+        Assert.Equal(3, metric.Window.Size);
+        Assert.Equal(1001, metric.Window.StartContestId);
+        Assert.Equal(1003, metric.Window.EndContestId);
+        Assert.Equal(25, metric.Value.Count);
+        Assert.False(string.IsNullOrWhiteSpace(metric.Explanation));
+
+        using var json = JsonSerializer.SerializeToDocument(payload);
+        var root = json.RootElement;
+        Assert.True(root.TryGetProperty("dataset_version", out _));
+        Assert.True(root.TryGetProperty("tool_version", out _));
+        Assert.True(root.TryGetProperty("deterministic_hash", out _));
+
+        var firstMetricJson = root.GetProperty("metrics")[0];
+        Assert.True(firstMetricJson.TryGetProperty("metric_name", out _));
+        Assert.True(firstMetricJson.TryGetProperty("scope", out _));
+        Assert.True(firstMetricJson.TryGetProperty("shape", out _));
+        Assert.True(firstMetricJson.TryGetProperty("unit", out _));
+        Assert.True(firstMetricJson.TryGetProperty("version", out _));
+        Assert.True(firstMetricJson.TryGetProperty("window", out _));
+        Assert.True(firstMetricJson.TryGetProperty("value", out _));
+        Assert.True(firstMetricJson.TryGetProperty("explanation", out _));
     }
 
     [Fact]
-    public void ComputeWindowMetrics_WithUnknownMetric_ReturnsUnknownMetricError()
+    public void ComputeWindowMetrics_WithUnknownMetric_ReturnsUnknownMetricErrorShape()
     {
         var sut = new V0Tools();
         var request = new ComputeWindowMetricsRequest(
@@ -39,37 +68,18 @@ public class V0Phase2ContractRedTests
     }
 
     [Fact]
-    public void GetDrawWindow_ReturnsDrawsInAscendingContestOrder()
+    public void ComputeWindowMetrics_WithoutMetrics_ReturnsInvalidRequestErrorShape()
     {
-        var fixture = LoadSyntheticFixture();
-        var expectedIds = fixture.Select(d => d.ContestId).OrderBy(id => id).ToArray();
         var sut = new V0Tools();
-        var request = new GetDrawWindowRequest(WindowSize: 4, EndContestId: 1004);
+        var request = new ComputeWindowMetricsRequest(
+            WindowSize: 3,
+            EndContestId: 1003,
+            Metrics: null);
 
-        var response = sut.GetDrawWindow(request);
+        var response = sut.ComputeWindowMetrics(request);
 
-        var window = Assert.IsType<GetDrawWindowResponse>(response);
-        Assert.Equal(expectedIds, window.Draws.Select(d => d.ContestId).ToArray());
+        var error = Assert.IsType<ContractErrorEnvelope>(response).Error;
+        Assert.Equal("INVALID_REQUEST", error.Code);
+        Assert.Equal("metrics", error.Details["missing_field"]);
     }
-
-    private static IReadOnlyList<FixtureDraw> LoadSyntheticFixture()
-    {
-        var fixturePath = Path.GetFullPath(
-            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "fixtures", "synthetic_min_window.json"));
-        var json = File.ReadAllText(fixturePath);
-        var fixture = JsonSerializer.Deserialize<FixtureRoot>(json);
-
-        Assert.NotNull(fixture);
-        Assert.NotNull(fixture.Draws);
-
-        return fixture.Draws;
-    }
-
-    private sealed record FixtureRoot(
-        [property: JsonPropertyName("draws")] IReadOnlyList<FixtureDraw> Draws);
-
-    private sealed record FixtureDraw(
-        [property: JsonPropertyName("contest_id")] int ContestId,
-        [property: JsonPropertyName("draw_date")] string DrawDate,
-        [property: JsonPropertyName("numbers")] IReadOnlyList<int> Numbers);
 }
