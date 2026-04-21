@@ -17,7 +17,8 @@ public sealed record MetricRequest([property: JsonPropertyName("name")] string N
 public sealed record ComputeWindowMetricsRequest(
     [property: JsonPropertyName("window_size")] int WindowSize,
     [property: JsonPropertyName("end_contest_id")] int? EndContestId,
-    [property: JsonPropertyName("metrics")] IReadOnlyList<MetricRequest>? Metrics);
+    [property: JsonPropertyName("metrics")] IReadOnlyList<MetricRequest>? Metrics,
+    [property: JsonPropertyName("allow_pending")] bool AllowPending = false);
 
 public sealed record GetDrawWindowRequest(
     [property: JsonPropertyName("window_size")] int WindowSize,
@@ -108,6 +109,7 @@ public sealed class V0Tools
                 WindowSize: request.WindowSize,
                 EndContestId: request.EndContestId,
                 Metrics: request.Metrics?.Select(metric => new MetricRequestInput(metric.Name)).ToArray(),
+                AllowPending: request.AllowPending,
                 FixturePath: _fixturePath));
 
             var deterministicHash = _deterministicHashService.Compute(
