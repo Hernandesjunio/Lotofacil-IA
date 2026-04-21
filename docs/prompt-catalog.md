@@ -9,6 +9,11 @@ Este documento lista prompts de referência para testes funcionais, E2E e valida
 - Todo prompt deve declarar a janela quando o domínio exigir.
 - Prompts com composição dinâmica devem declarar a combinação desejada em linguagem natural suficiente para o agente mapear para o payload estruturado.
 - Respostas devem manter linguagem descritiva, não preditiva.
+- Se um enunciado for intencionalmente **ambíguo** (teste negativo de integração), o comportamento esperado é **esclarecimento** ou recusa conforme [mcp-tool-contract.md](mcp-tool-contract.md) — não chamar tool com parâmetros inventados.
+
+## Validação com o contrato MCP
+
+Para que os `docs/` “validem” em conjunto: cada família de prompt positivo deve ser mapeável às tools sem lacuna de parâmetro obrigatório; cenários em que o modelo não consiga inferir argumentos devem ser cobertos por **perguntas específicas** do agente (e, na implementação opcional, erros estruturados do servidor), conforme a seção *Integração com agentes* em [mcp-tool-contract.md](mcp-tool-contract.md).
 
 ## 1. Estabilidade de indicadores
 

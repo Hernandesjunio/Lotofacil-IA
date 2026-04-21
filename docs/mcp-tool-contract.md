@@ -27,6 +27,55 @@ O contrato está organizado em camadas. Para validar uma implementação ou um P
 
 **Validação prática:** para cada tool, verifique (a) rejeição de inputs inválidos com o código de erro certo, (b) presença dos campos obrigatórios no output conforme invariantes, (c) reprodutibilidade quando o contrato exige `seed` ou `deterministic_hash`.
 
+7. **Lacunas de parâmetro em linguagem natural** — quando um pedido do usuário não puder ser mapeado sem ambiguidade para o JSON da tool, o fluxo deve obter dados faltantes por **perguntas específicas** (seção *Integração com agentes: lacunas de parâmetros e esclarecimento*, abaixo), nunca por inferência oculta no servidor.
+
+## Integração com agentes: lacunas de parâmetros e esclarecimento
+
+### Problema
+
+Uma conversa em linguagem natural pode ser insuficiente para o modelo montar todos os argumentos exigidos pelo schema da tool (janela, `seed`, agregações vetoriais, pesos que somam 1, estratégia fechada, etc.). O contrato **proíbe** que o servidor preencha lacunas com defaults semânticos não documentados (ver `MetricRequest` e invariante de composição explícita). Isso cria um gap entre intenção do usuário e chamada MCP válida.
+
+### Obrigação do fluxo host/agente (validação dos `docs/`)
+
+Antes de invocar uma tool com argumentos incompletos ou genéricos demais, o agente (cliente) deve:
+
+1. **Identificar** quais campos obrigatórios ou enums fechados não foram fixados pelo texto do usuário.
+2. **Perguntar de forma específica**, listando o que falta e, quando aplicável, as opções válidas do próprio contrato (ex.: `window_size`, `end_contest_id`, `aggregation` para séries vetoriais, `seed` para busca amostrada, nomes de métricas do catálogo).
+3. **Só então** montar o JSON final e chamar a tool — uma requisição completa por chamada, mantendo o invariante **Stateless por request** (sem “memória” da conversa dentro do servidor).
+
+Perguntas vagas (“quer dizer qual janela?”) **não** cumprem este requisito; a pergunta deve ser auditável (alinhada aos campos do schema e às tabelas deste documento).
+
+### Papel do servidor MCP
+
+O servidor pode permanecer estritamente validador: entradas inválidas ou incompletas → `INVALID_REQUEST` (e demais códigos da tabela de erros). Opcionalmente, a implementação pode enriquecer a resposta de erro com uma lista estruturada de faltas (ex.: `missing: ["window_size", "seed"]`, `hints` com enums permitidos) para o cliente exibir perguntas guiadas **sem** alterar a semântica stateless: nenhuma execução parcial com defaults inventados.
+
+### Relação com prompts de teste
+
+Famílias em [prompt-catalog.md](prompt-catalog.md) devem ser **suficientemente declarativas** para permitir o mapeamento direto. Prompts ambíguos pertencem a testes **negativos**: o resultado esperado é esclarecimento (ou recusa), não execução com suposições.
+
+## Primitivas MCP opcionais: Prompts e Resources
+
+Esta seção **não** substitui as tools: o cálculo determinístico continua em chamadas com JSON explícito. Ela trata de recursos **adicionais** do [Model Context Protocol](https://modelcontextprotocol.io/) para reduzir falhas de mapeamento e fornecer contexto estável ao modelo.
+
+| Primitiva | O que é no MCP (resumo) | Uso neste projeto (quando faz sentido) |
+|-----------|-------------------------|----------------------------------------|
+| **Prompts** (`prompts/list`, `prompts/get`) | Templates com argumentos nomeados; mensagens estruturadas para o LLM ([especificação](https://modelcontextprotocol.io/specification/2025-06-18/server/prompts)). | Fluxos recorrentes (ex.: “estabilidade na janela N”, “composição com pesos declarados”) onde os **argumentos do template espelham campos do schema** da tool, reduzindo omissão de parâmetros sem violar a proibição de pesos implícitos. |
+| **Resources** (`resources/read`, templates) | Dados identificados por URI, fornecendo contexto à aplicação/modelo ([especificação](https://modelcontextprotocol.io/specification/2025-06-18/server/resources)). | Trechos versionados do glossário, definições de métricas ou metadados de `dataset_version` — conteúdo **read-only** e referenciável em análises sem duplicar lógica nas tools. |
+
+**Disambiguação:** “Prompt” no protocolo MCP ≠ “prompt do usuário” no chat cotidiano. O primeiro é recurso **servidor** com descoberta e parâmetros; o segundo é entrada livre, sujeita às regras de esclarecimento desta seção.
+
+### Fundamentação para uso (evidências)
+
+1. **Prompts MCP expõem argumentos declarados** — A especificação define `arguments` por prompt (nome, descrição, obrigatoriedade) e validação antes do processamento; isso alinha-se ao requisito de parâmetros explícitos do domínio Lotofácil sem conflitar com o invariante de stateless, desde que o resultado final das tools seja JSON completo por requisição. Ver [Prompts — Data Types / arguments](https://modelcontextprotocol.io/specification/2025-06-18/server/prompts).
+2. **Resources formalizam contexto anexável** — O protocolo descreve resources como meio padronizado de compartilhar “files, database schemas, or application-specific information” com o modelo; encaixa glossário/catálogo como dados de referência estáveis. Ver [Resources — introdução](https://modelcontextprotocol.io/specification/2025-06-18/server/resources).
+3. **Composição Prompt + Resource na spec** — Mensagens de prompt podem incluir **embedded resources** (documentação, exemplos) diretamente no fluxo, o que sustenta análises com insumos textuais canônicos sem inflar o system prompt do cliente. Ver [Prompts — Embedded resources](https://modelcontextprotocol.io/specification/2025-06-18/server/prompts).
+4. **Application-driven** — Resources são “application-driven”; o host decide inclusão no contexto. Isso é compatível com políticas de auditoria e limite de tokens no cliente.
+
+### Quando **não** introduzir Prompts/Resources na implementação
+
+- Se o cliente já injeta [metric-glossary.md](metric-glossary.md) / [metric-catalog.md](metric-catalog.md) por outros meios e os testes E2E cobrem o mapeamento NL→JSON, as primitivas extras são **opcionais** (otimização e padronização, não pré-requisito de correção).
+- Evitar duplicar documentação mutável em duas superfícies sem processo de sincronização: ou resources gerados a partir dos mesmos fontes do repositório, ou apenas referência por URI estável.
+
 ## Decisão de escopo para V1
 
 A V1 expandida deve operar sobre um histórico canônico da Lotofácil e expor poucas tools de alto valor, cada uma com semântica fechada e payload estável.
@@ -786,6 +835,7 @@ Cada item abaixo é um critério de aceite binário: sem ele, a implementação 
 8. `explain_candidate_games` retorna ranking de estratégias e detalhamento de exclusões.
 9. `divergencia_kl` nunca retorna `+∞` ou `NaN` para janelas `N >= 5`.
 10. Toda família de prompt documentada em [prompt-catalog.md](prompt-catalog.md) deve ter ao menos um teste positivo e um negativo em [test-plan.md](test-plan.md).
+11. Em pelo menos um fluxo de integração (E2E ou teste de agente), um pedido **não** mapeável sem lacunas deve resultar em esclarecimento com campos explícitos ou em `INVALID_REQUEST` **sem** execução com parâmetros supostos pelo modelo.
 
 ## Avaliação de viabilidade
 

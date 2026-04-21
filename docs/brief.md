@@ -72,6 +72,7 @@ Exemplos adicionais de prompts de teste ficam em [prompt-catalog.md](prompt-cata
 - Atualizações futuras via API a ser definida.
 - Processamento deve ser determinístico (mesmo input => mesmo output). Isso exige: (a) `seed` explícito em toda chamada com componente estocástico, (b) `dataset_version` rastreável por hash do snapshot, (c) `deterministic_hash` canônico por resposta.
 - Toda composição dinâmica deve declarar explicitamente componentes, transformações, agregações, pesos, janelas de referência e operadores; não pode haver regra implícita inferida por prompt.
+- Quando a intenção do usuário não permitir inferir com segurança os parâmetros das tools MCP, o fluxo (agente/host) deve fazer **perguntas específicas** alinhadas ao contrato até obter um JSON válido; o servidor não supre defaults não documentados. Detalhes e uso opcional de **Prompts/Resources** do protocolo MCP estão em [mcp-tool-contract.md](mcp-tool-contract.md).
 - A geração de jogos deve registrar critérios, pesos efetivos, filtros, janela, `seed`, `search_method`, `tie_break_rule` e versão da estratégia usada.
 - O sistema deve permitir evolução da persistência e do armazenamento sem alterar a semântica das métricas.
 
