@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LotofacilMcp.Domain.Tests",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LotofacilMcp.ContractTests", "tests\LotofacilMcp.ContractTests\LotofacilMcp.ContractTests.csproj", "{0DADD732-17FC-4F1F-B272-328661BD30AA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LotofacilMcp.Infrastructure.Tests", "tests\LotofacilMcp.Infrastructure.Tests\LotofacilMcp.Infrastructure.Tests.csproj", "{17EC57F5-17BC-465A-941A-D95C3CBB1CF9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -101,6 +103,18 @@ Global
 		{0DADD732-17FC-4F1F-B272-328661BD30AA}.Release|x64.Build.0 = Release|Any CPU
 		{0DADD732-17FC-4F1F-B272-328661BD30AA}.Release|x86.ActiveCfg = Release|Any CPU
 		{0DADD732-17FC-4F1F-B272-328661BD30AA}.Release|x86.Build.0 = Release|Any CPU
+		{17EC57F5-17BC-465A-941A-D95C3CBB1CF9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{17EC57F5-17BC-465A-941A-D95C3CBB1CF9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{17EC57F5-17BC-465A-941A-D95C3CBB1CF9}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{17EC57F5-17BC-465A-941A-D95C3CBB1CF9}.Debug|x64.Build.0 = Debug|Any CPU
+		{17EC57F5-17BC-465A-941A-D95C3CBB1CF9}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{17EC57F5-17BC-465A-941A-D95C3CBB1CF9}.Debug|x86.Build.0 = Debug|Any CPU
+		{17EC57F5-17BC-465A-941A-D95C3CBB1CF9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{17EC57F5-17BC-465A-941A-D95C3CBB1CF9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{17EC57F5-17BC-465A-941A-D95C3CBB1CF9}.Release|x64.ActiveCfg = Release|Any CPU
+		{17EC57F5-17BC-465A-941A-D95C3CBB1CF9}.Release|x64.Build.0 = Release|Any CPU
+		{17EC57F5-17BC-465A-941A-D95C3CBB1CF9}.Release|x86.ActiveCfg = Release|Any CPU
+		{17EC57F5-17BC-465A-941A-D95C3CBB1CF9}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -112,5 +126,6 @@ Global
 		{FCB295CA-145D-4498-B743-B9181A4DF84B} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{19862DCC-CA43-4BFD-8449-DCF3C21EE2D4} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{0DADD732-17FC-4F1F-B272-328661BD30AA} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{17EC57F5-17BC-465A-941A-D95C3CBB1CF9} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal
