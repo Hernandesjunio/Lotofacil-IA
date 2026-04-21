@@ -58,7 +58,7 @@ Para cada métrica do catálogo, um caso deve indicar:
 - **Contrato**: `shape`, `scope`, `unit` em [`metric-catalog.md`](metric-catalog.md) Tabela 1.
 - **Golden**: apontar para arquivo em `tests/fixtures/golden/<metric_name>/<case_id>.golden.json` após a primeira implementação.
 
-Métricas `pendente de detalhamento` (`estabilidade_ranking`): apenas teste negativo sem golden até fechamento semântico.
+`estabilidade_ranking@1.0.0` é canônica: exige teste de fórmula (positivo e negativo) e golden versionado após a primeira implementação, com as mesmas regras de revisão dos demais goldens do repositório.
 
 ## Ligação com prompts
 

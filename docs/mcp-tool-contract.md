@@ -392,7 +392,7 @@ Calcular métricas canônicas para uma janela.
 - `metrics` é obrigatório.
 - Cada item de `metrics` é um objeto; nomes soltos deixam de ser aceitos na V1 expandida.
 - Métrica desconhecida retorna `UNKNOWN_METRIC`.
-- Métricas `pendente de detalhamento` exigem `allow_pending: true`.
+- Métricas com **Status** `pendente de detalhamento` no [metric-catalog.md](metric-catalog.md) exigem `allow_pending: true`.
 - Parâmetros de métrica devem ser explícitos em `params`; o servidor não infere defaults semânticos escondidos.
 
 #### Observações

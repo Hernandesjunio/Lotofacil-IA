@@ -290,9 +290,9 @@ Documento pedagógico complementar ao catálogo técnico em [metric-catalog.md](
 
 ## `estabilidade_ranking`
 
-- **Definição:** *pendente de detalhamento no catálogo (versão 0.1.0).* Pretende capturar persistência de ranking entre sub-janelas.
-- **O que observa:** *a definir quando a métrica for fechada.*
-- **Exemplo de uso:** *uso apenas com `allow_pending: true` após leitura da especificação futura.*
+- **Definição:** score em \([0,1]\) que mede a **persistência de posição relativa** das 25 dezenas quando a janela é dividida em `k` sub-janelas contíguas e se compara a correlação de Spearman (via Pearson nos vetores de rank) entre rankings de frequência de blocos consecutivos — ver [metric-catalog.md](metric-catalog.md) (Nota normativa).
+- **O que observa:** se as dezenas que estavam mais altas no ranking de frequência num bloco tendem a permanecer altas no bloco seguinte (estabilidade de ordem global nas 25 dezenas), sem top-K fixo e sem leitura preditiva.
+- **Exemplo de uso:** “No recorte recente, o ranking de frequências ficou estável entre sub-janelas ou mudou de bloco para bloco?”
 
 ---
 

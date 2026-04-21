@@ -116,7 +116,7 @@ Requisitos e suíte mínima de **cinco** cenários (**L1–L5**): [live-openai-i
 | `tendencia_linear` | inclinação correta | série constante com slope zero |
 | `divergencia_kl` | valor finito com smoothing | sem infinito para `N >= 5` |
 | `zscore_repeticao` | z-score correto com referência declarada | erro se referência ausente |
-| `estabilidade_ranking` | teste bloqueado por status pendente | exige `allow_pending: true` |
+| `estabilidade_ranking` | score esperado \(1.0\) quando rankings idênticos entre blocos; golden conforme catálogo | ranking oposto entre blocos consecutivos (\(\rho=-1 \Rightarrow\) score \(0.0\)); fixture com empates para average rank |
 
 ## Cobertura por tool
 

@@ -113,7 +113,7 @@ Este ADR consolida as decisões tomadas. Em versões futuras, decisões estrutur
 - A matriz `Σ` carrega as correlações entre features — pesos implícitos, não arbitrários.
 - Testável com valores esperados para jogos sintéticos.
 
-**Status:** `canonica (v1.0)` a partir deste ADR. Permite promover `outlier_candidate` de `preview` para V1 após teste determinístico mínimo.
+**Status:** `canonica (v1.0)` a partir deste ADR. A promoção de `outlier_candidate` de `preview` para V1 exige **gate mínimo de testes determinísticos** (auditável e repetível): (1) **determinismo cross-run** — mesma entrada e mesmo `dataset_version`, **≥ 20** execuções, com estabilidade do output sob o contrato (incluindo `deterministic_hash` e ordenação relevante); (2) **fixture patológica** — ao menos um caso degenerado controlado que exercite bordas estatísticas da estratégia; (3) **borda de elegibilidade** — teste que valide exclusão ou inelegibilidade conforme filtros estruturais (ex.: entropia de linha abaixo do limiar). O checklist é **mínimo**, não exaustivo. Opcionalmente recomenda-se teste de empate/`tie_break` e teste com janela curta quando o domínio previr esses caminhos.
 
 **Arquivos alterados:** `metric-catalog.md`, `generation-strategies.md`.
 

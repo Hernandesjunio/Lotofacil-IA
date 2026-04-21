@@ -21,7 +21,10 @@ Classifica **para que serve** no fluxo analítico (leitura humana, documentaçã
 | **apoio** | **Vetor, série auxiliar ou agregado estruturado** que descreve o histórico para padrões, correlações ou composições; não é regra de estabilidade nem foco exclusivo no candidato — ex.: `pares_no_concurso`, `entropia_linha_por_concurso`, `estado_atual_dezena`. |
 | **geração** | Métrica cujo **objeto central** é o **jogo candidato** (ou o cruzamento explícito **candidato × janela** para pontuação/filtro) — ex.: `pares_impares`, `analise_slot`, `outlier_score`. |
 | **estabilidade** | **Resumo estatístico ou comparativo** sobre séries ou distribuições em janela(s): dispersão, tendência, divergência, extremos — ex.: `madn_janela`, `divergencia_kl`. |
-| **composição** | **Reservado**: valor do enum para métricas cuja **razão de existência** seja predominantemente ser **nó nomeado** em pipeline de composição declarativa ([ADR 0002](adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md)); na Tabela 1 atual **nenhuma linha** usa este rótulo — consumidores do contrato e a implementação não devem inferir comportamento até haver métrica listada. |
+
+**Regra normativa — categorias no catálogo:** o catálogo só lista valores de **Categoria** quando existe ao menos **uma** métrica canônica real atribuída a esse valor, com **fórmula fechada**, **unidade/escala definida**, **documentação** e **teste**. Categorias sem métrica canônica não constam no vocabulário. **Reintrodução** de novo valor de categoria exige decisão formal (ADR ou mecanismo equivalente).
+
+**Justificativa:** remove superfície especulativa, evita inferência por consumidores e elimina ambiguidade semântica no catálogo (sem prejuízo da tool MCP `compose_indicator_analysis`, que permanece contratada em [mcp-tool-contract.md](mcp-tool-contract.md)).
 
 ### Status — maturidade da especificação
 
@@ -29,7 +32,7 @@ Classifica **para que serve** no fluxo analítico (leitura humana, documentaçã
 |-------|-----------|
 | **canonica** | Especificação **fechada** para a `Versão` indicada: Tabelas 1–2 + referências a ADRs são o critério de conformidade. |
 | **satelite** | Especificação **válida e versionada**, porém com **prioridade ou estabilidade editorial** de segunda linha: pode depender de parâmetro extra, agregação sobre listas por dezena ou políticas com maior chance de *minor* documental — implementar conforme Tabela 2 e notas. Uma métrica pode ser **Categoria** `apoio` e **Status** `satelite` (ex.: `frequencia_blocos`). |
-| **pendente de detalhamento** | **Sem fechamento** de fórmula ou contrato suficiente para conformidade total — ex.: `estabilidade_ranking`; uso apenas com flag explícita de *preview* se o contrato MCP permitir. |
+| **pendente de detalhamento** | **Sem fechamento** de fórmula ou contrato suficiente para conformidade total; uso apenas com opt-in explícito no contrato MCP (`allow_pending: true`) quando aplicável. |
 
 ### Janela — texto da coluna
 
@@ -87,7 +90,7 @@ Os campos da Tabela 1 e seus valores controlados estão definidos na seção **L
 | Campo | Descrição | Objetivo principal |
 |-------|-----------|-------------------|
 | **Nome** | Identificador estável (`snake_case`). | Referência única em payloads, composições e prompts; evita drift por sinônimos. |
-| **Categoria** | `base`, `por_transformacao`, `apoio`, `geração`, `estabilidade` ou `composição`. | Organizar o domínio e orientar leitura; não altera semântica nem fórmula. |
+| **Categoria** | `base`, `por_transformacao`, `apoio`, `geração` ou `estabilidade`. | Organizar o domínio e orientar leitura; não altera semântica nem fórmula. |
 | **Janela** | `configurável`, `não se aplica` ou regra específica. | Deixar explícito se o cálculo depende de recorte temporal e qual tipo de janela. |
 | **Scope** | `window`, `series` ou `candidate_game`. | Separar agregado de janela, série temporal e avaliação sobre jogo candidato — evita misturar semânticas numa mesma métrica. |
 | **Unidade** | `count`, `ratio`, `bits`, `dimensionless` ou `herda do indicador`. | Impedir comparações e composições inválidas; documentar escala para explicação e agregação. |
@@ -147,7 +150,7 @@ Os campos da Tabela 1 e seus valores controlados estão definidos na seção **L
 | `madn_janela` | estabilidade | configurável | `window` | `dimensionless` | `scalar` | 1.0.0 | canonica |
 | `mad_janela` | estabilidade | configurável | `window` | `herda do indicador` | `scalar` | 1.0.0 | canonica |
 | `tendencia_linear` | estabilidade | configurável | `window` | `herda do indicador / concurso` | `scalar` | 1.0.0 | canonica |
-| `estabilidade_ranking` | estabilidade | configurável | `window` | `dimensionless` | `scalar` | 0.1.0 | pendente de detalhamento |
+| `estabilidade_ranking` | estabilidade | configurável | `window` | `dimensionless` | `scalar` | 1.0.0 | canonica |
 | `divergencia_kl` | estabilidade | comparação entre 2 janelas | `window` | `bits` | `scalar` | 1.0.0 | canonica |
 | `zscore_repeticao` | estabilidade | configurável | `window` | `dimensionless` | `scalar` | 2.0.0 | canonica |
 | `persistencia_atraso_extremo` | estabilidade | configurável | `window` | `count` | `scalar` | 2.0.0 | canonica |
@@ -195,13 +198,35 @@ Os campos da Tabela 1 e seus valores controlados estão definidos na seção **L
 | `madn_janela` | Dispersão robusta normalizada pela mediana. | `MADN = median(|x_i - median(x)|) / median(x)` com fallback robusto quando necessário. | Série | MCP / estabilidade |
 | `mad_janela` | Dispersão robusta absoluta. | `MAD = median(|x_i - median(x)|)`. | Série | MCP / estabilidade |
 | `tendencia_linear` | Inclinação linear canônica da série. | `x = 0..N-1`; `slope = Σ(x-x̄)(y-ȳ) / Σ(x-x̄)^2`. | Série | MCP / estabilidade |
-| `estabilidade_ranking` | Persistência de posição relativa entre sub-janelas. | Pendente de detalhamento. | Séries | MCP / estabilidade |
+| `estabilidade_ranking` | Persistência de **posição relativa** entre rankings de frequência em sub-janelas consecutivas (não mede estabilidade de Top-K nem churn em buckets). | Fórmula e particionamento normativos em **Nota normativa — `estabilidade_ranking`** (abaixo). **Pré-condição:** `window_size ≥ 2`; caso contrário → `INSUFFICIENT_HISTORY` (contrato MCP). **Justificativa:** correlação de Spearman entre rankings consecutivos mede diretamente persistência de posição relativa, alinhada ao nome `estabilidade_ranking`. | Histórico | MCP / estabilidade |
 | `divergencia_kl` | Mudança entre distribuições observadas em janelas distintas. | `D_KL(p||q)` com add-α smoothing. | Duas distribuições empíricas (janelas comparadas) | MCP / estabilidade |
 | `zscore_repeticao` | Distância padronizada da repetição observada. | `Z = (R - μ_ref) / σ_ref`, com `reference` e `baseline_version` explícitos. | Histórico | MCP / estabilidade |
 | `persistencia_atraso_extremo` | Quantas dezenas estão acima do atraso extremo de referência. | `Σ_d I(atraso[d] > P95_ref(reference, baseline_version))`, com `reference` e `baseline_version` explícitos. | Histórico | MCP / estabilidade |
 | `assimetria_blocos` | Desequilíbrio entre presença e ausência. | Por dezena: `(pres-aus)/(pres+aus)`; agregação padrão: mediana das dezenas. | Histórico | MCP / estabilidade / composição |
 | `estatistica_runs` | Resumo dos runs do jogo. | `runs = (sequencia_maxima_vizinhos, quantidade_vizinhos)`. | Jogo candidato | MCP / geração |
 | `outlier_score` | Distância do jogo ao centroide da janela. | Distância de Mahalanobis regularizada sobre 5 features canônicas. | Histórico + jogo | MCP / geração |
+
+### Nota normativa — `estabilidade_ranking`
+
+**Definição:** mede estabilidade da **posição relativa** entre as 25 dezenas quando a janela é particionada em `k` sub-janelas contíguas no tempo; em cada sub-janela calcula-se o ranking por frequência; entre pares consecutivos de sub-janelas calcula-se a correlação de Spearman dos rankings; o score final é a média das correlações normalizadas.
+
+**Parâmetros operacionais**
+
+- `k_default = 4`, `k_min = 2`.
+- Seja `N = window_size` (número de concursos na janela). **Requer** `N ≥ 2`. Se `N < 2`, a implementação deve falhar com `INSUFFICIENT_HISTORY`.
+- **Número de blocos:** `k = min(k_default, N)`. Se `N < k_default`, `k` reduz-se automaticamente (ex.: `N = 3` ⇒ `k = 3`); o mínimo aplicável com `N ≥ 2` é `k = 2` quando `N = 2`.
+- **Particionamento do tempo:** dividir os `N` concursos em blocos consecutivos `B1..Bk` com tamanhos `n_1..n_k` tais que `Σ n_i = N`, cada `n_i ≥ 1`, e os tamanhos sejam o mais uniformes possível: `n_i ∈ {⌊N/k⌋, ⌈N/k⌉}` e `max(n_i) - min(n_i) ≤ 1`.
+
+**Fórmula**
+
+1. Para cada bloco `Bi`, para cada dezena `d ∈ {1..25}`, `freq_i[d]` = contagem de ocorrências de `d` nos concursos de `Bi`.
+2. Para cada `Bi`, construir `rank_i[d]` ordenando `freq_i` por valor **descendente**; empates usam **average rank** sobre as posições 1..25.
+3. Para cada par consecutivo `(Bi, B{i+1})`, sejam `r1[d] = rank_i[d]` e `r2[d] = rank_{i+1}[d]`. Calcular `rho_i` como a **correlação de Pearson** entre os vetores `r1[1..25]` e `r2[1..25]`.
+4. **Borda — variância nula nos ranks:** seja `var` a variância amostral com divisor `24` (desvio padrão amostral em 25 pontos). Se `var(r1)=0` e `var(r2)=0`, então `rho_i = 1` se `r1[d]=r2[d]` para todo `d`, senão `rho_i = 0`. Se exatamente uma de `var(r1)`, `var(r2)` for zero, então `rho_i = 0`.
+5. `s_i = (rho_i + 1) / 2`.
+6. `estabilidade_ranking = (1/(k-1)) * Σ_{i=1..k-1} s_i` ∈ `[0,1]`.
+
+**Impacto de implementação:** particionamento determinístico da janela, ranking com average rank, Spearman implementado via Pearson nos ranks, regra de borda para `rho_i` quando variância amostral é zero, e testes golden para valores esperados.
 
 ## Features do `outlier_score`
 

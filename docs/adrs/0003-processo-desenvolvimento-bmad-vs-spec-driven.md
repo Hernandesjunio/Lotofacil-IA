@@ -40,7 +40,9 @@ O projeto possui especificação densa e versionada: [`metric-catalog.md`](../me
 
 - Issues e PRs devem referenciar métricas e tools pelos **nomes versionados** do catálogo e do contrato.
 - Se alguém usar BMAD para gerar PRD ou épicos, o output deve ser **reconciliado** com a [documentação versionada](../brief.md) antes de virar escopo implementável.
-- Revisão desta decisão: se o time crescer e faltar padronização de *gestão* de backlog além do Git, reavaliar integração mínima com um workflow externo — sem mudar a fonte de verdade semântica.
+- **Política normativa — backlog externo além do Git:** a adoção de ferramenta externa de backlog não ocorre por percepção subjetiva; ocorre quando houver evidência operacional observável de que o fluxo atual (issues e PRs no Git) deixou de ser suficiente.
+  - **Gatilhos objetivos:** `(devs_ativos ≥ 3 e PRs_por_semana ≥ 10)` **ou** lead time mediano acima de um **limite numericamente definido pelo projeto** (o valor do limiar não consta deste ADR até ser fixado em política operacional explícita).
+  - **Justificativa:** evita burocracia prematura e ancora a decisão em volume e fluxo mensuráveis, mantendo documentação versionada e testes como fonte de verdade semântica.
 
 ## Referências internas
 

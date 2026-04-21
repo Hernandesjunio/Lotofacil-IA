@@ -170,6 +170,8 @@ score = outlier_score(jogo, janela)
 
 **`interpretacao_incorreta`:** jogo com vantagem matemática.
 
+**Gate de promoção (normativo):** a estratégia `outlier_candidate@1.0.0` só deve ser tratada como pronta para integração com o mesmo nível de garantia da V1 quando o gate mínimo de testes determinísticos definido em [ADR 0001](adrs/0001-fechamento-semantico-e-determinismo-v1.md) (seção D9) estiver implementado e verde na suíte. O checklist lá é mínimo, não exaustivo.
+
 ---
 
 ### `declared_composite_profile`
