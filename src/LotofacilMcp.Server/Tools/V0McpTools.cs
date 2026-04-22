@@ -103,6 +103,25 @@ public sealed class V0McpTools
         return ToToolResult(payload, payload is ContractErrorEnvelope);
     }
 
+    [McpServerTool(Name = "summarize_window_patterns"), Description("Resume padroes de janela via IQR (recorte minimo com uma feature escalar).")]
+    public CallToolResult SummarizeWindowPatterns(
+        V0Tools tools,
+        [Description("Tamanho da janela.")] int window_size = 0,
+        [Description("Concurso final inclusivo.")] int? end_contest_id = null,
+        [Description("Features por concurso para resumir (recorte atual: pares_no_concurso).")] IReadOnlyList<WindowPatternFeatureRequest>? features = null,
+        [Description("Limiar de cobertura no intervalo [0,1].")] double coverage_threshold = 0.8,
+        [Description("Metodo de faixa tipica (recorte: iqr).")] string? range_method = null)
+    {
+        var payload = tools.SummarizeWindowPatterns(new SummarizeWindowPatternsRequest(
+            WindowSize: window_size,
+            EndContestId: end_contest_id,
+            Features: features,
+            CoverageThreshold: coverage_threshold,
+            RangeMethod: range_method ?? string.Empty));
+
+        return ToToolResult(payload, payload is ContractErrorEnvelope);
+    }
+
     private static CallToolResult ToToolResult(object payload, bool isError)
     {
         var jsonPayload = JsonSerializer.SerializeToElement(payload, JsonOptions);

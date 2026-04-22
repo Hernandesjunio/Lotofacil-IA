@@ -9,6 +9,7 @@ public static class V0ToolEndpoints
         MapToolRoute(endpoints, "/tools/analyze_indicator_stability", HandleAnalyzeIndicatorStabilityAsync);
         MapToolRoute(endpoints, "/tools/compose_indicator_analysis", HandleComposeIndicatorAnalysisAsync);
         MapToolRoute(endpoints, "/tools/analyze_indicator_associations", HandleAnalyzeIndicatorAssociationsAsync);
+        MapToolRoute(endpoints, "/tools/summarize_window_patterns", HandleSummarizeWindowPatternsAsync);
 
         // Alias REST (deprecado): manter compatibilidade sem sugerir que isso é MCP/HTTP.
         MapToolRoute(endpoints, "/mcp/tools/get_draw_window", HandleGetDrawWindowAsync);
@@ -16,6 +17,7 @@ public static class V0ToolEndpoints
         MapToolRoute(endpoints, "/mcp/tools/analyze_indicator_stability", HandleAnalyzeIndicatorStabilityAsync);
         MapToolRoute(endpoints, "/mcp/tools/compose_indicator_analysis", HandleComposeIndicatorAnalysisAsync);
         MapToolRoute(endpoints, "/mcp/tools/analyze_indicator_associations", HandleAnalyzeIndicatorAssociationsAsync);
+        MapToolRoute(endpoints, "/mcp/tools/summarize_window_patterns", HandleSummarizeWindowPatternsAsync);
 
         return endpoints;
     }
@@ -93,6 +95,20 @@ public static class V0ToolEndpoints
         }
 
         var response = tools.AnalyzeIndicatorAssociations(toolRequest!);
+        return response is ContractErrorEnvelope errorEnvelope
+            ? Results.BadRequest(errorEnvelope)
+            : Results.Ok(response);
+    }
+
+    private static async Task<IResult> HandleSummarizeWindowPatternsAsync(HttpRequest request, V0Tools tools)
+    {
+        var (toolRequest, bindingError) = await ToolRequestBinding.BindAsync<SummarizeWindowPatternsRequest>(request);
+        if (bindingError is not null)
+        {
+            return Results.BadRequest(bindingError);
+        }
+
+        var response = tools.SummarizeWindowPatterns(toolRequest!);
         return response is ContractErrorEnvelope errorEnvelope
             ? Results.BadRequest(errorEnvelope)
             : Results.Ok(response);

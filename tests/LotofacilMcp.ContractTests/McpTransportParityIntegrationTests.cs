@@ -251,6 +251,31 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         var httpAssociationPayload = await ReadHttpJsonAsync(httpAssociationResponse);
         Assert.True(JsonElement.DeepEquals(httpAssociationPayload, ReadMcpStructuredJson(stdioAssociationResponse)));
         Assert.True(JsonElement.DeepEquals(httpAssociationPayload, ReadMcpStructuredJson(httpMcpAssociationResponse)));
+
+        var summarizeRequest = new Dictionary<string, object?>
+        {
+            ["window_size"] = 5,
+            ["end_contest_id"] = 1005,
+            ["coverage_threshold"] = 0.8,
+            ["range_method"] = "iqr",
+            ["features"] = new object[]
+            {
+                new Dictionary<string, object?>
+                {
+                    ["metric_name"] = "pares_no_concurso"
+                }
+            }
+        };
+
+        var httpSummarizeResponse = await _httpClient.PostAsJsonAsync("/tools/summarize_window_patterns", summarizeRequest);
+        Assert.Equal(HttpStatusCode.OK, httpSummarizeResponse.StatusCode);
+
+        var stdioSummarizeResponse = await _stdioMcpClient.CallToolAsync("summarize_window_patterns", summarizeRequest);
+        var httpMcpSummarizeResponse = await _httpMcpClient.CallToolAsync("summarize_window_patterns", summarizeRequest);
+
+        var httpSummarizePayload = await ReadHttpJsonAsync(httpSummarizeResponse);
+        Assert.True(JsonElement.DeepEquals(httpSummarizePayload, ReadMcpStructuredJson(stdioSummarizeResponse)));
+        Assert.True(JsonElement.DeepEquals(httpSummarizePayload, ReadMcpStructuredJson(httpMcpSummarizeResponse)));
     }
 
     [Fact]
@@ -359,6 +384,34 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         var httpAssocPayload = await ReadHttpJsonAsync(httpAssocErr);
         Assert.True(JsonElement.DeepEquals(httpAssocPayload, ReadMcpStructuredJson(stdioAssocErr)));
         Assert.True(JsonElement.DeepEquals(httpAssocPayload, ReadMcpStructuredJson(httpMcpAssocErr)));
+
+        var invalidSummarizeRequest = new Dictionary<string, object?>
+        {
+            ["window_size"] = 5,
+            ["end_contest_id"] = 1005,
+            ["coverage_threshold"] = 0.8,
+            ["range_method"] = "mad",
+            ["features"] = new object[]
+            {
+                new Dictionary<string, object?>
+                {
+                    ["metric_name"] = "pares_no_concurso"
+                }
+            }
+        };
+
+        var httpSummarizeErr = await _httpClient.PostAsJsonAsync("/tools/summarize_window_patterns", invalidSummarizeRequest);
+        Assert.Equal(HttpStatusCode.BadRequest, httpSummarizeErr.StatusCode);
+
+        var stdioSummarizeErr = await _stdioMcpClient.CallToolAsync("summarize_window_patterns", invalidSummarizeRequest);
+        var httpMcpSummarizeErr = await _httpMcpClient.CallToolAsync("summarize_window_patterns", invalidSummarizeRequest);
+
+        Assert.True(stdioSummarizeErr.IsError);
+        Assert.True(httpMcpSummarizeErr.IsError);
+
+        var httpSummarizeErrPayload = await ReadHttpJsonAsync(httpSummarizeErr);
+        Assert.True(JsonElement.DeepEquals(httpSummarizeErrPayload, ReadMcpStructuredJson(stdioSummarizeErr)));
+        Assert.True(JsonElement.DeepEquals(httpSummarizeErrPayload, ReadMcpStructuredJson(httpMcpSummarizeErr)));
     }
 
     private static async Task AssertToolDiscoveryAsync(McpClient client)
@@ -369,6 +422,7 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         Assert.Contains(listedTools, tool => tool.Name is "analyze_indicator_stability");
         Assert.Contains(listedTools, tool => tool.Name is "compose_indicator_analysis");
         Assert.Contains(listedTools, tool => tool.Name is "analyze_indicator_associations");
+        Assert.Contains(listedTools, tool => tool.Name is "summarize_window_patterns");
     }
 
     private async Task<JsonElement> ReadHttpJsonAsync(HttpResponseMessage response)

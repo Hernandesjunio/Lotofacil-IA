@@ -39,6 +39,16 @@ public sealed class V0CrossFieldValidator
         "coefficient_of_variation"
     ];
 
+    private static readonly HashSet<string> SupportedWindowPatternFeatures =
+    [
+        "pares_no_concurso"
+    ];
+
+    private static readonly HashSet<string> SupportedRangeMethods =
+    [
+        "iqr"
+    ];
+
     public void ValidateGetDrawWindow(GetDrawWindowInput input)
     {
         if (input.WindowSize <= 0)
@@ -355,6 +365,101 @@ public sealed class V0CrossFieldValidator
                 {
                     ["field"] = "items[].name"
                 });
+            }
+        }
+    }
+
+    public void ValidateSummarizeWindowPatterns(SummarizeWindowPatternsInput input)
+    {
+        if (input.WindowSize <= 0)
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_WINDOW_SIZE",
+                message: "window_size must be greater than zero.",
+                details: new Dictionary<string, object?>
+                {
+                    ["window_size"] = input.WindowSize
+                });
+        }
+
+        if (input.Features is null || input.Features.Count == 0)
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_REQUEST",
+                message: "features is required and must be non-empty.",
+                details: new Dictionary<string, object?>
+                {
+                    ["field"] = "features"
+                });
+        }
+
+        if (input.CoverageThreshold is < 0d or > 1d)
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_REQUEST",
+                message: "coverage_threshold must be in the inclusive range [0,1].",
+                details: new Dictionary<string, object?>
+                {
+                    ["coverage_threshold"] = input.CoverageThreshold
+                });
+        }
+
+        if (string.IsNullOrWhiteSpace(input.RangeMethod))
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_REQUEST",
+                message: "range_method is required.",
+                details: new Dictionary<string, object?>
+                {
+                    ["field"] = "range_method"
+                });
+        }
+
+        if (!SupportedRangeMethods.Contains(input.RangeMethod))
+        {
+            throw new ApplicationValidationException(
+                code: "UNSUPPORTED_RANGE_METHOD",
+                message: "this recorte only supports range_method iqr.",
+                details: new Dictionary<string, object?>
+                {
+                    ["range_method"] = input.RangeMethod
+                });
+        }
+
+        foreach (var feature in input.Features)
+        {
+            if (feature is null || string.IsNullOrWhiteSpace(feature.MetricName))
+            {
+                throw new ApplicationValidationException(
+                    code: "INVALID_REQUEST",
+                    message: "each feature entry must have a non-empty metric_name.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["field"] = "features[].metric_name"
+                    });
+            }
+
+            if (!SupportedWindowPatternFeatures.Contains(feature.MetricName))
+            {
+                throw new ApplicationValidationException(
+                    code: "UNKNOWN_METRIC",
+                    message: "requested metric is not available in this summarize_window_patterns recorte.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["metric_name"] = feature.MetricName
+                    });
+            }
+
+            if (!string.IsNullOrWhiteSpace(feature.Aggregation) &&
+                !string.Equals(feature.Aggregation, "identity", StringComparison.Ordinal))
+            {
+                throw new ApplicationValidationException(
+                    code: "UNSUPPORTED_AGGREGATION",
+                    message: "this recorte only supports identity aggregation for scalar features.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["aggregation"] = feature.Aggregation
+                    });
             }
         }
     }

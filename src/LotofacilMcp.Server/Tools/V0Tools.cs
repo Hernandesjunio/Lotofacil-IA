@@ -158,6 +158,43 @@ public sealed record AnalyzeIndicatorAssociationsResponse(
     [property: JsonPropertyName("association_magnitude")] AssociationMagnitudeEnvelope AssociationMagnitude,
     [property: JsonPropertyName("association_stability")] object? AssociationStability);
 
+public sealed record WindowPatternFeatureRequest(
+    [property: JsonPropertyName("metric_name")] string MetricName,
+    [property: JsonPropertyName("aggregation")] string? Aggregation);
+
+public sealed record SummarizeWindowPatternsRequest(
+    [property: JsonPropertyName("window_size")] int WindowSize,
+    [property: JsonPropertyName("end_contest_id")] int? EndContestId,
+    [property: JsonPropertyName("features")] IReadOnlyList<WindowPatternFeatureRequest>? Features,
+    [property: JsonPropertyName("coverage_threshold")] double CoverageThreshold,
+    [property: JsonPropertyName("range_method")] string RangeMethod);
+
+public sealed record WindowPatternSummaryEnvelope(
+    [property: JsonPropertyName("metric_name")] string MetricName,
+    [property: JsonPropertyName("aggregation")] string Aggregation,
+    [property: JsonPropertyName("mode")] double Mode,
+    [property: JsonPropertyName("q1")] double Q1,
+    [property: JsonPropertyName("median")] double Median,
+    [property: JsonPropertyName("q3")] double Q3,
+    [property: JsonPropertyName("iqr")] double Iqr,
+    [property: JsonPropertyName("coverage_observed")] double CoverageObserved,
+    [property: JsonPropertyName("coverage_count")] int CoverageCount,
+    [property: JsonPropertyName("total_count")] int TotalCount,
+    [property: JsonPropertyName("outlier_count")] int OutlierCount,
+    [property: JsonPropertyName("outlier_lower_fence")] double OutlierLowerFence,
+    [property: JsonPropertyName("outlier_upper_fence")] double OutlierUpperFence,
+    [property: JsonPropertyName("coverage_threshold_met")] bool CoverageThresholdMet,
+    [property: JsonPropertyName("explanation")] string Explanation);
+
+public sealed record SummarizeWindowPatternsResponse(
+    [property: JsonPropertyName("dataset_version")] string DatasetVersion,
+    [property: JsonPropertyName("tool_version")] string ToolVersion,
+    [property: JsonPropertyName("deterministic_hash")] string DeterministicHash,
+    [property: JsonPropertyName("window")] WindowEnvelope Window,
+    [property: JsonPropertyName("range_method")] string RangeMethod,
+    [property: JsonPropertyName("coverage_threshold")] double CoverageThreshold,
+    [property: JsonPropertyName("summaries")] IReadOnlyList<WindowPatternSummaryEnvelope> Summaries);
+
 public sealed class V0Tools
 {
     private readonly ComputeWindowMetricsUseCase _computeWindowMetricsUseCase;
@@ -165,6 +202,7 @@ public sealed class V0Tools
     private readonly AnalyzeIndicatorStabilityUseCase _analyzeIndicatorStabilityUseCase;
     private readonly ComposeIndicatorAnalysisUseCase _composeIndicatorAnalysisUseCase;
     private readonly AnalyzeIndicatorAssociationsUseCase _analyzeIndicatorAssociationsUseCase;
+    private readonly SummarizeWindowPatternsUseCase _summarizeWindowPatternsUseCase;
     private readonly DeterministicHashService _deterministicHashService;
     private readonly string _fixturePath;
 
@@ -230,6 +268,14 @@ public sealed class V0Tools
             validator,
             mapper,
             new IndicatorAssociationAnalyzer());
+
+        _summarizeWindowPatternsUseCase = new SummarizeWindowPatternsUseCase(
+            fixtureProvider,
+            datasetVersionService,
+            new WindowResolver(),
+            windowMetricDispatcher,
+            validator,
+            mapper);
 
         _deterministicHashService = new DeterministicHashService(
             new CanonicalJsonSerializer(),
@@ -461,6 +507,60 @@ public sealed class V0Tools
                             entry.Explanation))
                         .ToArray()),
                 AssociationStability: result.AssociationStability);
+        }
+        catch (ApplicationValidationException ex)
+        {
+            return ToContractError(ex.Code, ex.Message, ex.Details);
+        }
+    }
+
+    public object SummarizeWindowPatterns(SummarizeWindowPatternsRequest request)
+    {
+        try
+        {
+            var result = _summarizeWindowPatternsUseCase.Execute(new SummarizeWindowPatternsInput(
+                WindowSize: request.WindowSize,
+                EndContestId: request.EndContestId,
+                Features: (request.Features ?? Array.Empty<WindowPatternFeatureRequest>())
+                    .Select(feature => new WindowPatternFeatureInput(feature.MetricName, feature.Aggregation))
+                    .ToArray(),
+                CoverageThreshold: request.CoverageThreshold,
+                RangeMethod: request.RangeMethod,
+                FixturePath: _fixturePath));
+
+            var deterministicHash = _deterministicHashService.Compute(
+                result.DeterministicHashInput,
+                result.DatasetVersion,
+                result.ToolVersion);
+
+            return new SummarizeWindowPatternsResponse(
+                DatasetVersion: result.DatasetVersion,
+                ToolVersion: result.ToolVersion,
+                DeterministicHash: deterministicHash,
+                Window: new WindowEnvelope(
+                    result.Window.Size,
+                    result.Window.StartContestId,
+                    result.Window.EndContestId),
+                RangeMethod: result.RangeMethod,
+                CoverageThreshold: result.CoverageThreshold,
+                Summaries: result.Summaries
+                    .Select(summary => new WindowPatternSummaryEnvelope(
+                        summary.MetricName,
+                        summary.Aggregation,
+                        summary.Mode,
+                        summary.Q1,
+                        summary.Median,
+                        summary.Q3,
+                        summary.Iqr,
+                        summary.CoverageObserved,
+                        summary.CoverageCount,
+                        summary.TotalCount,
+                        summary.OutlierCount,
+                        summary.OutlierLowerFence,
+                        summary.OutlierUpperFence,
+                        summary.CoverageThresholdMet,
+                        summary.Explanation))
+                    .ToArray());
         }
         catch (ApplicationValidationException ex)
         {
