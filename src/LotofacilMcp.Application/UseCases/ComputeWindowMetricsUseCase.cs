@@ -35,7 +35,7 @@ public sealed class ComputeWindowMetricsUseCase
     private readonly SyntheticFixtureProvider _fixtureProvider;
     private readonly DatasetVersionService _datasetVersionService;
     private readonly WindowResolver _windowResolver;
-    private readonly FrequencyByDezenaMetric _frequencyByDezenaMetric;
+    private readonly WindowMetricDispatcher _windowMetricDispatcher;
     private readonly V0CrossFieldValidator _validator;
     private readonly V0RequestMapper _mapper;
 
@@ -43,14 +43,14 @@ public sealed class ComputeWindowMetricsUseCase
         SyntheticFixtureProvider fixtureProvider,
         DatasetVersionService datasetVersionService,
         WindowResolver windowResolver,
-        FrequencyByDezenaMetric frequencyByDezenaMetric,
+        WindowMetricDispatcher windowMetricDispatcher,
         V0CrossFieldValidator validator,
         V0RequestMapper mapper)
     {
         _fixtureProvider = fixtureProvider;
         _datasetVersionService = datasetVersionService;
         _windowResolver = windowResolver;
-        _frequencyByDezenaMetric = frequencyByDezenaMetric;
+        _windowMetricDispatcher = windowMetricDispatcher;
         _validator = validator;
         _mapper = mapper;
     }
@@ -93,9 +93,9 @@ public sealed class ComputeWindowMetricsUseCase
     {
         var results = new List<FrequencyMetricValueView>(metricRequests.Count);
 
-        foreach (var _ in metricRequests)
+        foreach (var metricRequest in metricRequests)
         {
-            var value = _frequencyByDezenaMetric.Compute(window);
+            var value = _windowMetricDispatcher.Dispatch(metricRequest.Name, window);
             results.Add(new FrequencyMetricValueView(
                 MetricName: value.MetricName,
                 Scope: value.Scope,
@@ -112,6 +112,18 @@ public sealed class ComputeWindowMetricsUseCase
 
     private static ApplicationValidationException MapDomainError(DomainInvariantViolationException ex)
     {
+        if (ex.Message.StartsWith("UNKNOWN_METRIC:", StringComparison.Ordinal))
+        {
+            var metricName = ex.Message["UNKNOWN_METRIC:".Length..].Trim();
+            return new ApplicationValidationException(
+                code: "UNKNOWN_METRIC",
+                message: "requested metric is not available in V0.",
+                details: new Dictionary<string, object?>
+                {
+                    ["metric_name"] = metricName
+                });
+        }
+
         if (ex.Message.Contains("requested end_contest_id", StringComparison.Ordinal))
         {
             return new ApplicationValidationException(

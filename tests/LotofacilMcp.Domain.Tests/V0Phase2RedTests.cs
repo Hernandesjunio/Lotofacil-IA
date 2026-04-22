@@ -88,6 +88,33 @@ public class V0Phase2RedTests
         Assert.Equal(15 * window.Size, metric.Value.Sum());
     }
 
+    [Fact]
+    public void WindowMetricDispatcher_DispatchesByCanonicalMetricName()
+    {
+        var window = BuildWindow(endContestIdInclusive: 3);
+        var sut = new WindowMetricDispatcher(new FrequencyByDezenaMetric());
+
+        var metric = sut.Dispatch("frequencia_por_dezena", window);
+
+        Assert.Equal("frequencia_por_dezena", metric.MetricName);
+        Assert.Equal(25, metric.Value.Count);
+    }
+
+    [Fact]
+    public void WindowMetricDispatcher_WithUnknownMetric_ThrowsDomainInvariantViolation()
+    {
+        var window = BuildWindow(endContestIdInclusive: 3);
+        var sut = new WindowMetricDispatcher(new FrequencyByDezenaMetric());
+
+        var error = Assert.Throws<DomainInvariantViolationException>(() =>
+        {
+            _ = sut.Dispatch("metrica_inexistente", window);
+        });
+
+        Assert.Contains("UNKNOWN_METRIC", error.Message, StringComparison.Ordinal);
+        Assert.Contains("metrica_inexistente", error.Message, StringComparison.Ordinal);
+    }
+
     private static IReadOnlyList<FixtureDraw> LoadSyntheticFixture()
     {
         var fixturePath = Path.GetFullPath(
@@ -107,6 +134,20 @@ public class V0Phase2RedTests
             fixtureDraw.ContestId,
             DateOnly.Parse(fixtureDraw.DrawDate),
             fixtureDraw.Numbers);
+    }
+
+    private static DrawWindow BuildWindow(int endContestIdInclusive)
+    {
+        var draws = LoadSyntheticFixture()
+            .Where(d => d.ContestId <= endContestIdInclusive)
+            .Select(ToDomainDraw)
+            .ToList();
+
+        return new DrawWindow(
+            Size: draws.Count,
+            StartContestId: draws.First().ContestId,
+            EndContestId: draws.Last().ContestId,
+            Draws: draws);
     }
 
     private sealed record FixtureRoot(

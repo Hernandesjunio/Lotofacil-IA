@@ -114,7 +114,7 @@ public sealed class V0Tools
             fixtureProvider,
             datasetVersionService,
             new WindowResolver(),
-            new FrequencyByDezenaMetric(),
+            new WindowMetricDispatcher(new FrequencyByDezenaMetric()),
             validator,
             mapper);
 

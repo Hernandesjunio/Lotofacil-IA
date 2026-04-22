@@ -82,4 +82,27 @@ public sealed class V0Phase6ContractTests
         Assert.Equal("INVALID_REQUEST", error.Code);
         Assert.Equal("metrics", error.Details["missing_field"]);
     }
+
+    [Fact]
+    public void ComputeWindowMetrics_PreservesRequestCardinalityForDuplicateMetrics()
+    {
+        var sut = new V0Tools();
+        var request = new ComputeWindowMetricsRequest(
+            WindowSize: 3,
+            EndContestId: 1003,
+            Metrics:
+            [
+                new MetricRequest("frequencia_por_dezena"),
+                new MetricRequest("frequencia_por_dezena"),
+                new MetricRequest("frequencia_por_dezena")
+            ]);
+
+        var response = sut.ComputeWindowMetrics(request);
+
+        var payload = Assert.IsType<ComputeWindowMetricsResponse>(response);
+        Assert.Equal(3, payload.Metrics.Count);
+        Assert.Equal(
+            request.Metrics!.Select(metric => metric.Name).ToArray(),
+            payload.Metrics.Select(metric => metric.MetricName).ToArray());
+    }
 }

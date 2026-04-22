@@ -187,7 +187,7 @@ public sealed class Phase5ApplicationUseCasesTests
             new SyntheticFixtureProvider(),
             new DatasetVersionService(),
             new WindowResolver(),
-            new FrequencyByDezenaMetric(),
+            new WindowMetricDispatcher(new FrequencyByDezenaMetric()),
             new V0CrossFieldValidator(),
             new V0RequestMapper(new DrawNormalizer()));
     }

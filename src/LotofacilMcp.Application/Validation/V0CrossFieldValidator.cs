@@ -4,7 +4,6 @@ namespace LotofacilMcp.Application.Validation;
 
 public sealed class V0CrossFieldValidator
 {
-    private const string SupportedMetricName = "frequencia_por_dezena";
     private static readonly HashSet<string> SupportedNormalizationMethods =
     [
         "madn",
@@ -59,17 +58,6 @@ public sealed class V0CrossFieldValidator
                     details: new Dictionary<string, object?>
                     {
                         ["field"] = "metrics[].name"
-                    });
-            }
-
-            if (!string.Equals(metric.Name, SupportedMetricName, StringComparison.Ordinal))
-            {
-                throw new ApplicationValidationException(
-                    code: "UNKNOWN_METRIC",
-                    message: "requested metric is not available in V0.",
-                    details: new Dictionary<string, object?>
-                    {
-                        ["metric_name"] = metric.Name
                     });
             }
         }
