@@ -414,6 +414,147 @@ Critério mínimo de aceite:
 - um cliente MCP conecta via HTTP (`/sse` e/ou `/mcp`) e executa `tools/list` + `tools/call`;
 - paridade MCP HTTP ↔ REST `/tools/*` é comprovada por teste;
 - `/mcp/tools/*` (quando existir) permanece tratado como REST deprecado.
+ 
+### Fase 14: Fechar `compute_window_metrics` como “catálogo executável” (dispatcher)
+
+Objetivo: tornar `compute_window_metrics` um executor real do catálogo (despachando por `metrics[].name`), com erros e paridade pedido↔resposta conforme contrato.
+
+Contexto: a tool pode existir e responder, mas sem um dispatcher real ela não cumpre o “catálogo fechado” (e bloqueia composição/padrões/associações ao forçar métricas erradas).
+
+Passos atômicos recomendados:
+
+- Implementar dispatcher real por `metrics[].name` (paridade pedido↔resposta).
+- Implementar erro `UNKNOWN_METRIC` para nomes fora do catálogo.
+
+Critério mínimo de aceite:
+
+- `compute_window_metrics`:
+  - despacha por nome canônico do catálogo;
+  - retorna `UNKNOWN_METRIC` para nomes fora do catálogo;
+  - preserva o envelope (`dataset_version`, `tool_version`, `deterministic_hash`) e a tipagem (`scope`, `shape`, `unit`, `version`);
+  - não colapsa pedidos duplicados (paridade 1:1).
+
+### Fase 15: Métricas derivadas diretas de `frequencia_por_dezena`
+
+Objetivo: materializar as primeiras métricas `por_transformacao` do catálogo, mantendo determinismo e tie-break canônico.
+
+- Implementar:
+  - `top10_mais_sorteados@1.0.0`
+  - `top10_menos_sorteados@1.0.0`
+
+Critério mínimo de aceite:
+
+- as duas métricas retornam listas determinísticas com regra de empate por dezena asc;
+- `scope`, `shape`, `unit` e `version` batem com o catálogo.
+
+### Fase 16: Séries escalares por concurso (destravando associações e padrões)
+
+Objetivo: materializar séries canônicas por concurso (escalares) que servem como base para associações e resumo de padrões.
+
+- Implementar:
+  - `pares_no_concurso@1.0.0`
+  - `repeticao_concurso_anterior@1.0.0` (comprimento conforme regra normativa no catálogo/ADR referenciado)
+  - `quantidade_vizinhos_por_concurso@1.0.0`
+  - `sequencia_maxima_vizinhos_por_concurso@1.0.0`
+
+Critério mínimo de aceite:
+
+- cada série tem comprimento coerente com a janela resolvida e contrato;
+- o cálculo é determinístico na fixture mínima.
+
+### Fase 17: Séries estruturais (vetoriais por concurso) para agregações e resumos
+
+Objetivo: materializar shapes estruturados necessários para agregações explícitas e para features vetoriais em tools de associações/padrões.
+
+- Implementar:
+  - `distribuicao_linha_por_concurso@1.0.0` (`shape=series_of_count_vector[5]`)
+  - `distribuicao_coluna_por_concurso@1.0.0` (`shape=series_of_count_vector[5]`)
+  - `entropia_linha_por_concurso@1.0.0`
+  - `entropia_coluna_por_concurso@1.0.0`
+  - `hhi_linha_por_concurso@1.0.0`
+  - `hhi_coluna_por_concurso@1.0.0`
+
+Critério mínimo de aceite:
+
+- shapes seguem o catálogo (incluindo `series_of_count_vector[5]`);
+- entropias são em bits e valores permanecem finitos;
+- cada ponto da distribuição por linha/coluna soma 15.
+
+### Fase 18: Implementar `compose_indicator_analysis` (recorte mínimo)
+
+Objetivo: materializar a primeira tool de composição declarativa, começando pelo menor recorte útil e totalmente validável.
+
+- Implementar `compose_indicator_analysis` começando pelo recorte mínimo `target=dezena`, `operator=weighted_rank`.
+- Validar pesos \(1.0 ± 1e-9\) e transforms do enum; falhas com códigos do contrato.
+
+Critério mínimo de aceite:
+
+- testes negativos: pesos não somam 1; transform inválida;
+- 1 teste positivo determinístico;
+- exposição em HTTP + MCP no mesmo recorte.
+
+### Fase 19: Implementar `analyze_indicator_associations` e `summarize_window_patterns` (uma por vez)
+
+Objetivo: materializar as duas tools analíticas restantes antes da geração, com validação de enums/agregações e outputs explícitos.
+
+- `analyze_indicator_associations`:
+  - começar com séries escalares e `method=spearman`;
+  - vetoriais exigem `aggregation` explícita antes de correlacionar.
+- `summarize_window_patterns`:
+  - começar com `range_method=iqr` e 1 feature suportada;
+  - output declara `Q1`, `median`, `Q3`, `IQR`, cobertura e contagens.
+
+Critério mínimo de aceite:
+
+- cada tool nova tem:
+  - pelo menos 1 teste negativo de contrato (código correto);
+  - pelo menos 1 teste positivo determinístico com fixture;
+  - paridade semântica entre MCP e HTTP para o mesmo request.
+
+### Fase 20: Implementar `generate_candidate_games` e `explain_candidate_games` (uma por vez)
+
+Objetivo: fechar o ciclo de geração/explicação com rastreabilidade e determinismo, seguindo o catálogo fechado de estratégias e exclusões.
+
+- `generate_candidate_games`:
+  - começar com 1 estratégia nominal simples, orçamento e determinismo;
+  - seed obrigatória quando houver `sampled`/`greedy_topk`;
+  - output sempre traz linhagem (`strategy_name`, `strategy_version`, `search_method`, `tie_break_rule`, `seed_used` quando aplicável).
+- `explain_candidate_games`:
+  - ranking determinístico de estratégias e breakdown de métricas/exclusões com versões.
+
+Critério mínimo de aceite:
+
+- cada tool nova tem:
+  - pelo menos 1 teste negativo de contrato (código correto);
+  - pelo menos 1 teste positivo determinístico com fixture;
+  - exposição em HTTP + MCP no mesmo recorte (salvo exceção documentada).
+
+Nota operacional: template para pedidos atômicos
+
+- O template abaixo pode (e deve) ser usado para gerar “pedidos atômicos” para implementação, mantendo o fluxo spec-driven:
+
+```md
+Implemente apenas <passo único>.
+
+Referências obrigatórias:
+- <spec 1>
+- <spec 2>
+
+Arquivos esperados:
+- <arquivo A>
+- <arquivo B>
+
+Regras:
+- não extrapolar além do recorte citado;
+- manter TDD;
+- respeitar fronteiras do ADR 0004 e superfície MCP do ADR 0005;
+- seguir nomes canônicos do catálogo/contrato.
+
+Critério de pronto:
+- <teste X passa>
+- <erro Y é emitido>
+- <payload Z contém campos obrigatórios>
+```
 
 ## Como pedir implementação para IA
 
