@@ -4,6 +4,11 @@ namespace LotofacilMcp.Application.Validation;
 
 public sealed class V0CrossFieldValidator
 {
+    private static readonly HashSet<string> SupportedComputeWindowMetrics =
+    [
+        "frequencia_por_dezena"
+    ];
+
     private static readonly HashSet<string> SupportedNormalizationMethods =
     [
         "madn",
@@ -58,6 +63,17 @@ public sealed class V0CrossFieldValidator
                     details: new Dictionary<string, object?>
                     {
                         ["field"] = "metrics[].name"
+                    });
+            }
+
+            if (!SupportedComputeWindowMetrics.Contains(metric.Name))
+            {
+                throw new ApplicationValidationException(
+                    code: "UNKNOWN_METRIC",
+                    message: "requested metric is not available in V0.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["metric_name"] = metric.Name
                     });
             }
         }
