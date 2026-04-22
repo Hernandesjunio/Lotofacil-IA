@@ -122,7 +122,8 @@ public sealed class V0Tools
                 new ParesNoConcursoMetric(),
                 new RepeticaoConcursoAnteriorMetric(),
                 new QuantidadeVizinhosPorConcursoMetric(),
-                new SequenciaMaximaVizinhosPorConcursoMetric()),
+                new SequenciaMaximaVizinhosPorConcursoMetric(),
+                new DistribuicaoLinhaPorConcursoMetric()),
             validator,
             mapper);
 

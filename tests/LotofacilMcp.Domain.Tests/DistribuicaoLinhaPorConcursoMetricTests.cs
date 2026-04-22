@@ -6,63 +6,54 @@ using LotofacilMcp.Domain.Windows;
 
 namespace LotofacilMcp.Domain.Tests;
 
-/// <summary>
-/// Série escalar <c>sequencia_maxima_vizinhos_por_concurso@1.0.0</c> (catálogo, test-plan séries por concurso).
-/// </summary>
-public sealed class SequenciaMaximaVizinhosPorConcursoMetricTests
+public sealed class DistribuicaoLinhaPorConcursoMetricTests
 {
-    [Fact]
-    public void VizinhosConsecutivos_ListaSemParesDiferençaUm_RunMáximaUnidade()
-    {
-        // test-plan (borda): run unitária — maior bloco = 1 dezena (nenhum par (d, d+1) na sequência)
-        Assert.Equal(1, VizinhosConsecutivos.MaxConsecutiveAdjacencyRunLength(new[] { 1, 3, 5, 7, 9 }));
-    }
-
     [Fact]
     public void Serie_OnMinimalFixture_FirstThreeContests_Deterministic()
     {
         var window = BuildWindowFromSyntheticFixture(endContestIdInclusive: 3);
-        var sut = new SequenciaMaximaVizinhosPorConcursoMetric();
+        var sut = new DistribuicaoLinhaPorConcursoMetric();
 
         var metric = sut.Compute(window);
 
-        Assert.Equal("sequencia_maxima_vizinhos_por_concurso", metric.MetricName);
+        Assert.Equal("distribuicao_linha_por_concurso", metric.MetricName);
         Assert.Equal("series", metric.Scope);
-        Assert.Equal("series", metric.Shape);
+        Assert.Equal("series_of_count_vector[5]", metric.Shape);
         Assert.Equal("count", metric.Unit);
         Assert.Equal("1.0.0", metric.Version);
         Assert.Equal(3, window.Size);
-        Assert.Equal([3, 4, 7], metric.Value.ToArray());
+        Assert.Equal(15, metric.Value.Count);
+        // Por concurso: [3,3,3,3,3], [3,3,4,3,2], [2,5,3,3,2] — ver synthetic_min_window (contest_id 1..3)
+        Assert.Equal(
+            [3, 3, 3, 3, 3, 3, 3, 4, 3, 2, 2, 5, 3, 3, 2],
+            metric.Value.ToArray());
+        for (var c = 0; c < window.Size; c++)
+        {
+            var sum = 0;
+            for (var r = 0; r < 5; r++)
+            {
+                sum += metric.Value[c * 5 + r];
+            }
+
+            Assert.Equal(15, sum);
+        }
     }
 
     [Fact]
-    public void Draw_ContiguousBlock1To15_MaxRun15()
+    public void Draw_OneToFifteen_ContiguousFirstThreeRows_15()
     {
+        // 1..5 row0 (5), 6..10 row1 (5), 11..15 row2 (5)
         var draw = new Draw(1, new DateOnly(2026, 1, 1), Enumerable.Range(1, 15).ToArray());
         var window = new DrawWindow(1, 1, 1, [draw]);
-        var sut = new SequenciaMaximaVizinhosPorConcursoMetric();
+        var sut = new DistribuicaoLinhaPorConcursoMetric();
 
         var metric = sut.Compute(window);
 
-        Assert.Equal(15, metric.Value[0]);
+        Assert.Equal([5, 5, 5, 0, 0], metric.Value.ToArray());
     }
 
     [Fact]
-    public void Draw_OnlyIsolatedNeighborPairs_MaxRun2()
-    {
-        // Borda: maior run mínima não trivial (apenas pares isolados, sem trechos de 3+ consecutivos)
-        var numbers = new[] { 1, 2, 4, 5, 7, 8, 10, 11, 13, 14, 16, 17, 19, 20, 22 };
-        var draw = new Draw(1, new DateOnly(2026, 1, 1), numbers);
-        var window = new DrawWindow(1, 1, 1, [draw]);
-        var sut = new SequenciaMaximaVizinhosPorConcursoMetric();
-
-        var metric = sut.Compute(window);
-
-        Assert.Equal(2, metric.Value[0]);
-    }
-
-    [Fact]
-    public void WindowMetricDispatcher_DispatchesSequenciaMaximaVizinhosPorConcurso()
+    public void WindowMetricDispatcher_DispatchesDistribuicaoLinhaPorConcurso()
     {
         var window = BuildWindowFromSyntheticFixture(endContestIdInclusive: 3);
         var frequency = new FrequencyByDezenaMetric();
@@ -76,10 +67,13 @@ public sealed class SequenciaMaximaVizinhosPorConcursoMetricTests
             new SequenciaMaximaVizinhosPorConcursoMetric(),
             new DistribuicaoLinhaPorConcursoMetric());
 
-        var metric = sut.Dispatch("sequencia_maxima_vizinhos_por_concurso", window);
+        var metric = sut.Dispatch("distribuicao_linha_por_concurso", window);
 
-        Assert.Equal("sequencia_maxima_vizinhos_por_concurso", metric.MetricName);
-        Assert.Equal([3, 4, 7], metric.Value.ToArray());
+        Assert.Equal("distribuicao_linha_por_concurso", metric.MetricName);
+        Assert.Equal("series_of_count_vector[5]", metric.Shape);
+        Assert.Equal(
+            [3, 3, 3, 3, 3, 3, 3, 4, 3, 2, 2, 5, 3, 3, 2],
+            metric.Value.ToArray());
     }
 
     private static DrawWindow BuildWindowFromSyntheticFixture(int endContestIdInclusive)

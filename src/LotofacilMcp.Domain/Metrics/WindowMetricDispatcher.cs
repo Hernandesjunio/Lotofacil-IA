@@ -14,7 +14,8 @@ public sealed class WindowMetricDispatcher
         ParesNoConcursoMetric paresNoConcursoMetric,
         RepeticaoConcursoAnteriorMetric repeticaoConcursoAnteriorMetric,
         QuantidadeVizinhosPorConcursoMetric quantidadeVizinhosPorConcursoMetric,
-        SequenciaMaximaVizinhosPorConcursoMetric sequenciaMaximaVizinhosPorConcursoMetric)
+        SequenciaMaximaVizinhosPorConcursoMetric sequenciaMaximaVizinhosPorConcursoMetric,
+        DistribuicaoLinhaPorConcursoMetric distribuicaoLinhaPorConcursoMetric)
     {
         ArgumentNullException.ThrowIfNull(frequencyByDezenaMetric);
         ArgumentNullException.ThrowIfNull(top10MaisSorteadosMetric);
@@ -23,6 +24,7 @@ public sealed class WindowMetricDispatcher
         ArgumentNullException.ThrowIfNull(repeticaoConcursoAnteriorMetric);
         ArgumentNullException.ThrowIfNull(quantidadeVizinhosPorConcursoMetric);
         ArgumentNullException.ThrowIfNull(sequenciaMaximaVizinhosPorConcursoMetric);
+        ArgumentNullException.ThrowIfNull(distribuicaoLinhaPorConcursoMetric);
 
         _dispatchByMetricName = new Dictionary<string, Func<DrawWindow, WindowMetricValue>>(StringComparer.Ordinal)
         {
@@ -32,7 +34,8 @@ public sealed class WindowMetricDispatcher
             ["pares_no_concurso"] = paresNoConcursoMetric.Compute,
             ["repeticao_concurso_anterior"] = repeticaoConcursoAnteriorMetric.Compute,
             ["quantidade_vizinhos_por_concurso"] = quantidadeVizinhosPorConcursoMetric.Compute,
-            ["sequencia_maxima_vizinhos_por_concurso"] = sequenciaMaximaVizinhosPorConcursoMetric.Compute
+            ["sequencia_maxima_vizinhos_por_concurso"] = sequenciaMaximaVizinhosPorConcursoMetric.Compute,
+            ["distribuicao_linha_por_concurso"] = distribuicaoLinhaPorConcursoMetric.Compute
         };
     }
 

@@ -187,6 +187,31 @@ public sealed class Phase5ApplicationUseCasesTests
     }
 
     [Fact]
+    public void ComputeWindowMetricsUseCase_ReturnsDistribuicaoLinhaPorConcursoPerCatalog()
+    {
+        var sut = BuildComputeWindowMetricsUseCase();
+        var input = new ComputeWindowMetricsInput(
+            WindowSize: 3,
+            EndContestId: 3,
+            Metrics: [new MetricRequestInput("distribuicao_linha_por_concurso")],
+            FixturePath: GetFixturePath());
+
+        var result = sut.Execute(input);
+
+        var metric = Assert.Single(result.Metrics);
+        Assert.Equal("distribuicao_linha_por_concurso", metric.MetricName);
+        Assert.Equal("series", metric.Scope);
+        Assert.Equal("series_of_count_vector[5]", metric.Shape);
+        Assert.Equal("count", metric.Unit);
+        Assert.Equal("1.0.0", metric.Version);
+        Assert.Equal(3, result.Window.Size);
+        Assert.Equal(15, metric.Value.Count);
+        Assert.Equal(
+            [3, 3, 3, 3, 3, 3, 3, 4, 3, 2, 2, 5, 3, 3, 2],
+            metric.Value.ToArray());
+    }
+
+    [Fact]
     public void ComputeWindowMetricsUseCase_ReturnsTop10MenosSorteadosPerCatalog()
     {
         var sut = BuildComputeWindowMetricsUseCase();
@@ -313,7 +338,8 @@ public sealed class Phase5ApplicationUseCasesTests
             new ParesNoConcursoMetric(),
             new RepeticaoConcursoAnteriorMetric(),
             new QuantidadeVizinhosPorConcursoMetric(),
-            new SequenciaMaximaVizinhosPorConcursoMetric());
+            new SequenciaMaximaVizinhosPorConcursoMetric(),
+            new DistribuicaoLinhaPorConcursoMetric());
     }
 
     private static AnalyzeIndicatorStabilityUseCase BuildAnalyzeIndicatorStabilityUseCase()
