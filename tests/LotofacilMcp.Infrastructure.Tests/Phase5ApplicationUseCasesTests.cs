@@ -97,6 +97,27 @@ public sealed class Phase5ApplicationUseCasesTests
     }
 
     [Fact]
+    public void ComputeWindowMetricsUseCase_ReturnsTop10MaisSorteadosPerCatalog()
+    {
+        var sut = BuildComputeWindowMetricsUseCase();
+        var input = new ComputeWindowMetricsInput(
+            WindowSize: 3,
+            EndContestId: 3,
+            Metrics: [new MetricRequestInput("top10_mais_sorteados")],
+            FixturePath: GetFixturePath());
+
+        var result = sut.Execute(input);
+
+        var metric = Assert.Single(result.Metrics);
+        Assert.Equal("top10_mais_sorteados", metric.MetricName);
+        Assert.Equal("window", metric.Scope);
+        Assert.Equal("dezena_list[10]", metric.Shape);
+        Assert.Equal("dimensionless", metric.Unit);
+        Assert.Equal("1.0.0", metric.Version);
+        Assert.Equal([6, 9, 11, 16, 20, 23, 24, 1, 4, 5], metric.Value.ToArray());
+    }
+
+    [Fact]
     public void AnalyzeIndicatorStabilityUseCase_ReturnsRankingWithDefaultMadn()
     {
         var sut = BuildAnalyzeIndicatorStabilityUseCase();
@@ -187,9 +208,15 @@ public sealed class Phase5ApplicationUseCasesTests
             new SyntheticFixtureProvider(),
             new DatasetVersionService(),
             new WindowResolver(),
-            new WindowMetricDispatcher(new FrequencyByDezenaMetric()),
+            BuildWindowMetricDispatcher(),
             new V0CrossFieldValidator(),
             new V0RequestMapper(new DrawNormalizer()));
+    }
+
+    private static WindowMetricDispatcher BuildWindowMetricDispatcher()
+    {
+        var frequency = new FrequencyByDezenaMetric();
+        return new WindowMetricDispatcher(frequency, new Top10MaisSorteadosMetric(frequency));
     }
 
     private static AnalyzeIndicatorStabilityUseCase BuildAnalyzeIndicatorStabilityUseCase()

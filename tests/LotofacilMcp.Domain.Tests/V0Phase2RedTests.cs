@@ -92,7 +92,7 @@ public class V0Phase2RedTests
     public void WindowMetricDispatcher_DispatchesByCanonicalMetricName()
     {
         var window = BuildWindow(endContestIdInclusive: 3);
-        var sut = new WindowMetricDispatcher(new FrequencyByDezenaMetric());
+        var sut = CreateWindowMetricDispatcher();
 
         var metric = sut.Dispatch("frequencia_por_dezena", window);
 
@@ -101,10 +101,45 @@ public class V0Phase2RedTests
     }
 
     [Fact]
+    public void WindowMetricDispatcher_DispatchesTop10MaisSorteados()
+    {
+        var window = BuildWindow(endContestIdInclusive: 3);
+        var sut = CreateWindowMetricDispatcher();
+
+        var metric = sut.Dispatch("top10_mais_sorteados", window);
+
+        Assert.Equal("top10_mais_sorteados", metric.MetricName);
+        Assert.Equal("window", metric.Scope);
+        Assert.Equal("dezena_list[10]", metric.Shape);
+        Assert.Equal("dimensionless", metric.Unit);
+        Assert.Equal("1.0.0", metric.Version);
+        Assert.Equal([6, 9, 11, 16, 20, 23, 24, 1, 4, 5], metric.Value.ToArray());
+    }
+
+    [Fact]
+    public void Top10MaisSorteados_TieBreakUsesAscendingDezenaWhenFrequenciesMatch()
+    {
+        var draw = new Draw(
+            1,
+            new DateOnly(2026, 1, 1),
+            Enumerable.Range(1, 15).ToArray());
+        var window = new DrawWindow(
+            Size: 1,
+            StartContestId: 1,
+            EndContestId: 1,
+            Draws: [draw]);
+        var sut = new Top10MaisSorteadosMetric(new FrequencyByDezenaMetric());
+
+        var metric = sut.Compute(window);
+
+        Assert.Equal([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], metric.Value.ToArray());
+    }
+
+    [Fact]
     public void WindowMetricDispatcher_WithUnknownMetric_ThrowsDomainInvariantViolation()
     {
         var window = BuildWindow(endContestIdInclusive: 3);
-        var sut = new WindowMetricDispatcher(new FrequencyByDezenaMetric());
+        var sut = CreateWindowMetricDispatcher();
 
         var error = Assert.Throws<DomainInvariantViolationException>(() =>
         {
@@ -148,6 +183,12 @@ public class V0Phase2RedTests
             StartContestId: draws.First().ContestId,
             EndContestId: draws.Last().ContestId,
             Draws: draws);
+    }
+
+    private static WindowMetricDispatcher CreateWindowMetricDispatcher()
+    {
+        var frequency = new FrequencyByDezenaMetric();
+        return new WindowMetricDispatcher(frequency, new Top10MaisSorteadosMetric(frequency));
     }
 
     private sealed record FixtureRoot(

@@ -110,11 +110,14 @@ public sealed class V0Tools
         var datasetVersionService = new DatasetVersionService();
         var validator = new V0CrossFieldValidator();
 
+        var frequencyByDezena = new FrequencyByDezenaMetric();
         _computeWindowMetricsUseCase = new ComputeWindowMetricsUseCase(
             fixtureProvider,
             datasetVersionService,
             new WindowResolver(),
-            new WindowMetricDispatcher(new FrequencyByDezenaMetric()),
+            new WindowMetricDispatcher(
+                frequencyByDezena,
+                new Top10MaisSorteadosMetric(frequencyByDezena)),
             validator,
             mapper);
 

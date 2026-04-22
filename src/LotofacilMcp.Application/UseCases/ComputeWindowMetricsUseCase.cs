@@ -104,7 +104,7 @@ public sealed class ComputeWindowMetricsUseCase
                 Version: value.Version,
                 Window: windowView,
                 Value: value.Value.ToArray(),
-                Explanation: "Contagem de ocorrencias por dezena na janela resolvida."));
+                Explanation: ExplanationFor(value.MetricName)));
         }
 
         return results;
@@ -145,4 +145,12 @@ public sealed class ComputeWindowMetricsUseCase
             message: ex.Message,
             details: new Dictionary<string, object?>());
     }
+
+    private static string ExplanationFor(string metricName) => metricName switch
+    {
+        "frequencia_por_dezena" => "Contagem de ocorrencias por dezena na janela resolvida.",
+        "top10_mais_sorteados" =>
+            "Dez dezenas com maior frequencia na janela; empates resolvidos por dezena ascendente.",
+        _ => "Metrica de janela."
+    };
 }

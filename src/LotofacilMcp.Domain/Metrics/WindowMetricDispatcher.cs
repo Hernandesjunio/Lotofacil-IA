@@ -5,19 +5,23 @@ namespace LotofacilMcp.Domain.Metrics;
 
 public sealed class WindowMetricDispatcher
 {
-    private readonly IReadOnlyDictionary<string, Func<DrawWindow, FrequencyByDezenaMetricValue>> _dispatchByMetricName;
+    private readonly IReadOnlyDictionary<string, Func<DrawWindow, WindowMetricValue>> _dispatchByMetricName;
 
-    public WindowMetricDispatcher(FrequencyByDezenaMetric frequencyByDezenaMetric)
+    public WindowMetricDispatcher(
+        FrequencyByDezenaMetric frequencyByDezenaMetric,
+        Top10MaisSorteadosMetric top10MaisSorteadosMetric)
     {
         ArgumentNullException.ThrowIfNull(frequencyByDezenaMetric);
+        ArgumentNullException.ThrowIfNull(top10MaisSorteadosMetric);
 
-        _dispatchByMetricName = new Dictionary<string, Func<DrawWindow, FrequencyByDezenaMetricValue>>(StringComparer.Ordinal)
+        _dispatchByMetricName = new Dictionary<string, Func<DrawWindow, WindowMetricValue>>(StringComparer.Ordinal)
         {
-            ["frequencia_por_dezena"] = frequencyByDezenaMetric.Compute
+            ["frequencia_por_dezena"] = frequencyByDezenaMetric.Compute,
+            ["top10_mais_sorteados"] = top10MaisSorteadosMetric.Compute
         };
     }
 
-    public FrequencyByDezenaMetricValue Dispatch(string metricName, DrawWindow window)
+    public WindowMetricValue Dispatch(string metricName, DrawWindow window)
     {
         if (string.IsNullOrWhiteSpace(metricName))
         {

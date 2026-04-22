@@ -6,7 +6,8 @@ public sealed class V0CrossFieldValidator
 {
     private static readonly HashSet<string> SupportedComputeWindowMetrics =
     [
-        "frequencia_por_dezena"
+        "frequencia_por_dezena",
+        "top10_mais_sorteados"
     ];
 
     private static readonly HashSet<string> SupportedNormalizationMethods =

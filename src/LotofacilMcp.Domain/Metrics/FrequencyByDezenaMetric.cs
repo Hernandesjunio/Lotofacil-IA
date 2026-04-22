@@ -3,17 +3,9 @@ using LotofacilMcp.Domain.Windows;
 
 namespace LotofacilMcp.Domain.Metrics;
 
-public sealed record FrequencyByDezenaMetricValue(
-    string MetricName,
-    string Scope,
-    string Shape,
-    string Unit,
-    string Version,
-    IReadOnlyList<int> Value);
-
 public sealed class FrequencyByDezenaMetric
 {
-    public FrequencyByDezenaMetricValue Compute(DrawWindow window)
+    public WindowMetricValue Compute(DrawWindow window)
     {
         if (window is null)
         {
@@ -30,7 +22,7 @@ public sealed class FrequencyByDezenaMetric
             }
         }
 
-        return new FrequencyByDezenaMetricValue(
+        return new WindowMetricValue(
             MetricName: "frequencia_por_dezena",
             Scope: "window",
             Shape: "vector_by_dezena",
