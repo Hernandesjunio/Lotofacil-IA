@@ -221,6 +221,48 @@ public sealed record GenerateCandidateGamesResponse(
     [property: JsonPropertyName("window")] WindowEnvelope Window,
     [property: JsonPropertyName("candidate_games")] IReadOnlyList<CandidateGameEnvelope> CandidateGames);
 
+public sealed record ExplainCandidateGamesRequest(
+    [property: JsonPropertyName("window_size")] int WindowSize,
+    [property: JsonPropertyName("end_contest_id")] int? EndContestId,
+    [property: JsonPropertyName("games")] IReadOnlyList<IReadOnlyList<int>>? Games,
+    [property: JsonPropertyName("include_metric_breakdown")] bool IncludeMetricBreakdown = true,
+    [property: JsonPropertyName("include_exclusion_breakdown")] bool IncludeExclusionBreakdown = true);
+
+public sealed record MetricBreakdownEntryEnvelope(
+    [property: JsonPropertyName("metric_name")] string MetricName,
+    [property: JsonPropertyName("metric_version")] string MetricVersion,
+    [property: JsonPropertyName("value")] double Value,
+    [property: JsonPropertyName("contribution")] double Contribution,
+    [property: JsonPropertyName("explanation")] string Explanation);
+
+public sealed record ExclusionBreakdownEntryEnvelope(
+    [property: JsonPropertyName("exclusion_name")] string ExclusionName,
+    [property: JsonPropertyName("exclusion_version")] string ExclusionVersion,
+    [property: JsonPropertyName("passed")] bool Passed,
+    [property: JsonPropertyName("observed_value")] double ObservedValue,
+    [property: JsonPropertyName("threshold")] double Threshold,
+    [property: JsonPropertyName("explanation")] string Explanation);
+
+public sealed record CandidateStrategyExplanationEnvelope(
+    [property: JsonPropertyName("strategy_name")] string StrategyName,
+    [property: JsonPropertyName("strategy_version")] string StrategyVersion,
+    [property: JsonPropertyName("search_method")] string SearchMethod,
+    [property: JsonPropertyName("tie_break_rule")] string TieBreakRule,
+    [property: JsonPropertyName("score")] double Score,
+    [property: JsonPropertyName("metric_breakdown")] IReadOnlyList<MetricBreakdownEntryEnvelope> MetricBreakdown,
+    [property: JsonPropertyName("exclusion_breakdown")] IReadOnlyList<ExclusionBreakdownEntryEnvelope> ExclusionBreakdown);
+
+public sealed record GameExplanationEnvelope(
+    [property: JsonPropertyName("game")] IReadOnlyList<int> Game,
+    [property: JsonPropertyName("candidate_strategies")] IReadOnlyList<CandidateStrategyExplanationEnvelope> CandidateStrategies);
+
+public sealed record ExplainCandidateGamesResponse(
+    [property: JsonPropertyName("dataset_version")] string DatasetVersion,
+    [property: JsonPropertyName("tool_version")] string ToolVersion,
+    [property: JsonPropertyName("deterministic_hash")] string DeterministicHash,
+    [property: JsonPropertyName("window")] WindowEnvelope Window,
+    [property: JsonPropertyName("explanations")] IReadOnlyList<GameExplanationEnvelope> Explanations);
+
 public sealed class V0Tools
 {
     private readonly ComputeWindowMetricsUseCase _computeWindowMetricsUseCase;
@@ -230,6 +272,7 @@ public sealed class V0Tools
     private readonly AnalyzeIndicatorAssociationsUseCase _analyzeIndicatorAssociationsUseCase;
     private readonly SummarizeWindowPatternsUseCase _summarizeWindowPatternsUseCase;
     private readonly GenerateCandidateGamesUseCase _generateCandidateGamesUseCase;
+    private readonly ExplainCandidateGamesUseCase _explainCandidateGamesUseCase;
     private readonly DeterministicHashService _deterministicHashService;
     private readonly string _fixturePath;
 
@@ -305,6 +348,14 @@ public sealed class V0Tools
             mapper);
 
         _generateCandidateGamesUseCase = new GenerateCandidateGamesUseCase(
+            fixtureProvider,
+            datasetVersionService,
+            new WindowResolver(),
+            windowMetricDispatcher,
+            validator,
+            mapper);
+
+        _explainCandidateGamesUseCase = new ExplainCandidateGamesUseCase(
             fixtureProvider,
             datasetVersionService,
             new WindowResolver(),
@@ -640,6 +691,67 @@ public sealed class V0Tools
                         game.SearchMethod,
                         game.TieBreakRule,
                         game.SeedUsed))
+                    .ToArray());
+        }
+        catch (ApplicationValidationException ex)
+        {
+            return ToContractError(ex.Code, ex.Message, ex.Details);
+        }
+    }
+
+    public object ExplainCandidateGames(ExplainCandidateGamesRequest request)
+    {
+        try
+        {
+            var result = _explainCandidateGamesUseCase.Execute(new ExplainCandidateGamesInput(
+                WindowSize: request.WindowSize,
+                EndContestId: request.EndContestId,
+                Games: request.Games ?? Array.Empty<IReadOnlyList<int>>(),
+                IncludeMetricBreakdown: request.IncludeMetricBreakdown,
+                IncludeExclusionBreakdown: request.IncludeExclusionBreakdown,
+                FixturePath: _fixturePath));
+
+            var deterministicHash = _deterministicHashService.Compute(
+                result.DeterministicHashInput,
+                result.DatasetVersion,
+                result.ToolVersion);
+
+            return new ExplainCandidateGamesResponse(
+                DatasetVersion: result.DatasetVersion,
+                ToolVersion: result.ToolVersion,
+                DeterministicHash: deterministicHash,
+                Window: new WindowEnvelope(
+                    result.Window.Size,
+                    result.Window.StartContestId,
+                    result.Window.EndContestId),
+                Explanations: result.Explanations
+                    .Select(game => new GameExplanationEnvelope(
+                        game.Game.ToArray(),
+                        game.CandidateStrategies
+                            .Select(strategy => new CandidateStrategyExplanationEnvelope(
+                                strategy.StrategyName,
+                                strategy.StrategyVersion,
+                                strategy.SearchMethod,
+                                strategy.TieBreakRule,
+                                strategy.Score,
+                                strategy.MetricBreakdown
+                                    .Select(metric => new MetricBreakdownEntryEnvelope(
+                                        metric.MetricName,
+                                        metric.MetricVersion,
+                                        metric.Value,
+                                        metric.Contribution,
+                                        metric.Explanation))
+                                    .ToArray(),
+                                strategy.ExclusionBreakdown
+                                    .Select(exclusion => new ExclusionBreakdownEntryEnvelope(
+                                        exclusion.ExclusionName,
+                                        exclusion.ExclusionVersion,
+                                        exclusion.Passed,
+                                        exclusion.ObservedValue,
+                                        exclusion.Threshold,
+                                        exclusion.Explanation))
+                                    .ToArray()))
+                            .ToArray()))
                     .ToArray());
         }
         catch (ApplicationValidationException ex)

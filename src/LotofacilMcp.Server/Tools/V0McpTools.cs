@@ -139,6 +139,25 @@ public sealed class V0McpTools
         return ToToolResult(payload, payload is ContractErrorEnvelope);
     }
 
+    [McpServerTool(Name = "explain_candidate_games"), Description("Explica jogos candidatos com ranking deterministico de estrategias e breakdown rastreavel.")]
+    public CallToolResult ExplainCandidateGames(
+        V0Tools tools,
+        [Description("Tamanho da janela.")] int window_size = 0,
+        [Description("Concurso final inclusivo.")] int? end_contest_id = null,
+        [Description("Lista de jogos candidatos para explicacao.")] IReadOnlyList<IReadOnlyList<int>>? games = null,
+        [Description("Inclui detalhamento por metrica e contribuicao.")] bool include_metric_breakdown = true,
+        [Description("Inclui detalhamento de exclusoes estruturais avaliadas.")] bool include_exclusion_breakdown = true)
+    {
+        var payload = tools.ExplainCandidateGames(new ExplainCandidateGamesRequest(
+            WindowSize: window_size,
+            EndContestId: end_contest_id,
+            Games: games,
+            IncludeMetricBreakdown: include_metric_breakdown,
+            IncludeExclusionBreakdown: include_exclusion_breakdown));
+
+        return ToToolResult(payload, payload is ContractErrorEnvelope);
+    }
+
     private static CallToolResult ToToolResult(object payload, bool isError)
     {
         var jsonPayload = JsonSerializer.SerializeToElement(payload, JsonOptions);

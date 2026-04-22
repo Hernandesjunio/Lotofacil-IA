@@ -11,6 +11,7 @@ public static class V0ToolEndpoints
         MapToolRoute(endpoints, "/tools/analyze_indicator_associations", HandleAnalyzeIndicatorAssociationsAsync);
         MapToolRoute(endpoints, "/tools/summarize_window_patterns", HandleSummarizeWindowPatternsAsync);
         MapToolRoute(endpoints, "/tools/generate_candidate_games", HandleGenerateCandidateGamesAsync);
+        MapToolRoute(endpoints, "/tools/explain_candidate_games", HandleExplainCandidateGamesAsync);
 
         // Alias REST (deprecado): manter compatibilidade sem sugerir que isso é MCP/HTTP.
         MapToolRoute(endpoints, "/mcp/tools/get_draw_window", HandleGetDrawWindowAsync);
@@ -20,6 +21,7 @@ public static class V0ToolEndpoints
         MapToolRoute(endpoints, "/mcp/tools/analyze_indicator_associations", HandleAnalyzeIndicatorAssociationsAsync);
         MapToolRoute(endpoints, "/mcp/tools/summarize_window_patterns", HandleSummarizeWindowPatternsAsync);
         MapToolRoute(endpoints, "/mcp/tools/generate_candidate_games", HandleGenerateCandidateGamesAsync);
+        MapToolRoute(endpoints, "/mcp/tools/explain_candidate_games", HandleExplainCandidateGamesAsync);
 
         return endpoints;
     }
@@ -125,6 +127,20 @@ public static class V0ToolEndpoints
         }
 
         var response = tools.GenerateCandidateGames(toolRequest!);
+        return response is ContractErrorEnvelope errorEnvelope
+            ? Results.BadRequest(errorEnvelope)
+            : Results.Ok(response);
+    }
+
+    private static async Task<IResult> HandleExplainCandidateGamesAsync(HttpRequest request, V0Tools tools)
+    {
+        var (toolRequest, bindingError) = await ToolRequestBinding.BindAsync<ExplainCandidateGamesRequest>(request);
+        if (bindingError is not null)
+        {
+            return Results.BadRequest(bindingError);
+        }
+
+        var response = tools.ExplainCandidateGames(toolRequest!);
         return response is ContractErrorEnvelope errorEnvelope
             ? Results.BadRequest(errorEnvelope)
             : Results.Ok(response);

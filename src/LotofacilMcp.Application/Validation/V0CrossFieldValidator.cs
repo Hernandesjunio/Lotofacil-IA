@@ -579,4 +579,91 @@ public sealed class V0CrossFieldValidator
                 });
         }
     }
+
+    public void ValidateExplainCandidateGames(ExplainCandidateGamesInput input)
+    {
+        if (input.WindowSize <= 0)
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_WINDOW_SIZE",
+                message: "window_size must be greater than zero.",
+                details: new Dictionary<string, object?>
+                {
+                    ["window_size"] = input.WindowSize
+                });
+        }
+
+        if (input.Games is null || input.Games.Count == 0)
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_REQUEST",
+                message: "games is required and must be non-empty.",
+                details: new Dictionary<string, object?>
+                {
+                    ["field"] = "games"
+                });
+        }
+
+        for (var gameIndex = 0; gameIndex < input.Games.Count; gameIndex++)
+        {
+            var game = input.Games[gameIndex];
+            if (game is null || game.Count != 15)
+            {
+                throw new ApplicationValidationException(
+                    code: "INVALID_REQUEST",
+                    message: "each game must contain exactly 15 dezenas.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["field"] = "games[]",
+                        ["game_index"] = gameIndex
+                    });
+            }
+
+            var seen = new HashSet<int>();
+            var previous = 0;
+            for (var i = 0; i < game.Count; i++)
+            {
+                var number = game[i];
+                if (number is < 1 or > 25)
+                {
+                    throw new ApplicationValidationException(
+                        code: "INVALID_REQUEST",
+                        message: "game dezenas must be within [1, 25].",
+                        details: new Dictionary<string, object?>
+                        {
+                            ["field"] = "games[][]",
+                            ["game_index"] = gameIndex,
+                            ["number"] = number
+                        });
+                }
+
+                if (!seen.Add(number))
+                {
+                    throw new ApplicationValidationException(
+                        code: "INVALID_REQUEST",
+                        message: "game dezenas must be unique.",
+                        details: new Dictionary<string, object?>
+                        {
+                            ["field"] = "games[][]",
+                            ["game_index"] = gameIndex,
+                            ["number"] = number
+                        });
+                }
+
+                if (i > 0 && number <= previous)
+                {
+                    throw new ApplicationValidationException(
+                        code: "INVALID_REQUEST",
+                        message: "game dezenas must be strictly increasing.",
+                        details: new Dictionary<string, object?>
+                        {
+                            ["field"] = "games[][]",
+                            ["game_index"] = gameIndex
+                        });
+                }
+
+                previous = number;
+            }
+        }
+    }
 }
