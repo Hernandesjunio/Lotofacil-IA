@@ -25,6 +25,20 @@ public sealed class IndicatorStabilityAnalyzer
 {
     private const double Epsilon = 1e-9;
 
+    public static IReadOnlyList<ResolvedIndicatorScalarSeries> ResolveScalarSeriesForAssociation(
+        DrawWindow window,
+        StabilityIndicatorRequest indicator)
+    {
+        return BuildScalarSeries(window, indicator)
+            .Select(series => new ResolvedIndicatorScalarSeries(
+                indicator.Name,
+                series.Aggregation,
+                series.ComponentIndex,
+                series.Shape,
+                series.Values))
+            .ToArray();
+    }
+
     public StabilityAnalysis Analyze(
         DrawWindow window,
         IReadOnlyList<StabilityIndicatorRequest> indicators,

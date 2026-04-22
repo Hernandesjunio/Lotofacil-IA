@@ -82,6 +82,27 @@ public sealed class V0McpTools
         return ToToolResult(payload, payload is ContractErrorEnvelope);
     }
 
+    [McpServerTool(Name = "analyze_indicator_associations"), Description("Mede associacoes Spearman entre series escalares alinhadas na janela (recorte minimo).")]
+    public CallToolResult AnalyzeIndicatorAssociations(
+        V0Tools tools,
+        [Description("Tamanho da janela.")] int window_size = 0,
+        [Description("Concurso final inclusivo.")] int? end_contest_id = null,
+        [Description("Itens (metrica e agregacao opcional para series vetoriais).")] IReadOnlyList<AssociationItemRequest>? items = null,
+        [Description("Metodo (recorte: spearman).")] string? method = null,
+        [Description("Top pares por magnitude.")] int top_k = 5,
+        [Description("Estabilidade em subjanelas (ainda nao suportado neste recorte).")] object? stability_check = null)
+    {
+        var payload = tools.AnalyzeIndicatorAssociations(new AnalyzeIndicatorAssociationsRequest(
+            WindowSize: window_size,
+            EndContestId: end_contest_id,
+            Items: items,
+            Method: method ?? string.Empty,
+            TopK: top_k,
+            StabilityCheck: stability_check));
+
+        return ToToolResult(payload, payload is ContractErrorEnvelope);
+    }
+
     private static CallToolResult ToToolResult(object payload, bool isError)
     {
         var jsonPayload = JsonSerializer.SerializeToElement(payload, JsonOptions);

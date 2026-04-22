@@ -286,4 +286,76 @@ public sealed class V0CrossFieldValidator
                 });
         }
     }
+
+    public void ValidateAnalyzeIndicatorAssociations(AnalyzeIndicatorAssociationsInput input)
+    {
+        if (input.WindowSize <= 0)
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_WINDOW_SIZE",
+                message: "window_size must be greater than zero.",
+                details: new Dictionary<string, object?>
+                {
+                    ["window_size"] = input.WindowSize
+                });
+        }
+
+        if (input.Items is null || input.Items.Count < 2)
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_REQUEST",
+                message: "items is required and must list at least two association inputs.",
+                details: new Dictionary<string, object?>
+                {
+                    ["field"] = "items"
+                });
+        }
+
+        if (input.TopK <= 0)
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_REQUEST",
+                message: "top_k must be greater than zero.",
+                details: new Dictionary<string, object?>
+                {
+                    ["top_k"] = input.TopK
+                });
+        }
+
+        if (string.IsNullOrWhiteSpace(input.Method))
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_REQUEST",
+                message: "method is required.",
+                details: new Dictionary<string, object?>
+                {
+                    ["field"] = "method"
+                });
+        }
+
+        if (!string.Equals(input.Method, "spearman", StringComparison.Ordinal))
+        {
+            throw new ApplicationValidationException(
+                code: "UNSUPPORTED_ASSOCIATION_METHOD",
+                message: "this recorte only supports method spearman.",
+                details: new Dictionary<string, object?>
+                {
+                    ["method"] = input.Method
+                });
+        }
+
+        foreach (var item in input.Items)
+        {
+            if (item is null || string.IsNullOrWhiteSpace(item.Name))
+            {
+                throw new ApplicationValidationException(
+                    code: "INVALID_REQUEST",
+                    message: "each items entry must have a non-empty name.",
+                    details: new Dictionary<string, object?>
+                {
+                    ["field"] = "items[].name"
+                });
+            }
+        }
+    }
 }

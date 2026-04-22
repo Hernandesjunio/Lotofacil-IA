@@ -226,6 +226,31 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         var httpComposePayload = await ReadHttpJsonAsync(httpComposeResponse);
         Assert.True(JsonElement.DeepEquals(httpComposePayload, ReadMcpStructuredJson(stdioComposeResponse)));
         Assert.True(JsonElement.DeepEquals(httpComposePayload, ReadMcpStructuredJson(httpMcpComposeResponse)));
+
+        var associationRequest = new Dictionary<string, object?>
+        {
+            ["window_size"] = 5,
+            ["end_contest_id"] = 1005,
+            ["method"] = "spearman",
+            ["top_k"] = 6,
+            ["items"] = new object[]
+            {
+                new Dictionary<string, object?> { ["name"] = "repeticao_concurso_anterior" },
+                new Dictionary<string, object?> { ["name"] = "pares_no_concurso" },
+                new Dictionary<string, object?> { ["name"] = "quantidade_vizinhos_por_concurso" },
+                new Dictionary<string, object?> { ["name"] = "sequencia_maxima_vizinhos_por_concurso" }
+            }
+        };
+
+        var httpAssociationResponse = await _httpClient.PostAsJsonAsync("/tools/analyze_indicator_associations", associationRequest);
+        Assert.Equal(HttpStatusCode.OK, httpAssociationResponse.StatusCode);
+
+        var stdioAssociationResponse = await _stdioMcpClient.CallToolAsync("analyze_indicator_associations", associationRequest);
+        var httpMcpAssociationResponse = await _httpMcpClient.CallToolAsync("analyze_indicator_associations", associationRequest);
+
+        var httpAssociationPayload = await ReadHttpJsonAsync(httpAssociationResponse);
+        Assert.True(JsonElement.DeepEquals(httpAssociationPayload, ReadMcpStructuredJson(stdioAssociationResponse)));
+        Assert.True(JsonElement.DeepEquals(httpAssociationPayload, ReadMcpStructuredJson(httpMcpAssociationResponse)));
     }
 
     [Fact]
@@ -308,6 +333,32 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         var httpAnalyzePayload = await ReadHttpJsonAsync(httpAnalyzeResponse);
         Assert.True(JsonElement.DeepEquals(httpAnalyzePayload, ReadMcpStructuredJson(stdioAnalyzeResponse)));
         Assert.True(JsonElement.DeepEquals(httpAnalyzePayload, ReadMcpStructuredJson(httpMcpAnalyzeResponse)));
+
+        var invalidAssociationRequest = new Dictionary<string, object?>
+        {
+            ["window_size"] = 5,
+            ["end_contest_id"] = 1005,
+            ["method"] = "spearman",
+            ["top_k"] = 3,
+            ["items"] = new object[]
+            {
+                new Dictionary<string, object?> { ["name"] = "repeticao_concurso_anterior" },
+                new Dictionary<string, object?> { ["name"] = "distribuicao_linha_por_concurso" }
+            }
+        };
+
+        var httpAssocErr = await _httpClient.PostAsJsonAsync("/tools/analyze_indicator_associations", invalidAssociationRequest);
+        Assert.Equal(HttpStatusCode.BadRequest, httpAssocErr.StatusCode);
+
+        var stdioAssocErr = await _stdioMcpClient.CallToolAsync("analyze_indicator_associations", invalidAssociationRequest);
+        var httpMcpAssocErr = await _httpMcpClient.CallToolAsync("analyze_indicator_associations", invalidAssociationRequest);
+
+        Assert.True(stdioAssocErr.IsError);
+        Assert.True(httpMcpAssocErr.IsError);
+
+        var httpAssocPayload = await ReadHttpJsonAsync(httpAssocErr);
+        Assert.True(JsonElement.DeepEquals(httpAssocPayload, ReadMcpStructuredJson(stdioAssocErr)));
+        Assert.True(JsonElement.DeepEquals(httpAssocPayload, ReadMcpStructuredJson(httpMcpAssocErr)));
     }
 
     private static async Task AssertToolDiscoveryAsync(McpClient client)
@@ -317,6 +368,7 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         Assert.Contains(listedTools, tool => tool.Name is "compute_window_metrics");
         Assert.Contains(listedTools, tool => tool.Name is "analyze_indicator_stability");
         Assert.Contains(listedTools, tool => tool.Name is "compose_indicator_analysis");
+        Assert.Contains(listedTools, tool => tool.Name is "analyze_indicator_associations");
     }
 
     private async Task<JsonElement> ReadHttpJsonAsync(HttpResponseMessage response)

@@ -123,12 +123,48 @@ public sealed record ComposeIndicatorAnalysisResponse(
     [property: JsonPropertyName("operator")] string Operator,
     [property: JsonPropertyName("ranking")] IReadOnlyList<WeightedDezenaRankingEntryEnvelope> Ranking);
 
+public sealed record AssociationItemRequest(
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("aggregation")] string? Aggregation);
+
+public sealed record AnalyzeIndicatorAssociationsRequest(
+    [property: JsonPropertyName("window_size")] int WindowSize,
+    [property: JsonPropertyName("end_contest_id")] int? EndContestId,
+    [property: JsonPropertyName("items")] IReadOnlyList<AssociationItemRequest>? Items,
+    [property: JsonPropertyName("method")] string Method,
+    [property: JsonPropertyName("top_k")] int TopK = 5,
+    [property: JsonPropertyName("stability_check")] object? StabilityCheck = null);
+
+public sealed record AssociationMagnitudeEntryEnvelope(
+    [property: JsonPropertyName("indicator_a")] string IndicatorA,
+    [property: JsonPropertyName("aggregation_a")] string AggregationA,
+    [property: JsonPropertyName("component_index_a")] int? ComponentIndexA,
+    [property: JsonPropertyName("indicator_b")] string IndicatorB,
+    [property: JsonPropertyName("aggregation_b")] string AggregationB,
+    [property: JsonPropertyName("component_index_b")] int? ComponentIndexB,
+    [property: JsonPropertyName("association_strength")] double AssociationStrength,
+    [property: JsonPropertyName("explanation")] string Explanation);
+
+public sealed record AssociationMagnitudeEnvelope(
+    [property: JsonPropertyName("method")] string Method,
+    [property: JsonPropertyName("top_pairs")] IReadOnlyList<AssociationMagnitudeEntryEnvelope> TopPairs);
+
+public sealed record AnalyzeIndicatorAssociationsResponse(
+    [property: JsonPropertyName("dataset_version")] string DatasetVersion,
+    [property: JsonPropertyName("tool_version")] string ToolVersion,
+    [property: JsonPropertyName("deterministic_hash")] string DeterministicHash,
+    [property: JsonPropertyName("window")] WindowEnvelope Window,
+    [property: JsonPropertyName("method")] string Method,
+    [property: JsonPropertyName("association_magnitude")] AssociationMagnitudeEnvelope AssociationMagnitude,
+    [property: JsonPropertyName("association_stability")] object? AssociationStability);
+
 public sealed class V0Tools
 {
     private readonly ComputeWindowMetricsUseCase _computeWindowMetricsUseCase;
     private readonly GetDrawWindowUseCase _getDrawWindowUseCase;
     private readonly AnalyzeIndicatorStabilityUseCase _analyzeIndicatorStabilityUseCase;
     private readonly ComposeIndicatorAnalysisUseCase _composeIndicatorAnalysisUseCase;
+    private readonly AnalyzeIndicatorAssociationsUseCase _analyzeIndicatorAssociationsUseCase;
     private readonly DeterministicHashService _deterministicHashService;
     private readonly string _fixturePath;
 
@@ -186,6 +222,14 @@ public sealed class V0Tools
             windowMetricDispatcher,
             validator,
             mapper);
+
+        _analyzeIndicatorAssociationsUseCase = new AnalyzeIndicatorAssociationsUseCase(
+            fixtureProvider,
+            datasetVersionService,
+            new WindowResolver(),
+            validator,
+            mapper,
+            new IndicatorAssociationAnalyzer());
 
         _deterministicHashService = new DeterministicHashService(
             new CanonicalJsonSerializer(),
@@ -357,6 +401,66 @@ public sealed class V0Tools
                         entry.Score,
                         entry.Explanation))
                     .ToArray());
+        }
+        catch (ApplicationValidationException ex)
+        {
+            return ToContractError(ex.Code, ex.Message, ex.Details);
+        }
+    }
+
+    public object AnalyzeIndicatorAssociations(AnalyzeIndicatorAssociationsRequest request)
+    {
+        if (request.StabilityCheck is not null)
+        {
+            return ToContractError(
+                "INVALID_REQUEST",
+                "stability_check is not supported in this recorte.",
+                new Dictionary<string, object?>
+                {
+                    ["field"] = "stability_check"
+                });
+        }
+
+        try
+        {
+            var result = _analyzeIndicatorAssociationsUseCase.Execute(new AnalyzeIndicatorAssociationsInput(
+                WindowSize: request.WindowSize,
+                EndContestId: request.EndContestId,
+                Items: (request.Items ?? Array.Empty<AssociationItemRequest>())
+                    .Select(item => new StabilityIndicatorRequestInput(item.Name, item.Aggregation))
+                    .ToArray(),
+                Method: request.Method,
+                TopK: request.TopK,
+                FixturePath: _fixturePath));
+
+            var deterministicHash = _deterministicHashService.Compute(
+                result.DeterministicHashInput,
+                result.DatasetVersion,
+                result.ToolVersion);
+
+            return new AnalyzeIndicatorAssociationsResponse(
+                DatasetVersion: result.DatasetVersion,
+                ToolVersion: result.ToolVersion,
+                DeterministicHash: deterministicHash,
+                Window: new WindowEnvelope(
+                    result.Window.Size,
+                    result.Window.StartContestId,
+                    result.Window.EndContestId),
+                Method: result.Method,
+                AssociationMagnitude: new AssociationMagnitudeEnvelope(
+                    result.AssociationMagnitude.Method,
+                    result.AssociationMagnitude.TopPairs
+                        .Select(entry => new AssociationMagnitudeEntryEnvelope(
+                            entry.IndicatorA,
+                            entry.AggregationA,
+                            entry.ComponentIndexA,
+                            entry.IndicatorB,
+                            entry.AggregationB,
+                            entry.ComponentIndexB,
+                            entry.AssociationStrength,
+                            entry.Explanation))
+                        .ToArray()),
+                AssociationStability: result.AssociationStability);
         }
         catch (ApplicationValidationException ex)
         {
