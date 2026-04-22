@@ -4,7 +4,7 @@
 
 ## Status
 
-Aceito — congela a estrutura arquitetural inicial para a implementação da V0/V1.
+Aceito — congela a **estrutura em projetos e fronteiras** para a implementação da V0/V1. A **superfície de entrega** (MCP + convivência HTTP) está detalhada no [ADR 0005](0005-transporte-mcp-e-superficie-tools-v1.md), que altera a decisão **D2** abaixo.
 
 ## Contexto
 
@@ -33,13 +33,13 @@ O repositório inicia com exatamente estes quatro projetos .NET:
 3. `LotofacilMcp.Infrastructure`
 4. `LotofacilMcp.Server`
 
-**Justificativa:** quatro projetos são suficientes para proteger a semântica do domínio, isolar IO/serialização, separar orquestração de casos de uso e manter o host HTTP fino, sem criar estrutura cenográfica.
+**Justificativa:** quatro projetos são suficientes para proteger a semântica do domínio, isolar IO/serialização, separar orquestração de casos de uso e manter o host de entrega fino, sem criar estrutura cenográfica.
 
-### D2 — Servidor único, HTTP-only na V0/V1 inicial
+### D2 — Servidor único; superfície pública MCP com HTTP espelhado (V1)
 
-Há um único host de execução: `LotofacilMcp.Server`, exposto via HTTP.
+Há um único **host de bootstrap** principal: `LotofacilMcp.Server`. A entrega pública inclui **protocolo MCP** para integração com agentes e hosts, com **endpoints HTTP** opcionais que espelham as mesmas tools e payloads (compatibilidade, testes e depuração). Detalhes de SDK, transportes (`stdio` / HTTP MCP) e rollout das tools estão no [ADR 0005](0005-transporte-mcp-e-superficie-tools-v1.md).
 
-**Justificativa:** a decisão atual não exige múltiplos transportes nem a separação entre “MCP adapter” e “host”. Manter dois projetos de delivery neste momento introduziria duplicação de bootstrap, DI e tradução de erro sem ganho funcional.
+**Justificativa (V0):** começar só por HTTP reduziu duplicação antes de existir semântica canônica validada. **Justificativa (evolução):** o brief e o contrato assumem MCP; após a V0, o protocolo MCP torna-se superfície obrigatória para agentes, sem segundo “servidor de domínio” — apenas outro binding no mesmo host ou um executável mínimo de stdio que reutiliza o mesmo `Application`/`Infrastructure`.
 
 ### D3 — Servidor sem IA embarcada
 
@@ -187,7 +187,7 @@ Os códigos `UNAUTHORIZED`, `RATE_LIMITED` e `QUOTA_EXCEEDED` permanecem documen
 
 ## O que fica fora desta decisão
 
-- escolha definitiva do SDK MCP/HTTP em nível de pacote NuGet;
+- detalhes do SDK MCP e dos transportes (ver [ADR 0005](0005-transporte-mcp-e-superficie-tools-v1.md));
 - política futura de autenticação, throttling e quotas quando forem ativados;
 - introdução de cache, banco ou pipelines assíncronos;
 - estrutura do cliente/agente externo que consumirá o servidor.
@@ -208,6 +208,7 @@ Esta decisão só deve ser considerada implementada quando:
 - [ADR 0001](0001-fechamento-semantico-e-determinismo-v1.md)
 - [ADR 0002](0002-composicao-analitica-e-filtros-estruturais-v1.md)
 - [ADR 0003](0003-processo-desenvolvimento-bmad-vs-spec-driven.md)
+- [ADR 0005](0005-transporte-mcp-e-superficie-tools-v1.md)
 - [project-guide.md](../project-guide.md)
 - [vertical-slice.md](../vertical-slice.md)
 - [mcp-tool-contract.md](../mcp-tool-contract.md)

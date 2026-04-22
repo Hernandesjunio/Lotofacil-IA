@@ -35,6 +35,7 @@ Referências normativas:
 - [contract-test-plan.md](contract-test-plan.md)
 - [ADR 0003](adrs/0003-processo-desenvolvimento-bmad-vs-spec-driven.md)
 - [ADR 0004](adrs/0004-estrutura-arquitetural-inicial-mcp-dotnet10.md)
+- [ADR 0005](adrs/0005-transporte-mcp-e-superficie-tools-v1.md)
 
 ## Regra operacional principal
 
@@ -55,7 +56,7 @@ Objetivo: não começar implementação em cima de arquitetura ou semântica em 
 
 Passos atômicos:
 
-- Confirmar que a arquitetura vigente é a do [ADR 0004](adrs/0004-estrutura-arquitetural-inicial-mcp-dotnet10.md).
+- Confirmar que a arquitetura vigente é a do [ADR 0004](adrs/0004-estrutura-arquitetural-inicial-mcp-dotnet10.md) e que a superfície MCP + HTTP está alinhada ao [ADR 0005](adrs/0005-transporte-mcp-e-superficie-tools-v1.md) quando o trabalho for pós-V0.
 - Confirmar que a stack base é C# / .NET 10 em [brief.md](brief.md) e [vertical-slice.md](vertical-slice.md).
 - Confirmar que a V0 vigente é a de [vertical-slice.md](vertical-slice.md).
 - Confirmar que o contrato vigente é [mcp-tool-contract.md](mcp-tool-contract.md).
@@ -216,9 +217,9 @@ Critério mínimo de aceite:
 - a V0 já tem contrato mínimo descrito em testes objetivos;
 - nenhuma obrigação do envelope básico fica implícita.
 
-### Fase 7 — Materializar o servidor HTTP/MCP da V0
+### Fase 7 — Materializar o servidor HTTP da V0 (superfície mínima)
 
-Objetivo: expor a V0 sem colocar cálculo no host e sem deixar metadados contratuais para depois.
+Objetivo: expor a V0 por **HTTP** sem colocar cálculo no host e sem deixar metadados contratuais para depois. O **transporte MCP** entra na [Fase 9](#fase-9-transporte-mcp-paridade-com-o-contrato).
 
 Passos atômicos:
 
@@ -260,6 +261,77 @@ Critério mínimo de aceite:
 - a V0 está verde e rastreável por testes;
 - a barreira de normalização, o envelope contratual mínimo e o determinismo já estão cobertos antes da próxima fatia.
 
+### Fase 9: Transporte MCP (paridade com o contrato)
+
+Objetivo: expor as tools já implementadas via **protocolo MCP** real ([ADR 0005](adrs/0005-transporte-mcp-e-superficie-tools-v1.md)), com a **mesma semântica JSON** que os POSTs HTTP.
+
+Passos atômicos:
+
+- Adicionar a família de pacotes `**ModelContextProtocol`** (SDK oficial C#) conforme documentação vigente do repositório `csharp-sdk`; incluir `ModelContextProtocol.AspNetCore` apenas se o transporte HTTP MCP for necessário na mesma PR.
+- Confinar atributos/tipos do SDK ao `LotofacilMcp.Server` (e a um executável stdio mínimo, se for o caso), sem referências MCP em `Domain`/`Application`.
+- Registrar `get_draw_window` e `compute_window_metrics` como tools MCP com nomes e schemas alinhados a [mcp-tool-contract.md](mcp-tool-contract.md).
+- Implementar **pelo menos um** transporte MCP: **stdio** (prioridade para hosts desktop) e/ou HTTP MCP no pipeline ASP.NET Core, conforme [ADR 0005](adrs/0005-transporte-mcp-e-superficie-tools-v1.md).
+- Escrever testes de integração que provem descoberta e invocação (ex.: fluxo equivalente a `tools/list` e `tools/call`) e **paridade** com a resposta dos endpoints HTTP para o mesmo input.
+- Documentar configuração mínima do host (ex.: entrada MCP no cliente) no [README.md](../README.md) ou doc operacional existente.
+
+Referências:
+
+- [ADR 0005](adrs/0005-transporte-mcp-e-superficie-tools-v1.md)
+- [mcp-tool-contract.md](mcp-tool-contract.md)
+- [contract-test-plan.md](contract-test-plan.md)
+
+Critério mínimo de aceite:
+
+- um host MCP consegue listar e chamar as tools da V0;
+- sucesso e erros de contrato são consistentes entre MCP e HTTP;
+- D3 do [ADR 0004](adrs/0004-estrutura-arquitetural-inicial-mcp-dotnet10.md) (servidor sem IA embarcada) permanece verdadeiro.
+
+### Fase 10: Expandir tools documentadas (ondas B e C)
+
+Objetivo: implementar as ferramentas restantes de [mcp-tool-contract.md](mcp-tool-contract.md) (*Ferramentas propostas*, itens 3–8), em **fatias verticais** independentes.
+
+Ordem recomendada (dependências e complexidade crescente):
+
+1. `analyze_indicator_stability`
+2. `compose_indicator_analysis`
+3. `analyze_indicator_associations`
+4. `summarize_window_patterns`
+5. `generate_candidate_games`
+6. `explain_candidate_games`
+
+Passos atômicos (repetir por tool):
+
+- Fixar semântica no [metric-catalog.md](metric-catalog.md) / [generation-strategies.md](generation-strategies.md) se ainda houver lacuna normativa.
+- Escrever testes de contrato e/ou domínio **antes** (ou em paralelo explícito) da superfície.
+- Implementar `Application` → `Domain` conforme [ADR 0002](adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md) quando aplicável.
+- Expor a tool em **HTTP** e **MCP** no mesmo recorte, salvo exceção documentada no PR.
+
+Referências:
+
+- [ADR 0002](adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md)
+- [mcp-tool-contract.md](mcp-tool-contract.md)
+- [contract-test-plan.md](contract-test-plan.md)
+
+Critério mínimo de aceite:
+
+- cada tool concluída tem testes objetivos e entradas/saídas conforme o contrato;
+- envelope com `dataset_version`, `tool_version`, `deterministic_hash` onde o contrato exigir.
+
+### Fase 11: Fechar evidências da V1 (MCP + catálogo em escopo)
+
+Objetivo: declarar a V1 “fechada” para o escopo acordado (transporte MCP + tools implementadas) com rastreabilidade na CI.
+
+Passos atômicos:
+
+- Rodar suítes de domínio, contrato e integração MCP relevantes.
+- Atualizar [contract-test-plan.md](contract-test-plan.md) e, se necessário, [vertical-slice.md](vertical-slice.md) ou um doc de escopo V1 para refletir tools e transportes entregues.
+- Confirmar que [ADR 0005](adrs/0005-transporte-mcp-e-superficie-tools-v1.md) critérios de verificação são atendidos para o recorte entregue.
+
+Critério mínimo de aceite:
+
+- nenhuma tool em escopo documentado fica só em HTTP ou só em MCP sem justificativa escrita;
+- documentação, testes e comportamento observado permanecem alinhados.
+
 ## Como pedir implementação para IA
 
 O erro mais comum em fluxo spec-driven é pedir “implemente a V1” ou “crie o MCP”. Isso é amplo demais.
@@ -286,9 +358,9 @@ Arquivos esperados:
 - <arquivo B>
 
 Regras:
-- não extrapolar além da V0;
+- não extrapolar além do recorte citado (V0, Fase 9 MCP, ou uma tool da Fase 10);
 - manter TDD;
-- não criar camadas fora do ADR 0004;
+- respeitar fronteiras do [ADR 0004](adrs/0004-estrutura-arquitetural-inicial-mcp-dotnet10.md) e superfície MCP do [ADR 0005](adrs/0005-transporte-mcp-e-superficie-tools-v1.md);
 - seguir nomes canônicos do catálogo/contrato.
 
 Critério de pronto:
@@ -320,13 +392,13 @@ então ele ainda está grande demais.
 
 Depois da V0, cada nova entrega deve seguir sempre esta ordem operacional:
 
-1. escolher a próxima fatia;
+1. escolher a próxima fatia ([Fase 9](#fase-9-transporte-mcp-paridade-com-o-contrato) MCP, depois [Fase 10](#fase-10-expandir-tools-documentadas-ondas-b-e-c) por tool);
 2. localizar os specs normativos;
 3. escrever/ajustar testes;
 4. implementar domínio;
 5. implementar orquestração;
-6. expor no server;
-7. validar contrato;
+6. expor no server (**HTTP + MCP** para a mesma tool, salvo exceção documentada);
+7. validar contrato nos dois caminhos quando a tool já existir em ambos;
 8. atualizar docs se a semântica tiver mudado.
 
 Além dessa ordem operacional, a progressão de conteúdo deve ir do mais simples para o mais complexo:
@@ -346,7 +418,7 @@ Ordem prática recomendada para evolução do catálogo:
 2. `top10_mais_sorteados` e `top10_menos_sorteados`
 3. `repeticao_concurso_anterior`, `pares_no_concurso`, `quantidade_vizinhos_por_concurso`
 4. `media_janela`, `desvio_padrao_janela`, `mad_janela`, `madn_janela`, `tendencia_linear`
-5. distribuições e séries vetoriais (`distribuicao_*`, `entropia_*`, `hhi_*`)
+5. distribuições e séries vetoriais (`distribuicao_`*, `entropia_*`, `hhi_*`)
 6. `analyze_indicator_stability`, `compose_indicator_analysis`, `analyze_indicator_associations`, `summarize_window_patterns`
 7. métricas simples de `candidate_game`
 8. `matriz_numero_slot`, `analise_slot`, `surpresa_slot`, `outlier_score`, `generate_candidate_games` e perfis compostos
@@ -375,22 +447,25 @@ Criar novo documento apenas quando houver pergunta concreta que os atuais não r
 
 ## Checklist de início da execução
 
-- [ ] Arquitetura congelada no [ADR 0004](adrs/0004-estrutura-arquitetural-inicial-mcp-dotnet10.md)
-- [ ] V0 confirmada em [vertical-slice.md](vertical-slice.md)
-- [ ] Ordem de teste confirmada em [contract-test-plan.md](contract-test-plan.md)
-- [ ] Métrica inicial confirmada em [metric-catalog.md](metric-catalog.md)
-- [ ] Contrato inicial confirmado em [mcp-tool-contract.md](mcp-tool-contract.md)
-- [ ] Estrutura de projetos confirmada em [project-guide.md](project-guide.md)
-- [ ] Fixture mínima definida
-- [ ] Teste explícito da barreira de normalização escrito
-- [ ] Primeiro teste negativo escrito
-- [ ] Primeiro teste de fórmula escrito
-- [ ] Primeiro teste do envelope mínimo (`dataset_version`, `tool_version`, `deterministic_hash`) escrito
-- [ ] Primeiro teste de determinismo escrito
+- Arquitetura congelada no [ADR 0004](adrs/0004-estrutura-arquitetural-inicial-mcp-dotnet10.md)
+- Superfície MCP + rollout de tools conforme [ADR 0005](adrs/0005-transporte-mcp-e-superficie-tools-v1.md) (quando pós-V0)
+- V0 confirmada em [vertical-slice.md](vertical-slice.md)
+- Ordem de teste confirmada em [contract-test-plan.md](contract-test-plan.md)
+- Métrica inicial confirmada em [metric-catalog.md](metric-catalog.md)
+- Contrato inicial confirmado em [mcp-tool-contract.md](mcp-tool-contract.md)
+- Estrutura de projetos confirmada em [project-guide.md](project-guide.md)
+- Fixture mínima definida
+- Teste explícito da barreira de normalização escrito
+- Primeiro teste negativo escrito
+- Primeiro teste de fórmula escrito
+- Primeiro teste do envelope mínimo (`dataset_version`, `tool_version`, `deterministic_hash`) escrito
+- Primeiro teste de determinismo escrito
 
 ## Recomendação prática
 
 Se houver dúvida sobre “qual passo pedir agora para a IA”, comece sempre por este recorte:
+
+**Até fechar a V0 (Fases 0–8):**
 
 1. fixture mínima;
 2. testes vermelhos de normalização, janela e fórmula;
@@ -399,7 +474,13 @@ Se houver dúvida sobre “qual passo pedir agora para a IA”, comece sempre po
 5. provider de fixture + `dataset_version` + `canonical_json` + hash determinístico;
 6. caso de uso;
 7. teste de contrato do envelope mínimo;
-8. tool/endpoint;
+8. tool/endpoint HTTP;
 9. fechamento da V0.
+
+**Depois da V0:**
+
+1. [Fase 9](#fase-9-transporte-mcp-paridade-com-o-contrato): transporte MCP com paridade aos endpoints HTTP;
+2. [Fase 10](#fase-10-expandir-tools-documentadas-ondas-b-e-c): uma tool de cada vez, na ordem listada;
+3. [Fase 11](#fase-11-fechar-evidências-da-v1-mcp--catálogo-em-escopo): evidência e documentação alinhadas ao escopo V1.
 
 Essa ordem é a forma prática de usar spec-driven neste projeto: **spec → teste → implementação mínima → validação → próxima fatia**.
