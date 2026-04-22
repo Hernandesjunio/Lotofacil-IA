@@ -15,7 +15,9 @@ public sealed class V0CrossFieldValidator
         "distribuicao_linha_por_concurso",
         "distribuicao_coluna_por_concurso",
         "entropia_linha_por_concurso",
-        "entropia_coluna_por_concurso"
+        "entropia_coluna_por_concurso",
+        "hhi_linha_por_concurso",
+        "hhi_coluna_por_concurso"
     ];
 
     private static readonly HashSet<string> SupportedNormalizationMethods =

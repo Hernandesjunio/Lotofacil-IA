@@ -126,7 +126,9 @@ public sealed class V0Tools
                 new DistribuicaoLinhaPorConcursoMetric(),
                 new DistribuicaoColunaPorConcursoMetric(),
                 new EntropiaLinhaPorConcursoMetric(),
-                new EntropiaColunaPorConcursoMetric()),
+                new EntropiaColunaPorConcursoMetric(),
+                new HhiLinhaPorConcursoMetric(),
+                new HhiColunaPorConcursoMetric()),
             validator,
             mapper);
 

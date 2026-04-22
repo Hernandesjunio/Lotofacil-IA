@@ -342,7 +342,9 @@ public sealed class Phase5ApplicationUseCasesTests
             new DistribuicaoLinhaPorConcursoMetric(),
             new DistribuicaoColunaPorConcursoMetric(),
             new EntropiaLinhaPorConcursoMetric(),
-            new EntropiaColunaPorConcursoMetric());
+            new EntropiaColunaPorConcursoMetric(),
+            new HhiLinhaPorConcursoMetric(),
+            new HhiColunaPorConcursoMetric());
     }
 
     private static AnalyzeIndicatorStabilityUseCase BuildAnalyzeIndicatorStabilityUseCase()

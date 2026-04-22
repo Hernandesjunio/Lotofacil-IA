@@ -169,6 +169,10 @@ public sealed class ComputeWindowMetricsUseCase
             "Série da entropia de Shannon (bits) da distribuição das 15 dezenas pelas 5 linhas do volante, por concurso da janela (p_i = contagem na linha i / 15).",
         "entropia_coluna_por_concurso" =>
             "Série da entropia de Shannon (bits) da distribuição das 15 dezenas pelas 5 colunas do volante, por concurso da janela (p_i = contagem na coluna i / 15).",
+        "hhi_linha_por_concurso" =>
+            "Série do índice Herfindahl-Hirschman (HHI) da distribuição das dezenas pelas 5 linhas do volante, por concurso (HHI = soma (contagem_i/15)^2).",
+        "hhi_coluna_por_concurso" =>
+            "Série do índice Herfindahl-Hirschman (HHI) da distribuição das dezenas pelas 5 colunas do volante, por concurso (HHI = soma (contagem_i/15)^2).",
         _ => "Metrica de janela."
     };
 }
