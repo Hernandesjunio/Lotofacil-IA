@@ -123,7 +123,8 @@ public sealed class V0Tools
                 new RepeticaoConcursoAnteriorMetric(),
                 new QuantidadeVizinhosPorConcursoMetric(),
                 new SequenciaMaximaVizinhosPorConcursoMetric(),
-                new DistribuicaoLinhaPorConcursoMetric()),
+                new DistribuicaoLinhaPorConcursoMetric(),
+                new DistribuicaoColunaPorConcursoMetric()),
             validator,
             mapper);
 

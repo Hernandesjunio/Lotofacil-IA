@@ -345,7 +345,8 @@ public class V0Phase2RedTests
             new RepeticaoConcursoAnteriorMetric(),
             new QuantidadeVizinhosPorConcursoMetric(),
             new SequenciaMaximaVizinhosPorConcursoMetric(),
-            new DistribuicaoLinhaPorConcursoMetric());
+            new DistribuicaoLinhaPorConcursoMetric(),
+            new DistribuicaoColunaPorConcursoMetric());
     }
 
     private sealed record FixtureRoot(

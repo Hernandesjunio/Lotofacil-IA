@@ -95,6 +95,9 @@ public sealed class IndicatorStabilityAnalyzer
             "distribuicao_linha_por_concurso" => IndicatorSeriesData.FromVectorSeries(
                 "series_of_count_vector[5]",
                 window.Draws.Select(draw => ComputeRowDistribution(draw.Numbers)).ToArray()),
+            "distribuicao_coluna_por_concurso" => IndicatorSeriesData.FromVectorSeries(
+                "series_of_count_vector[5]",
+                window.Draws.Select(draw => ComputeColumnDistribution(draw.Numbers)).ToArray()),
             _ => throw new DomainInvariantViolationException($"unknown indicator requested: {indicator.Name}.")
         };
 
@@ -253,6 +256,18 @@ public sealed class IndicatorStabilityAnalyzer
         {
             var rowIndex = (number - 1) / 5;
             values[rowIndex]++;
+        }
+
+        return values;
+    }
+
+    private static double[] ComputeColumnDistribution(IReadOnlyList<int> numbers)
+    {
+        var values = new double[5];
+        foreach (var number in numbers)
+        {
+            var columnIndex = (number - 1) % 5;
+            values[columnIndex]++;
         }
 
         return values;

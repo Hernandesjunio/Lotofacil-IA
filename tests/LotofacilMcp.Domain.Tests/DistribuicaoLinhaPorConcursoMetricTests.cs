@@ -65,7 +65,8 @@ public sealed class DistribuicaoLinhaPorConcursoMetricTests
             new RepeticaoConcursoAnteriorMetric(),
             new QuantidadeVizinhosPorConcursoMetric(),
             new SequenciaMaximaVizinhosPorConcursoMetric(),
-            new DistribuicaoLinhaPorConcursoMetric());
+            new DistribuicaoLinhaPorConcursoMetric(),
+            new DistribuicaoColunaPorConcursoMetric());
 
         var metric = sut.Dispatch("distribuicao_linha_por_concurso", window);
 

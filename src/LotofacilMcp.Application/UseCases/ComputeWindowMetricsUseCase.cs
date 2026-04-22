@@ -163,6 +163,8 @@ public sealed class ComputeWindowMetricsUseCase
             "Série do maior bloco consecutivo com diferença 1 (vizinhos) em cada concurso da janela (ordem crescente canônica).",
         "distribuicao_linha_por_concurso" =>
             "Série (por concurso) da contagem de dezenas em cada linha do volante 5x5; cinco inteiros por ponto, somando 15, em blocos consecutivos na ordem das linhas 1 a 5.",
+        "distribuicao_coluna_por_concurso" =>
+            "Série (por concurso) da contagem de dezenas em cada coluna do volante 5x5; cinco inteiros por ponto, somando 15, em blocos consecutivos na ordem das colunas 1 a 5.",
         _ => "Metrica de janela."
     };
 }

@@ -339,7 +339,8 @@ public sealed class Phase5ApplicationUseCasesTests
             new RepeticaoConcursoAnteriorMetric(),
             new QuantidadeVizinhosPorConcursoMetric(),
             new SequenciaMaximaVizinhosPorConcursoMetric(),
-            new DistribuicaoLinhaPorConcursoMetric());
+            new DistribuicaoLinhaPorConcursoMetric(),
+            new DistribuicaoColunaPorConcursoMetric());
     }
 
     private static AnalyzeIndicatorStabilityUseCase BuildAnalyzeIndicatorStabilityUseCase()
