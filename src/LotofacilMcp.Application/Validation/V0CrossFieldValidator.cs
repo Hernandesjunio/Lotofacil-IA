@@ -13,7 +13,9 @@ public sealed class V0CrossFieldValidator
         "quantidade_vizinhos_por_concurso",
         "sequencia_maxima_vizinhos_por_concurso",
         "distribuicao_linha_por_concurso",
-        "distribuicao_coluna_por_concurso"
+        "distribuicao_coluna_por_concurso",
+        "entropia_linha_por_concurso",
+        "entropia_coluna_por_concurso"
     ];
 
     private static readonly HashSet<string> SupportedNormalizationMethods =

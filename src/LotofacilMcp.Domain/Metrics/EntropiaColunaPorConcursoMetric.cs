@@ -3,7 +3,7 @@ using LotofacilMcp.Domain.Windows;
 
 namespace LotofacilMcp.Domain.Metrics;
 
-public sealed class ParesNoConcursoMetric
+public sealed class EntropiaColunaPorConcursoMetric
 {
     public WindowMetricValue Compute(DrawWindow window)
     {
@@ -15,35 +15,23 @@ public sealed class ParesNoConcursoMetric
         if (window.Draws.Count != window.Size)
         {
             throw new DomainInvariantViolationException(
-                "pares_no_concurso: draw count must match the resolved window size.");
+                "entropia_coluna_por_concurso: draw count must match the resolved window size.");
         }
 
-        var series = new int[window.Size];
+        var series = new double[window.Size];
+        Span<int> counts = stackalloc int[5];
         for (var i = 0; i < window.Size; i++)
         {
-            series[i] = CountEvenDezenas(window.Draws[i]);
+            VolanteRowColumnCounts.FillColumnCounts(window.Draws[i], counts);
+            series[i] = ShannonEntropyBits.FromNonNegativeCounts(counts);
         }
 
         return new WindowMetricValue(
-            MetricName: "pares_no_concurso",
+            MetricName: "entropia_coluna_por_concurso",
             Scope: "series",
             Shape: "series",
-            Unit: "count",
+            Unit: "bits",
             Version: "1.0.0",
-            Value: Array.ConvertAll(series, static x => (double)x));
-    }
-
-    private static int CountEvenDezenas(Draw draw)
-    {
-        var c = 0;
-        foreach (var n in draw.Numbers)
-        {
-            if (n % 2 == 0)
-            {
-                c++;
-            }
-        }
-
-        return c;
+            Value: series);
     }
 }

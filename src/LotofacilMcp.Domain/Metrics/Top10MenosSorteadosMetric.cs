@@ -34,6 +34,6 @@ public sealed class Top10MenosSorteadosMetric
             Shape: "dezena_list[10]",
             Unit: "dimensionless",
             Version: "1.0.0",
-            Value: top10);
+            Value: Array.ConvertAll(top10, static d => (double)d));
     }
 }

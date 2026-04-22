@@ -22,7 +22,7 @@ public sealed class RepeticaoConcursoAnteriorMetric
             Shape: "series",
             Unit: "count",
             Version: "1.0.0",
-            Value: series);
+            Value: series.Select(static x => (double)x).ToArray());
     }
 }
 

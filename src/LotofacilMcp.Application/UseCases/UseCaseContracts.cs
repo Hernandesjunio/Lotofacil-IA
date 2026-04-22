@@ -23,7 +23,7 @@ public sealed record FrequencyMetricValueView(
     string Unit,
     string Version,
     WindowDescriptor Window,
-    IReadOnlyList<int> Value,
+    IReadOnlyList<double> Value,
     string Explanation);
 
 public sealed record StabilityRankingEntryView(

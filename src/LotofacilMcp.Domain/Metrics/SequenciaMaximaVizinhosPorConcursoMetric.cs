@@ -30,6 +30,6 @@ public sealed class SequenciaMaximaVizinhosPorConcursoMetric
             Shape: "series",
             Unit: "count",
             Version: "1.0.0",
-            Value: series);
+            Value: Array.ConvertAll(series, static x => (double)x));
     }
 }

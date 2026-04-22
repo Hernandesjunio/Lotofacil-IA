@@ -6,71 +6,62 @@ using LotofacilMcp.Domain.Windows;
 
 namespace LotofacilMcp.Domain.Tests;
 
-/// <summary>
-/// Série escalar <c>sequencia_maxima_vizinhos_por_concurso@1.0.0</c> (catálogo, test-plan séries por concurso).
-/// </summary>
-public sealed class SequenciaMaximaVizinhosPorConcursoMetricTests
+public sealed class EntropiaColunaPorConcursoMetricTests
 {
     [Fact]
-    public void VizinhosConsecutivos_ListaSemParesDiferençaUm_RunMáximaUnidade()
-    {
-        // test-plan (borda): run unitária — maior bloco = 1 dezena (nenhum par (d, d+1) na sequência)
-        Assert.Equal(1, VizinhosConsecutivos.MaxConsecutiveAdjacencyRunLength(new[] { 1, 3, 5, 7, 9 }));
-    }
-
-    [Fact]
-    public void Serie_OnMinimalFixture_FirstThreeContests_Deterministic()
+    public void Serie_OnMinimalFixture_MatchesColumnHistogramEntropy()
     {
         var window = BuildWindowFromSyntheticFixture(endContestIdInclusive: 3);
-        var sut = new SequenciaMaximaVizinhosPorConcursoMetric();
+        var sut = new EntropiaColunaPorConcursoMetric();
 
         var metric = sut.Compute(window);
 
-        Assert.Equal("sequencia_maxima_vizinhos_por_concurso", metric.MetricName);
+        Assert.Equal("entropia_coluna_por_concurso", metric.MetricName);
         Assert.Equal("series", metric.Scope);
         Assert.Equal("series", metric.Shape);
-        Assert.Equal("count", metric.Unit);
+        Assert.Equal("bits", metric.Unit);
         Assert.Equal("1.0.0", metric.Version);
-        Assert.Equal(3, window.Size);
-        Assert.Equal([3, 4, 7], metric.Value.Select(static x => (int)x).ToArray());
+        Assert.Equal(3, metric.Value.Count);
+
+        Span<int> col = stackalloc int[5];
+        var expected = new double[window.Size];
+        for (var i = 0; i < window.Size; i++)
+        {
+            VolanteRowColumnCounts.FillColumnCounts(window.Draws[i], col);
+            expected[i] = ShannonEntropyBits.FromNonNegativeCounts(col);
+        }
+
+        for (var i = 0; i < expected.Length; i++)
+        {
+            Assert.Equal(expected[i], metric.Value[i], 12);
+            Assert.False(double.IsNaN(metric.Value[i]));
+            Assert.False(double.IsInfinity(metric.Value[i]));
+        }
     }
 
     [Fact]
-    public void Draw_ContiguousBlock1To15_MaxRun15()
+    public void Draw_OneToFifteen_UniformColumns_IsLog2Of5()
     {
         var draw = new Draw(1, new DateOnly(2026, 1, 1), Enumerable.Range(1, 15).ToArray());
         var window = new DrawWindow(1, 1, 1, [draw]);
-        var sut = new SequenciaMaximaVizinhosPorConcursoMetric();
+        var sut = new EntropiaColunaPorConcursoMetric();
 
         var metric = sut.Compute(window);
 
-        Assert.Equal(15, (int)metric.Value[0]);
+        Assert.Equal(Math.Log2(5), Assert.Single(metric.Value), 12);
     }
 
     [Fact]
-    public void Draw_OnlyIsolatedNeighborPairs_MaxRun2()
-    {
-        // Borda: maior run mínima não trivial (apenas pares isolados, sem trechos de 3+ consecutivos)
-        var numbers = new[] { 1, 2, 4, 5, 7, 8, 10, 11, 13, 14, 16, 17, 19, 20, 22 };
-        var draw = new Draw(1, new DateOnly(2026, 1, 1), numbers);
-        var window = new DrawWindow(1, 1, 1, [draw]);
-        var sut = new SequenciaMaximaVizinhosPorConcursoMetric();
-
-        var metric = sut.Compute(window);
-
-        Assert.Equal(2, (int)metric.Value[0]);
-    }
-
-    [Fact]
-    public void WindowMetricDispatcher_DispatchesSequenciaMaximaVizinhosPorConcurso()
+    public void WindowMetricDispatcher_DispatchesEntropiaColunaPorConcurso()
     {
         var window = BuildWindowFromSyntheticFixture(endContestIdInclusive: 3);
         var sut = WindowMetricDispatcherFactory.Create();
 
-        var metric = sut.Dispatch("sequencia_maxima_vizinhos_por_concurso", window);
+        var metric = sut.Dispatch("entropia_coluna_por_concurso", window);
 
-        Assert.Equal("sequencia_maxima_vizinhos_por_concurso", metric.MetricName);
-        Assert.Equal([3, 4, 7], metric.Value.Select(static x => (int)x).ToArray());
+        Assert.Equal("entropia_coluna_por_concurso", metric.MetricName);
+        Assert.Equal("bits", metric.Unit);
+        Assert.Equal(3, metric.Value.Count);
     }
 
     private static DrawWindow BuildWindowFromSyntheticFixture(int endContestIdInclusive)

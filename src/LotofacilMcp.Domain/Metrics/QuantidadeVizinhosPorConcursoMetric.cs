@@ -30,7 +30,7 @@ public sealed class QuantidadeVizinhosPorConcursoMetric
             Shape: "series",
             Unit: "count",
             Version: "1.0.0",
-            Value: series);
+            Value: Array.ConvertAll(series, static x => (double)x));
     }
 
     private static int CountConsecutiveAdjacencies(Draw draw)

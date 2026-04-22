@@ -30,7 +30,7 @@ public sealed class DistribuicaoColunaPorConcursoMetric
             Shape: "series_of_count_vector[5]",
             Unit: "count",
             Version: "1.0.0",
-            Value: flat);
+            Value: Array.ConvertAll(flat, static x => (double)x));
     }
 
     private static void FillColumnCounts(Draw draw, int[] destination, int offset)

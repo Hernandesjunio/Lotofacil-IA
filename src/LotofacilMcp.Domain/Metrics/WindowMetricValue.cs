@@ -6,4 +6,4 @@ public sealed record WindowMetricValue(
     string Shape,
     string Unit,
     string Version,
-    IReadOnlyList<int> Value);
+    IReadOnlyList<double> Value);

@@ -57,7 +57,7 @@ public sealed class Phase5ApplicationUseCasesTests
         Assert.Equal(result.Window, metric.Window);
         Assert.Equal(
             [2, 1, 1, 2, 2, 3, 2, 1, 3, 2, 3, 2, 2, 2, 1, 3, 1, 1, 1, 3, 0, 0, 3, 3, 1],
-            metric.Value.ToArray());
+            metric.Value.Select(static x => (int)x).ToArray());
         Assert.Equal(3, result.DeterministicHashInput.WindowSize);
         Assert.Equal(3, result.DeterministicHashInput.EndContestId);
         Assert.False(result.DeterministicHashInput.AllowPending);
@@ -114,7 +114,7 @@ public sealed class Phase5ApplicationUseCasesTests
         Assert.Equal("dezena_list[10]", metric.Shape);
         Assert.Equal("dimensionless", metric.Unit);
         Assert.Equal("1.0.0", metric.Version);
-        Assert.Equal([6, 9, 11, 16, 20, 23, 24, 1, 4, 5], metric.Value.ToArray());
+        Assert.Equal([6, 9, 11, 16, 20, 23, 24, 1, 4, 5], metric.Value.Select(static x => (int)x).ToArray());
     }
 
     [Fact]
@@ -137,7 +137,7 @@ public sealed class Phase5ApplicationUseCasesTests
         Assert.Equal("1.0.0", metric.Version);
         Assert.Equal(3, result.Window.Size);
         Assert.Equal(3, metric.Value.Count);
-        Assert.Equal([8, 6, 9], metric.Value.ToArray());
+        Assert.Equal([8, 6, 9], metric.Value.Select(static x => (int)x).ToArray());
     }
 
     [Fact]
@@ -160,7 +160,7 @@ public sealed class Phase5ApplicationUseCasesTests
         Assert.Equal("1.0.0", metric.Version);
         Assert.Equal(3, result.Window.Size);
         Assert.Equal(3, metric.Value.Count);
-        Assert.Equal([7, 8, 8], metric.Value.ToArray());
+        Assert.Equal([7, 8, 8], metric.Value.Select(static x => (int)x).ToArray());
     }
 
     [Fact]
@@ -183,7 +183,7 @@ public sealed class Phase5ApplicationUseCasesTests
         Assert.Equal("1.0.0", metric.Version);
         Assert.Equal(3, result.Window.Size);
         Assert.Equal(3, metric.Value.Count);
-        Assert.Equal([3, 4, 7], metric.Value.ToArray());
+        Assert.Equal([3, 4, 7], metric.Value.Select(static x => (int)x).ToArray());
     }
 
     [Fact]
@@ -208,7 +208,7 @@ public sealed class Phase5ApplicationUseCasesTests
         Assert.Equal(15, metric.Value.Count);
         Assert.Equal(
             [3, 3, 3, 3, 3, 3, 3, 4, 3, 2, 2, 5, 3, 3, 2],
-            metric.Value.ToArray());
+            metric.Value.Select(static x => (int)x).ToArray());
     }
 
     [Fact]
@@ -229,7 +229,7 @@ public sealed class Phase5ApplicationUseCasesTests
         Assert.Equal("dezena_list[10]", metric.Shape);
         Assert.Equal("dimensionless", metric.Unit);
         Assert.Equal("1.0.0", metric.Version);
-        Assert.Equal([21, 22, 2, 3, 8, 15, 17, 18, 19, 25], metric.Value.ToArray());
+        Assert.Equal([21, 22, 2, 3, 8, 15, 17, 18, 19, 25], metric.Value.Select(static x => (int)x).ToArray());
     }
 
     [Fact]
@@ -340,7 +340,9 @@ public sealed class Phase5ApplicationUseCasesTests
             new QuantidadeVizinhosPorConcursoMetric(),
             new SequenciaMaximaVizinhosPorConcursoMetric(),
             new DistribuicaoLinhaPorConcursoMetric(),
-            new DistribuicaoColunaPorConcursoMetric());
+            new DistribuicaoColunaPorConcursoMetric(),
+            new EntropiaLinhaPorConcursoMetric(),
+            new EntropiaColunaPorConcursoMetric());
     }
 
     private static AnalyzeIndicatorStabilityUseCase BuildAnalyzeIndicatorStabilityUseCase()

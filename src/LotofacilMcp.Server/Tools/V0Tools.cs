@@ -56,7 +56,7 @@ public sealed record MetricValueEnvelope(
     [property: JsonPropertyName("unit")] string Unit,
     [property: JsonPropertyName("version")] string Version,
     [property: JsonPropertyName("window")] WindowEnvelope Window,
-    [property: JsonPropertyName("value")] IReadOnlyList<int> Value,
+    [property: JsonPropertyName("value")] IReadOnlyList<double> Value,
     [property: JsonPropertyName("explanation")] string Explanation);
 
 public sealed record ComputeWindowMetricsResponse(
@@ -124,7 +124,9 @@ public sealed class V0Tools
                 new QuantidadeVizinhosPorConcursoMetric(),
                 new SequenciaMaximaVizinhosPorConcursoMetric(),
                 new DistribuicaoLinhaPorConcursoMetric(),
-                new DistribuicaoColunaPorConcursoMetric()),
+                new DistribuicaoColunaPorConcursoMetric(),
+                new EntropiaLinhaPorConcursoMetric(),
+                new EntropiaColunaPorConcursoMetric()),
             validator,
             mapper);
 

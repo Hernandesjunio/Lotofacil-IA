@@ -68,7 +68,7 @@ public class V0Phase2RedTests
         Assert.Equal("1.0.0", metric.Version);
         Assert.Equal(
             [2, 1, 1, 2, 2, 3, 2, 1, 3, 2, 3, 2, 2, 2, 1, 3, 1, 1, 1, 3, 0, 0, 3, 3, 1],
-            metric.Value.ToArray());
+            metric.Value.Select(static x => (int)x).ToArray());
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public class V0Phase2RedTests
         Assert.Equal("dezena_list[10]", metric.Shape);
         Assert.Equal("dimensionless", metric.Unit);
         Assert.Equal("1.0.0", metric.Version);
-        Assert.Equal([6, 9, 11, 16, 20, 23, 24, 1, 4, 5], metric.Value.ToArray());
+        Assert.Equal([6, 9, 11, 16, 20, 23, 24, 1, 4, 5], metric.Value.Select(static x => (int)x).ToArray());
     }
 
     [Fact]
@@ -131,7 +131,7 @@ public class V0Phase2RedTests
         Assert.Equal("dezena_list[10]", metric.Shape);
         Assert.Equal("dimensionless", metric.Unit);
         Assert.Equal("1.0.0", metric.Version);
-        Assert.Equal([21, 22, 2, 3, 8, 15, 17, 18, 19, 25], metric.Value.ToArray());
+        Assert.Equal([21, 22, 2, 3, 8, 15, 17, 18, 19, 25], metric.Value.Select(static x => (int)x).ToArray());
     }
 
     [Fact]
@@ -150,7 +150,7 @@ public class V0Phase2RedTests
 
         var metric = sut.Compute(window);
 
-        Assert.Equal([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], metric.Value.ToArray());
+        Assert.Equal([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], metric.Value.Select(static x => (int)x).ToArray());
     }
 
     [Fact]
@@ -169,7 +169,7 @@ public class V0Phase2RedTests
 
         var metric = sut.Compute(window);
 
-        Assert.Equal([16, 17, 18, 19, 20, 21, 22, 23, 24, 25], metric.Value.ToArray());
+        Assert.Equal([16, 17, 18, 19, 20, 21, 22, 23, 24, 25], metric.Value.Select(static x => (int)x).ToArray());
     }
 
     [Fact]
@@ -187,7 +187,7 @@ public class V0Phase2RedTests
         Assert.Equal("1.0.0", metric.Version);
         Assert.Equal(3, metric.Value.Count);
         Assert.Equal(window.Size, metric.Value.Count);
-        Assert.Equal([8, 6, 9], metric.Value.ToArray());
+        Assert.Equal([8, 6, 9], metric.Value.Select(static x => (int)x).ToArray());
     }
 
     [Fact]
@@ -200,7 +200,7 @@ public class V0Phase2RedTests
 
         var metric = sut.Compute(window);
 
-        Assert.Equal(12, metric.Value[0]);
+        Assert.Equal(12, (int)metric.Value[0]);
     }
 
     [Fact]
@@ -213,7 +213,7 @@ public class V0Phase2RedTests
 
         var metric = sut.Compute(window);
 
-        Assert.Equal(2, metric.Value[0]);
+        Assert.Equal(2, (int)metric.Value[0]);
     }
 
     [Fact]
@@ -231,7 +231,7 @@ public class V0Phase2RedTests
         Assert.Equal("1.0.0", metric.Version);
         Assert.Equal(3, metric.Value.Count);
         Assert.Equal(window.Size, metric.Value.Count);
-        Assert.Equal([7, 8, 8], metric.Value.ToArray());
+        Assert.Equal([7, 8, 8], metric.Value.Select(static x => (int)x).ToArray());
     }
 
     [Fact]
@@ -243,7 +243,7 @@ public class V0Phase2RedTests
 
         var metric = sut.Compute(window);
 
-        Assert.Equal(14, metric.Value[0]);
+        Assert.Equal(14, (int)metric.Value[0]);
     }
 
     [Fact]
@@ -255,7 +255,7 @@ public class V0Phase2RedTests
         var metric = sut.Dispatch("pares_no_concurso", window);
 
         Assert.Equal("pares_no_concurso", metric.MetricName);
-        Assert.Equal([8, 6, 9], metric.Value.ToArray());
+        Assert.Equal([8, 6, 9], metric.Value.Select(static x => (int)x).ToArray());
     }
 
     [Fact]
@@ -267,7 +267,7 @@ public class V0Phase2RedTests
         var metric = sut.Dispatch("quantidade_vizinhos_por_concurso", window);
 
         Assert.Equal("quantidade_vizinhos_por_concurso", metric.MetricName);
-        Assert.Equal([7, 8, 8], metric.Value.ToArray());
+        Assert.Equal([7, 8, 8], metric.Value.Select(static x => (int)x).ToArray());
     }
 
     [Fact]
@@ -281,7 +281,9 @@ public class V0Phase2RedTests
         Assert.Equal("repeticao_concurso_anterior", metric.MetricName);
         Assert.Equal("series", metric.Scope);
         Assert.Equal(2, metric.Value.Count);
-        Assert.Equal(RepeticaoConcursoAnteriorSeries.Build(window), metric.Value);
+        Assert.Equal(
+            RepeticaoConcursoAnteriorSeries.Build(window).Select(static x => (double)x).ToArray(),
+            metric.Value.ToArray());
     }
 
     [Fact]
@@ -334,20 +336,7 @@ public class V0Phase2RedTests
             Draws: draws);
     }
 
-    private static WindowMetricDispatcher CreateWindowMetricDispatcher()
-    {
-        var frequency = new FrequencyByDezenaMetric();
-        return new WindowMetricDispatcher(
-            frequency,
-            new Top10MaisSorteadosMetric(frequency),
-            new Top10MenosSorteadosMetric(frequency),
-            new ParesNoConcursoMetric(),
-            new RepeticaoConcursoAnteriorMetric(),
-            new QuantidadeVizinhosPorConcursoMetric(),
-            new SequenciaMaximaVizinhosPorConcursoMetric(),
-            new DistribuicaoLinhaPorConcursoMetric(),
-            new DistribuicaoColunaPorConcursoMetric());
-    }
+    private static WindowMetricDispatcher CreateWindowMetricDispatcher() => WindowMetricDispatcherFactory.Create();
 
     private sealed record FixtureRoot(
         [property: JsonPropertyName("draws")] IReadOnlyList<FixtureDraw> Draws);

@@ -30,7 +30,7 @@ public sealed class DistribuicaoLinhaPorConcursoMetric
             Shape: "series_of_count_vector[5]",
             Unit: "count",
             Version: "1.0.0",
-            Value: flat);
+            Value: Array.ConvertAll(flat, static x => (double)x));
     }
 
     private static void FillRowCounts(Draw draw, int[] destination, int offset)

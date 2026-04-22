@@ -16,7 +16,9 @@ public sealed class WindowMetricDispatcher
         QuantidadeVizinhosPorConcursoMetric quantidadeVizinhosPorConcursoMetric,
         SequenciaMaximaVizinhosPorConcursoMetric sequenciaMaximaVizinhosPorConcursoMetric,
         DistribuicaoLinhaPorConcursoMetric distribuicaoLinhaPorConcursoMetric,
-        DistribuicaoColunaPorConcursoMetric distribuicaoColunaPorConcursoMetric)
+        DistribuicaoColunaPorConcursoMetric distribuicaoColunaPorConcursoMetric,
+        EntropiaLinhaPorConcursoMetric entropiaLinhaPorConcursoMetric,
+        EntropiaColunaPorConcursoMetric entropiaColunaPorConcursoMetric)
     {
         ArgumentNullException.ThrowIfNull(frequencyByDezenaMetric);
         ArgumentNullException.ThrowIfNull(top10MaisSorteadosMetric);
@@ -27,6 +29,8 @@ public sealed class WindowMetricDispatcher
         ArgumentNullException.ThrowIfNull(sequenciaMaximaVizinhosPorConcursoMetric);
         ArgumentNullException.ThrowIfNull(distribuicaoLinhaPorConcursoMetric);
         ArgumentNullException.ThrowIfNull(distribuicaoColunaPorConcursoMetric);
+        ArgumentNullException.ThrowIfNull(entropiaLinhaPorConcursoMetric);
+        ArgumentNullException.ThrowIfNull(entropiaColunaPorConcursoMetric);
 
         _dispatchByMetricName = new Dictionary<string, Func<DrawWindow, WindowMetricValue>>(StringComparer.Ordinal)
         {
@@ -38,7 +42,9 @@ public sealed class WindowMetricDispatcher
             ["quantidade_vizinhos_por_concurso"] = quantidadeVizinhosPorConcursoMetric.Compute,
             ["sequencia_maxima_vizinhos_por_concurso"] = sequenciaMaximaVizinhosPorConcursoMetric.Compute,
             ["distribuicao_linha_por_concurso"] = distribuicaoLinhaPorConcursoMetric.Compute,
-            ["distribuicao_coluna_por_concurso"] = distribuicaoColunaPorConcursoMetric.Compute
+            ["distribuicao_coluna_por_concurso"] = distribuicaoColunaPorConcursoMetric.Compute,
+            ["entropia_linha_por_concurso"] = entropiaLinhaPorConcursoMetric.Compute,
+            ["entropia_coluna_por_concurso"] = entropiaColunaPorConcursoMetric.Compute
         };
     }
 

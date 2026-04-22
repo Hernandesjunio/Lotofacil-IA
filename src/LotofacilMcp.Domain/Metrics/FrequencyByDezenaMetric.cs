@@ -28,6 +28,6 @@ public sealed class FrequencyByDezenaMetric
             Shape: "vector_by_dezena",
             Unit: "count",
             Version: "1.0.0",
-            Value: frequencies);
+            Value: Array.ConvertAll(frequencies, static f => (double)f));
     }
 }

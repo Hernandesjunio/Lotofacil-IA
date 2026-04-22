@@ -26,13 +26,13 @@ public sealed class DistribuicaoLinhaPorConcursoMetricTests
         // Por concurso: [3,3,3,3,3], [3,3,4,3,2], [2,5,3,3,2] — ver synthetic_min_window (contest_id 1..3)
         Assert.Equal(
             [3, 3, 3, 3, 3, 3, 3, 4, 3, 2, 2, 5, 3, 3, 2],
-            metric.Value.ToArray());
+            metric.Value.Select(static x => (int)x).ToArray());
         for (var c = 0; c < window.Size; c++)
         {
             var sum = 0;
             for (var r = 0; r < 5; r++)
             {
-                sum += metric.Value[c * 5 + r];
+                sum += (int)metric.Value[c * 5 + r];
             }
 
             Assert.Equal(15, sum);
@@ -49,24 +49,14 @@ public sealed class DistribuicaoLinhaPorConcursoMetricTests
 
         var metric = sut.Compute(window);
 
-        Assert.Equal([5, 5, 5, 0, 0], metric.Value.ToArray());
+        Assert.Equal([5, 5, 5, 0, 0], metric.Value.Select(static x => (int)x).ToArray());
     }
 
     [Fact]
     public void WindowMetricDispatcher_DispatchesDistribuicaoLinhaPorConcurso()
     {
         var window = BuildWindowFromSyntheticFixture(endContestIdInclusive: 3);
-        var frequency = new FrequencyByDezenaMetric();
-        var sut = new WindowMetricDispatcher(
-            frequency,
-            new Top10MaisSorteadosMetric(frequency),
-            new Top10MenosSorteadosMetric(frequency),
-            new ParesNoConcursoMetric(),
-            new RepeticaoConcursoAnteriorMetric(),
-            new QuantidadeVizinhosPorConcursoMetric(),
-            new SequenciaMaximaVizinhosPorConcursoMetric(),
-            new DistribuicaoLinhaPorConcursoMetric(),
-            new DistribuicaoColunaPorConcursoMetric());
+        var sut = WindowMetricDispatcherFactory.Create();
 
         var metric = sut.Dispatch("distribuicao_linha_por_concurso", window);
 
@@ -74,7 +64,7 @@ public sealed class DistribuicaoLinhaPorConcursoMetricTests
         Assert.Equal("series_of_count_vector[5]", metric.Shape);
         Assert.Equal(
             [3, 3, 3, 3, 3, 3, 3, 4, 3, 2, 2, 5, 3, 3, 2],
-            metric.Value.ToArray());
+            metric.Value.Select(static x => (int)x).ToArray());
     }
 
     private static DrawWindow BuildWindowFromSyntheticFixture(int endContestIdInclusive)

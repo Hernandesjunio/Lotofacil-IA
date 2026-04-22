@@ -165,6 +165,10 @@ public sealed class ComputeWindowMetricsUseCase
             "Série (por concurso) da contagem de dezenas em cada linha do volante 5x5; cinco inteiros por ponto, somando 15, em blocos consecutivos na ordem das linhas 1 a 5.",
         "distribuicao_coluna_por_concurso" =>
             "Série (por concurso) da contagem de dezenas em cada coluna do volante 5x5; cinco inteiros por ponto, somando 15, em blocos consecutivos na ordem das colunas 1 a 5.",
+        "entropia_linha_por_concurso" =>
+            "Série da entropia de Shannon (bits) da distribuição das 15 dezenas pelas 5 linhas do volante, por concurso da janela (p_i = contagem na linha i / 15).",
+        "entropia_coluna_por_concurso" =>
+            "Série da entropia de Shannon (bits) da distribuição das 15 dezenas pelas 5 colunas do volante, por concurso da janela (p_i = contagem na coluna i / 15).",
         _ => "Metrica de janela."
     };
 }
