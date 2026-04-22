@@ -171,6 +171,62 @@ public class V0Phase2RedTests
     }
 
     [Fact]
+    public void ParesNoConcurso_OnMinimalFixture_FirstThreeContests_DeterministicSeries()
+    {
+        var window = BuildWindow(endContestIdInclusive: 3);
+        var sut = new ParesNoConcursoMetric();
+
+        var metric = sut.Compute(window);
+
+        Assert.Equal("pares_no_concurso", metric.MetricName);
+        Assert.Equal("series", metric.Scope);
+        Assert.Equal("series", metric.Shape);
+        Assert.Equal("count", metric.Unit);
+        Assert.Equal("1.0.0", metric.Version);
+        Assert.Equal(3, metric.Value.Count);
+        Assert.Equal(window.Size, metric.Value.Count);
+        Assert.Equal([8, 6, 9], metric.Value.ToArray());
+    }
+
+    [Fact]
+    public void ParesNoConcurso_SingleDraw_MaximumEvenDezenas_Is12()
+    {
+        var numbers = new[] { 1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24 };
+        var draw = new Draw(1, new DateOnly(2026, 1, 1), numbers);
+        var window = new DrawWindow(1, 1, 1, [draw]);
+        var sut = new ParesNoConcursoMetric();
+
+        var metric = sut.Compute(window);
+
+        Assert.Equal(12, metric.Value[0]);
+    }
+
+    [Fact]
+    public void ParesNoConcurso_SingleDraw_MinimumEvenDezenas_Is2()
+    {
+        var numbers = new[] { 1, 2, 3, 4, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25 };
+        var draw = new Draw(1, new DateOnly(2026, 1, 1), numbers);
+        var window = new DrawWindow(1, 1, 1, [draw]);
+        var sut = new ParesNoConcursoMetric();
+
+        var metric = sut.Compute(window);
+
+        Assert.Equal(2, metric.Value[0]);
+    }
+
+    [Fact]
+    public void WindowMetricDispatcher_DispatchesParesNoConcurso()
+    {
+        var window = BuildWindow(endContestIdInclusive: 3);
+        var sut = CreateWindowMetricDispatcher();
+
+        var metric = sut.Dispatch("pares_no_concurso", window);
+
+        Assert.Equal("pares_no_concurso", metric.MetricName);
+        Assert.Equal([8, 6, 9], metric.Value.ToArray());
+    }
+
+    [Fact]
     public void WindowMetricDispatcher_WithUnknownMetric_ThrowsDomainInvariantViolation()
     {
         var window = BuildWindow(endContestIdInclusive: 3);
@@ -226,7 +282,8 @@ public class V0Phase2RedTests
         return new WindowMetricDispatcher(
             frequency,
             new Top10MaisSorteadosMetric(frequency),
-            new Top10MenosSorteadosMetric(frequency));
+            new Top10MenosSorteadosMetric(frequency),
+            new ParesNoConcursoMetric());
     }
 
     private sealed record FixtureRoot(

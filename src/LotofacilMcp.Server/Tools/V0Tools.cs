@@ -118,7 +118,8 @@ public sealed class V0Tools
             new WindowMetricDispatcher(
                 frequencyByDezena,
                 new Top10MaisSorteadosMetric(frequencyByDezena),
-                new Top10MenosSorteadosMetric(frequencyByDezena)),
+                new Top10MenosSorteadosMetric(frequencyByDezena),
+                new ParesNoConcursoMetric()),
             validator,
             mapper);
 

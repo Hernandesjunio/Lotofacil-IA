@@ -10,17 +10,20 @@ public sealed class WindowMetricDispatcher
     public WindowMetricDispatcher(
         FrequencyByDezenaMetric frequencyByDezenaMetric,
         Top10MaisSorteadosMetric top10MaisSorteadosMetric,
-        Top10MenosSorteadosMetric top10MenosSorteadosMetric)
+        Top10MenosSorteadosMetric top10MenosSorteadosMetric,
+        ParesNoConcursoMetric paresNoConcursoMetric)
     {
         ArgumentNullException.ThrowIfNull(frequencyByDezenaMetric);
         ArgumentNullException.ThrowIfNull(top10MaisSorteadosMetric);
         ArgumentNullException.ThrowIfNull(top10MenosSorteadosMetric);
+        ArgumentNullException.ThrowIfNull(paresNoConcursoMetric);
 
         _dispatchByMetricName = new Dictionary<string, Func<DrawWindow, WindowMetricValue>>(StringComparer.Ordinal)
         {
             ["frequencia_por_dezena"] = frequencyByDezenaMetric.Compute,
             ["top10_mais_sorteados"] = top10MaisSorteadosMetric.Compute,
-            ["top10_menos_sorteados"] = top10MenosSorteadosMetric.Compute
+            ["top10_menos_sorteados"] = top10MenosSorteadosMetric.Compute,
+            ["pares_no_concurso"] = paresNoConcursoMetric.Compute
         };
     }
 

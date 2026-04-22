@@ -153,6 +153,8 @@ public sealed class ComputeWindowMetricsUseCase
             "Dez dezenas com maior frequencia na janela; empates resolvidos por dezena ascendente.",
         "top10_menos_sorteados" =>
             "Dez dezenas com menor frequencia na janela; empates resolvidos por dezena ascendente.",
+        "pares_no_concurso" =>
+            "Série da quantidade de dezenas pares em cada concurso da janela (ordem cronologica).",
         _ => "Metrica de janela."
     };
 }
