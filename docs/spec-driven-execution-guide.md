@@ -219,7 +219,7 @@ Critério mínimo de aceite:
 
 ### Fase 7 — Materializar o servidor HTTP da V0 (superfície mínima)
 
-Objetivo: expor a V0 por **HTTP** sem colocar cálculo no host e sem deixar metadados contratuais para depois. O **transporte MCP** entra na [Fase 9](#fase-9-transporte-mcp-paridade-com-o-contrato).
+Objetivo: expor a V0 por **HTTP** sem colocar cálculo no host e sem deixar metadados contratuais para depois. O **transporte MCP** entra na [Fase 9](#fase-9-transporte-mcp-protocolo-real--paridade-com-o-contrato).
 
 Passos atômicos:
 
@@ -261,18 +261,48 @@ Critério mínimo de aceite:
 - a V0 está verde e rastreável por testes;
 - a barreira de normalização, o envelope contratual mínimo e o determinismo já estão cobertos antes da próxima fatia.
 
-### Fase 9: Transporte MCP (paridade com o contrato)
+### Fase 9: Transporte MCP (protocolo real + paridade com o contrato)
 
 Objetivo: expor as tools já implementadas via **protocolo MCP** real ([ADR 0005](adrs/0005-transporte-mcp-e-superficie-tools-v1.md)), com a **mesma semântica JSON** que os POSTs HTTP.
+
+Nota de consistência (normativa):
+
+- “MCP” aqui significa **protocolo MCP** (`tools/list`, `tools/call` etc.) sobre `stdio`, `SSE` ou `Streamable HTTP` (ver tabela explícita na ADR 0005).
+- Endpoints REST que recebem JSON por `POST` (ex.: `/tools/*`) são **HTTP espelhado/compatibilidade**, não MCP.
+- Prefixos de rota não definem protocolo: `/mcp/tools/*` (quando existir) continua sendo REST e deve ser tratado como **deprecado** por confundir “MCP via HTTP”.
 
 Passos atômicos:
 
 - Adicionar a família de pacotes `**ModelContextProtocol`** (SDK oficial C#) conforme documentação vigente do repositório `csharp-sdk`; incluir `ModelContextProtocol.AspNetCore` apenas se o transporte HTTP MCP for necessário na mesma PR.
 - Confinar atributos/tipos do SDK ao `LotofacilMcp.Server` (e a um executável stdio mínimo, se for o caso), sem referências MCP em `Domain`/`Application`.
 - Registrar `get_draw_window` e `compute_window_metrics` como tools MCP com nomes e schemas alinhados a [mcp-tool-contract.md](mcp-tool-contract.md).
-- Implementar **pelo menos um** transporte MCP: **stdio** (prioridade para hosts desktop) e/ou HTTP MCP no pipeline ASP.NET Core, conforme [ADR 0005](adrs/0005-transporte-mcp-e-superficie-tools-v1.md).
+- Implementar **pelo menos um** transporte MCP: **stdio** (prioridade para hosts desktop) e/ou MCP HTTP (SSE/Streamable HTTP) no pipeline ASP.NET Core, conforme [ADR 0005](adrs/0005-transporte-mcp-e-superficie-tools-v1.md).
 - Escrever testes de integração que provem descoberta e invocação (ex.: fluxo equivalente a `tools/list` e `tools/call`) e **paridade** com a resposta dos endpoints HTTP para o mesmo input.
 - Documentar configuração mínima do host (ex.: entrada MCP no cliente) no [README.md](../README.md) ou doc operacional existente.
+
+#### Fase 9A (recomendada primeiro): MCP via `stdio` (Cursor “plug-and-play”)
+
+Justificativa: reduz variáveis operacionais (deploy, streaming HTTP, proxies) e valida o núcleo do protocolo MCP no ambiente desktop com menor superfície.
+
+Critério mínimo de aceite adicional:
+
+- um host MCP desktop (ex.: Cursor) consegue iniciar o servidor local via comando e `--mcp-stdio`;
+- `tools/list` e `tools/call` funcionam para as tools em escopo;
+- paridade MCP/stdio ↔ REST `/tools/*` é provada por teste (deep-equals do JSON de payload).
+
+#### Fase 9B (opcional, fatia separada): MCP via HTTP (SSE e/ou Streamable HTTP)
+
+Justificativa: “MCP via HTTP” é uma camada de transporte diferente e historicamente foi o ponto de confusão (MCP-like REST ≠ MCP). Separar em uma fatia própria evita drift documental e mantém os passos atômicos.
+
+Regras:
+
+- o endpoint deve ser **MCP real** (capaz de `tools/list`/`tools/call`), não REST.
+- o endpoint **não** substitui `/tools/*` (compatibilidade); ele convive conforme ADR 0005.
+
+Critério mínimo de aceite adicional:
+
+- existe um endpoint MCP HTTP real (`/sse` e/ou `/mcp`) que um host MCP consegue conectar;
+- paridade MCP/HTTP ↔ REST `/tools/*` é provada por teste (deep-equals do JSON de payload).
 
 Referências:
 
@@ -317,7 +347,7 @@ Critério mínimo de aceite:
 - cada tool concluída tem testes objetivos e entradas/saídas conforme o contrato;
 - envelope com `dataset_version`, `tool_version`, `deterministic_hash` onde o contrato exigir.
 
-### Fase 11: Fechar evidências da V1 (MCP + catálogo em escopo)
+### Fase 11: Fechar evidências da V1 (transportes MCP + catálogo em escopo)
 
 Objetivo: declarar a V1 “fechada” para o escopo acordado (transporte MCP + tools implementadas) com rastreabilidade na CI.
 
@@ -325,12 +355,53 @@ Passos atômicos:
 
 - Rodar suítes de domínio, contrato e integração MCP relevantes.
 - Atualizar [contract-test-plan.md](contract-test-plan.md) e, se necessário, [vertical-slice.md](vertical-slice.md) ou um doc de escopo V1 para refletir tools e transportes entregues.
-- Confirmar que [ADR 0005](adrs/0005-transporte-mcp-e-superficie-tools-v1.md) critérios de verificação são atendidos para o recorte entregue.
+- Confirmar que [ADR 0005](adrs/0005-transporte-mcp-e-superficie-tools-v1.md) critérios de verificação são atendidos para o recorte entregue, usando a tabela explícita de superfícies (MCP real vs REST espelhado) como referência.
 
 Critério mínimo de aceite:
 
 - nenhuma tool em escopo documentado fica só em HTTP ou só em MCP sem justificativa escrita;
+- o documento de evidências explicita quais superfícies foram entregues (ex.: MCP `stdio` apenas; ou `stdio` + MCP HTTP/SSE) e trata `/mcp/tools/*` como REST deprecado quando existir;
 - documentação, testes e comportamento observado permanecem alinhados.
+
+### Fase 12: Correção de drift (desalinhamento spec ↔ implementação)
+
+Objetivo: tratar de forma explícita os casos em que a execução técnica se afasta do que estava definido em ADR/spec, sem “retroceder o roadmap”, e sim reconvergindo documentação, testes e código com rastreabilidade.
+
+Quando acionar esta fase (gatilhos):
+
+- implementação parcial que cumpre funcionalidade, mas viola nomenclatura/protocolo/superfície descrita nos specs;
+- divergência entre docs e comportamento observado (ex.: rota/fluxo descrito como MCP sem implementar `tools/list`/`tools/call`);
+- criação de artefato/projeto improvisado fora do recorte planejado;
+- necessidade de deprecar alias/atalho que induz interpretação errada no cliente.
+
+Classificação mínima do drift (registrar no PR/issue):
+
+1. **Semântico** (campo, contrato, invariantes, linguagem normativa).
+2. **Transporte/superfície** (MCP real vs REST espelhado, rotas e discovery).
+3. **Estrutural** (projeto/pasta/dependência fora das fronteiras ADR).
+4. **Evidência** (testes e documentação não cobrem o que foi entregue).
+
+Passos atômicos:
+
+- Documentar o desvio com referência explícita ao spec violado (ADR, contrato ou guia).
+- Definir decisão de correção: reconduzir código ao spec atual ou revisar o spec (nunca os dois de forma implícita).
+- Aplicar correção mínima em código/rotas/comentários para eliminar sinais ambíguos.
+- Atualizar documentação operacional e plano de testes para refletir o estado corrigido.
+- Adicionar ou ajustar testes de regressão para impedir retorno do mesmo drift.
+- Marcar itens de compatibilidade como `deprecated` quando não puder removê-los no mesmo recorte.
+
+Referências:
+
+- [ADR 0005](adrs/0005-transporte-mcp-e-superficie-tools-v1.md)
+- [mcp-tool-contract.md](mcp-tool-contract.md)
+- [contract-test-plan.md](contract-test-plan.md)
+
+Critério mínimo de aceite:
+
+- o drift fica classificado e rastreável;
+- documentação, testes e comportamento observado voltam a estar alinhados;
+- não permanece no código nenhuma superfície “parece MCP” mas não implementa protocolo MCP;
+- o recorte resultante fica claro para o próximo ciclo (retomar Fase 10/11 ou executar nova fatia de Fase 9B).
 
 ## Como pedir implementação para IA
 
@@ -358,7 +429,7 @@ Arquivos esperados:
 - <arquivo B>
 
 Regras:
-- não extrapolar além do recorte citado (V0, Fase 9 MCP, ou uma tool da Fase 10);
+- não extrapolar além do recorte citado (V0, Fase 9/10, Fase 11 de evidências, ou Fase 12 de correção de drift);
 - manter TDD;
 - respeitar fronteiras do [ADR 0004](adrs/0004-estrutura-arquitetural-inicial-mcp-dotnet10.md) e superfície MCP do [ADR 0005](adrs/0005-transporte-mcp-e-superficie-tools-v1.md);
 - seguir nomes canônicos do catálogo/contrato.
@@ -392,7 +463,7 @@ então ele ainda está grande demais.
 
 Depois da V0, cada nova entrega deve seguir sempre esta ordem operacional:
 
-1. escolher a próxima fatia ([Fase 9](#fase-9-transporte-mcp-paridade-com-o-contrato) MCP, depois [Fase 10](#fase-10-expandir-tools-documentadas-ondas-b-e-c) por tool);
+1. escolher a próxima fatia ([Fase 9](#fase-9-transporte-mcp-protocolo-real--paridade-com-o-contrato) MCP, depois [Fase 10](#fase-10-expandir-tools-documentadas-ondas-b-e-c) por tool);
 2. localizar os specs normativos;
 3. escrever/ajustar testes;
 4. implementar domínio;
@@ -400,6 +471,8 @@ Depois da V0, cada nova entrega deve seguir sempre esta ordem operacional:
 6. expor no server (**HTTP + MCP** para a mesma tool, salvo exceção documentada);
 7. validar contrato nos dois caminhos quando a tool já existir em ambos;
 8. atualizar docs se a semântica tiver mudado.
+
+Se durante esse ciclo surgir desalinhamento explícito entre spec e implementação, interromper a fatia atual e executar a [Fase 12](#fase-12-correção-de-drift-desalinhamento-spec--implementação) antes de seguir.
 
 Além dessa ordem operacional, a progressão de conteúdo deve ir do mais simples para o mais complexo:
 
@@ -479,8 +552,9 @@ Se houver dúvida sobre “qual passo pedir agora para a IA”, comece sempre po
 
 **Depois da V0:**
 
-1. [Fase 9](#fase-9-transporte-mcp-paridade-com-o-contrato): transporte MCP com paridade aos endpoints HTTP;
+1. [Fase 9](#fase-9-transporte-mcp-protocolo-real--paridade-com-o-contrato): transporte MCP com paridade aos endpoints HTTP;
 2. [Fase 10](#fase-10-expandir-tools-documentadas-ondas-b-e-c): uma tool de cada vez, na ordem listada;
-3. [Fase 11](#fase-11-fechar-evidências-da-v1-mcp--catálogo-em-escopo): evidência e documentação alinhadas ao escopo V1.
+3. [Fase 11](#fase-11-fechar-evidências-da-v1-transportes-mcp--catálogo-em-escopo): evidência e documentação alinhadas ao escopo V1;
+4. [Fase 12](#fase-12-correção-de-drift-desalinhamento-spec--implementação): executar quando houver desvio entre o que foi especificado e o que foi entregue.
 
 Essa ordem é a forma prática de usar spec-driven neste projeto: **spec → teste → implementação mínima → validação → próxima fatia**.
