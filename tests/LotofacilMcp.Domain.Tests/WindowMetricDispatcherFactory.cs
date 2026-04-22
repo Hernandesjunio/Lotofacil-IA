@@ -20,6 +20,8 @@ internal static class WindowMetricDispatcherFactory
             new EntropiaLinhaPorConcursoMetric(),
             new EntropiaColunaPorConcursoMetric(),
             new HhiLinhaPorConcursoMetric(),
-            new HhiColunaPorConcursoMetric());
+            new HhiColunaPorConcursoMetric(),
+            new AtrasoPorDezenaMetric(),
+            new AssimetriaBlocosMetric());
     }
 }

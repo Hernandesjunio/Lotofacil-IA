@@ -186,6 +186,46 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         var httpAnalyzePayload = await ReadHttpJsonAsync(httpAnalyzeResponse);
         Assert.True(JsonElement.DeepEquals(httpAnalyzePayload, ReadMcpStructuredJson(stdioAnalyzeResponse)));
         Assert.True(JsonElement.DeepEquals(httpAnalyzePayload, ReadMcpStructuredJson(httpMcpAnalyzeResponse)));
+
+        var composeRequest = new Dictionary<string, object?>
+        {
+            ["window_size"] = 5,
+            ["end_contest_id"] = 1005,
+            ["target"] = "dezena",
+            ["operator"] = "weighted_rank",
+            ["top_k"] = 10,
+            ["components"] = new object[]
+            {
+                new Dictionary<string, object?>
+                {
+                    ["metric_name"] = "frequencia_por_dezena",
+                    ["transform"] = "normalize_max",
+                    ["weight"] = 0.4
+                },
+                new Dictionary<string, object?>
+                {
+                    ["metric_name"] = "atraso_por_dezena",
+                    ["transform"] = "invert_normalize_max",
+                    ["weight"] = 0.3
+                },
+                new Dictionary<string, object?>
+                {
+                    ["metric_name"] = "assimetria_blocos",
+                    ["transform"] = "shift_scale_unit_interval",
+                    ["weight"] = 0.3
+                }
+            }
+        };
+
+        var httpComposeResponse = await _httpClient.PostAsJsonAsync("/tools/compose_indicator_analysis", composeRequest);
+        Assert.Equal(HttpStatusCode.OK, httpComposeResponse.StatusCode);
+
+        var stdioComposeResponse = await _stdioMcpClient.CallToolAsync("compose_indicator_analysis", composeRequest);
+        var httpMcpComposeResponse = await _httpMcpClient.CallToolAsync("compose_indicator_analysis", composeRequest);
+
+        var httpComposePayload = await ReadHttpJsonAsync(httpComposeResponse);
+        Assert.True(JsonElement.DeepEquals(httpComposePayload, ReadMcpStructuredJson(stdioComposeResponse)));
+        Assert.True(JsonElement.DeepEquals(httpComposePayload, ReadMcpStructuredJson(httpMcpComposeResponse)));
     }
 
     [Fact]
@@ -276,6 +316,7 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         Assert.Contains(listedTools, tool => tool.Name is "get_draw_window");
         Assert.Contains(listedTools, tool => tool.Name is "compute_window_metrics");
         Assert.Contains(listedTools, tool => tool.Name is "analyze_indicator_stability");
+        Assert.Contains(listedTools, tool => tool.Name is "compose_indicator_analysis");
     }
 
     private async Task<JsonElement> ReadHttpJsonAsync(HttpResponseMessage response)

@@ -61,6 +61,27 @@ public sealed class V0McpTools
         return ToToolResult(payload, payload is ContractErrorEnvelope);
     }
 
+    [McpServerTool(Name = "compose_indicator_analysis"), Description("Composição declarativa de indicadores (recorte: target dezena, weighted_rank).")]
+    public CallToolResult ComposeIndicatorAnalysis(
+        V0Tools tools,
+        [Description("Tamanho da janela.")] int window_size = 0,
+        [Description("Concurso final inclusivo.")] int? end_contest_id = null,
+        [Description("Unidade alvo (recorte: dezena).")] string? target = null,
+        [Description("Operador (recorte: weighted_rank).")] string? @operator = null,
+        [Description("Componentes com métrica, transform e peso.")] IReadOnlyList<ComposeIndicatorComponentRequest>? components = null,
+        [Description("Limite do ranking.")] int top_k = 10)
+    {
+        var payload = tools.ComposeIndicatorAnalysis(new ComposeIndicatorAnalysisRequest(
+            WindowSize: window_size,
+            EndContestId: end_contest_id,
+            Target: target ?? string.Empty,
+            Operator: @operator ?? string.Empty,
+            Components: components ?? Array.Empty<ComposeIndicatorComponentRequest>(),
+            TopK: top_k));
+
+        return ToToolResult(payload, payload is ContractErrorEnvelope);
+    }
+
     private static CallToolResult ToToolResult(object payload, bool isError)
     {
         var jsonPayload = JsonSerializer.SerializeToElement(payload, JsonOptions);

@@ -95,11 +95,40 @@ public sealed record AnalyzeIndicatorStabilityResponse(
     [property: JsonPropertyName("normalization_method")] string NormalizationMethod,
     [property: JsonPropertyName("ranking")] IReadOnlyList<StabilityRankingEntryEnvelope> Ranking);
 
+public sealed record ComposeIndicatorComponentRequest(
+    [property: JsonPropertyName("metric_name")] string MetricName,
+    [property: JsonPropertyName("transform")] string Transform,
+    [property: JsonPropertyName("weight")] double Weight);
+
+public sealed record ComposeIndicatorAnalysisRequest(
+    [property: JsonPropertyName("window_size")] int WindowSize,
+    [property: JsonPropertyName("end_contest_id")] int? EndContestId,
+    [property: JsonPropertyName("target")] string Target,
+    [property: JsonPropertyName("operator")] string Operator,
+    [property: JsonPropertyName("components")] IReadOnlyList<ComposeIndicatorComponentRequest> Components,
+    [property: JsonPropertyName("top_k")] int TopK);
+
+public sealed record WeightedDezenaRankingEntryEnvelope(
+    [property: JsonPropertyName("dezena")] int Dezena,
+    [property: JsonPropertyName("rank")] int Rank,
+    [property: JsonPropertyName("score")] double Score,
+    [property: JsonPropertyName("explanation")] string Explanation);
+
+public sealed record ComposeIndicatorAnalysisResponse(
+    [property: JsonPropertyName("dataset_version")] string DatasetVersion,
+    [property: JsonPropertyName("tool_version")] string ToolVersion,
+    [property: JsonPropertyName("deterministic_hash")] string DeterministicHash,
+    [property: JsonPropertyName("window")] WindowEnvelope Window,
+    [property: JsonPropertyName("target")] string Target,
+    [property: JsonPropertyName("operator")] string Operator,
+    [property: JsonPropertyName("ranking")] IReadOnlyList<WeightedDezenaRankingEntryEnvelope> Ranking);
+
 public sealed class V0Tools
 {
     private readonly ComputeWindowMetricsUseCase _computeWindowMetricsUseCase;
     private readonly GetDrawWindowUseCase _getDrawWindowUseCase;
     private readonly AnalyzeIndicatorStabilityUseCase _analyzeIndicatorStabilityUseCase;
+    private readonly ComposeIndicatorAnalysisUseCase _composeIndicatorAnalysisUseCase;
     private readonly DeterministicHashService _deterministicHashService;
     private readonly string _fixturePath;
 
@@ -111,24 +140,27 @@ public sealed class V0Tools
         var validator = new V0CrossFieldValidator();
 
         var frequencyByDezena = new FrequencyByDezenaMetric();
+        var windowMetricDispatcher = new WindowMetricDispatcher(
+            frequencyByDezena,
+            new Top10MaisSorteadosMetric(frequencyByDezena),
+            new Top10MenosSorteadosMetric(frequencyByDezena),
+            new ParesNoConcursoMetric(),
+            new RepeticaoConcursoAnteriorMetric(),
+            new QuantidadeVizinhosPorConcursoMetric(),
+            new SequenciaMaximaVizinhosPorConcursoMetric(),
+            new DistribuicaoLinhaPorConcursoMetric(),
+            new DistribuicaoColunaPorConcursoMetric(),
+            new EntropiaLinhaPorConcursoMetric(),
+            new EntropiaColunaPorConcursoMetric(),
+            new HhiLinhaPorConcursoMetric(),
+            new HhiColunaPorConcursoMetric(),
+            new AtrasoPorDezenaMetric(),
+            new AssimetriaBlocosMetric());
         _computeWindowMetricsUseCase = new ComputeWindowMetricsUseCase(
             fixtureProvider,
             datasetVersionService,
             new WindowResolver(),
-            new WindowMetricDispatcher(
-                frequencyByDezena,
-                new Top10MaisSorteadosMetric(frequencyByDezena),
-                new Top10MenosSorteadosMetric(frequencyByDezena),
-                new ParesNoConcursoMetric(),
-                new RepeticaoConcursoAnteriorMetric(),
-                new QuantidadeVizinhosPorConcursoMetric(),
-                new SequenciaMaximaVizinhosPorConcursoMetric(),
-                new DistribuicaoLinhaPorConcursoMetric(),
-                new DistribuicaoColunaPorConcursoMetric(),
-                new EntropiaLinhaPorConcursoMetric(),
-                new EntropiaColunaPorConcursoMetric(),
-                new HhiLinhaPorConcursoMetric(),
-                new HhiColunaPorConcursoMetric()),
+            windowMetricDispatcher,
             validator,
             mapper);
 
@@ -146,6 +178,14 @@ public sealed class V0Tools
             validator,
             mapper,
             new IndicatorStabilityAnalyzer());
+
+        _composeIndicatorAnalysisUseCase = new ComposeIndicatorAnalysisUseCase(
+            fixtureProvider,
+            datasetVersionService,
+            new WindowResolver(),
+            windowMetricDispatcher,
+            validator,
+            mapper);
 
         _deterministicHashService = new DeterministicHashService(
             new CanonicalJsonSerializer(),
@@ -268,6 +308,53 @@ public sealed class V0Tools
                         entry.Shape,
                         entry.Dispersion,
                         entry.StabilityScore,
+                        entry.Explanation))
+                    .ToArray());
+        }
+        catch (ApplicationValidationException ex)
+        {
+            return ToContractError(ex.Code, ex.Message, ex.Details);
+        }
+    }
+
+    public object ComposeIndicatorAnalysis(ComposeIndicatorAnalysisRequest request)
+    {
+        try
+        {
+            var result = _composeIndicatorAnalysisUseCase.Execute(new ComposeIndicatorAnalysisInput(
+                WindowSize: request.WindowSize,
+                EndContestId: request.EndContestId,
+                Target: request.Target,
+                Operator: request.Operator,
+                Components: (request.Components ?? Array.Empty<ComposeIndicatorComponentRequest>())
+                    .Select(component => new CompositionComponentInput(
+                        component.MetricName,
+                        component.Transform,
+                        component.Weight))
+                    .ToArray(),
+                TopK: request.TopK,
+                FixturePath: _fixturePath));
+
+            var deterministicHash = _deterministicHashService.Compute(
+                result.DeterministicHashInput,
+                result.DatasetVersion,
+                result.ToolVersion);
+
+            return new ComposeIndicatorAnalysisResponse(
+                DatasetVersion: result.DatasetVersion,
+                ToolVersion: result.ToolVersion,
+                DeterministicHash: deterministicHash,
+                Window: new WindowEnvelope(
+                    result.Window.Size,
+                    result.Window.StartContestId,
+                    result.Window.EndContestId),
+                Target: result.Target,
+                Operator: result.Operator,
+                Ranking: result.Ranking
+                    .Select(entry => new WeightedDezenaRankingEntryEnvelope(
+                        entry.Dezena,
+                        entry.Rank,
+                        entry.Score,
                         entry.Explanation))
                     .ToArray());
         }

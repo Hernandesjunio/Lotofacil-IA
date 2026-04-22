@@ -7,11 +7,13 @@ public static class V0ToolEndpoints
         MapToolRoute(endpoints, "/tools/get_draw_window", HandleGetDrawWindowAsync);
         MapToolRoute(endpoints, "/tools/compute_window_metrics", HandleComputeWindowMetricsAsync);
         MapToolRoute(endpoints, "/tools/analyze_indicator_stability", HandleAnalyzeIndicatorStabilityAsync);
+        MapToolRoute(endpoints, "/tools/compose_indicator_analysis", HandleComposeIndicatorAnalysisAsync);
 
         // Alias REST (deprecado): manter compatibilidade sem sugerir que isso é MCP/HTTP.
         MapToolRoute(endpoints, "/mcp/tools/get_draw_window", HandleGetDrawWindowAsync);
         MapToolRoute(endpoints, "/mcp/tools/compute_window_metrics", HandleComputeWindowMetricsAsync);
         MapToolRoute(endpoints, "/mcp/tools/analyze_indicator_stability", HandleAnalyzeIndicatorStabilityAsync);
+        MapToolRoute(endpoints, "/mcp/tools/compose_indicator_analysis", HandleComposeIndicatorAnalysisAsync);
 
         return endpoints;
     }
@@ -61,6 +63,20 @@ public static class V0ToolEndpoints
         }
 
         var response = tools.AnalyzeIndicatorStability(toolRequest!);
+        return response is ContractErrorEnvelope errorEnvelope
+            ? Results.BadRequest(errorEnvelope)
+            : Results.Ok(response);
+    }
+
+    private static async Task<IResult> HandleComposeIndicatorAnalysisAsync(HttpRequest request, V0Tools tools)
+    {
+        var (toolRequest, bindingError) = await ToolRequestBinding.BindAsync<ComposeIndicatorAnalysisRequest>(request);
+        if (bindingError is not null)
+        {
+            return Results.BadRequest(bindingError);
+        }
+
+        var response = tools.ComposeIndicatorAnalysis(toolRequest!);
         return response is ContractErrorEnvelope errorEnvelope
             ? Results.BadRequest(errorEnvelope)
             : Results.Ok(response);

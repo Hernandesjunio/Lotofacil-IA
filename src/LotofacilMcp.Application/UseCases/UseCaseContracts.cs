@@ -34,3 +34,40 @@ public sealed record StabilityRankingEntryView(
     double Dispersion,
     double StabilityScore,
     string Explanation);
+
+public sealed record CompositionComponentInput(
+    string MetricName,
+    string Transform,
+    double Weight);
+
+public sealed record ComposeIndicatorAnalysisInput(
+    int WindowSize,
+    int? EndContestId,
+    string Target,
+    string Operator,
+    IReadOnlyList<CompositionComponentInput> Components,
+    int TopK,
+    string FixturePath = "");
+
+public sealed record ComposeIndicatorAnalysisDeterministicHashInput(
+    int WindowSize,
+    int? EndContestId,
+    string Target,
+    string Operator,
+    int TopK,
+    IReadOnlyList<CompositionComponentInput> Components);
+
+public sealed record WeightedDezenaRankingEntryView(
+    int Dezena,
+    int Rank,
+    double Score,
+    string Explanation);
+
+public sealed record ComposeIndicatorAnalysisResult(
+    string DatasetVersion,
+    string ToolVersion,
+    ComposeIndicatorAnalysisDeterministicHashInput DeterministicHashInput,
+    WindowDescriptor Window,
+    string Target,
+    string Operator,
+    IReadOnlyList<WeightedDezenaRankingEntryView> Ranking);

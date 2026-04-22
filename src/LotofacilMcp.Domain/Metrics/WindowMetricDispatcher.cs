@@ -20,7 +20,9 @@ public sealed class WindowMetricDispatcher
         EntropiaLinhaPorConcursoMetric entropiaLinhaPorConcursoMetric,
         EntropiaColunaPorConcursoMetric entropiaColunaPorConcursoMetric,
         HhiLinhaPorConcursoMetric hhiLinhaPorConcursoMetric,
-        HhiColunaPorConcursoMetric hhiColunaPorConcursoMetric)
+        HhiColunaPorConcursoMetric hhiColunaPorConcursoMetric,
+        AtrasoPorDezenaMetric atrasoPorDezenaMetric,
+        AssimetriaBlocosMetric assimetriaBlocosMetric)
     {
         ArgumentNullException.ThrowIfNull(frequencyByDezenaMetric);
         ArgumentNullException.ThrowIfNull(top10MaisSorteadosMetric);
@@ -35,6 +37,8 @@ public sealed class WindowMetricDispatcher
         ArgumentNullException.ThrowIfNull(entropiaColunaPorConcursoMetric);
         ArgumentNullException.ThrowIfNull(hhiLinhaPorConcursoMetric);
         ArgumentNullException.ThrowIfNull(hhiColunaPorConcursoMetric);
+        ArgumentNullException.ThrowIfNull(atrasoPorDezenaMetric);
+        ArgumentNullException.ThrowIfNull(assimetriaBlocosMetric);
 
         _dispatchByMetricName = new Dictionary<string, Func<DrawWindow, WindowMetricValue>>(StringComparer.Ordinal)
         {
@@ -50,7 +54,9 @@ public sealed class WindowMetricDispatcher
             ["entropia_linha_por_concurso"] = entropiaLinhaPorConcursoMetric.Compute,
             ["entropia_coluna_por_concurso"] = entropiaColunaPorConcursoMetric.Compute,
             ["hhi_linha_por_concurso"] = hhiLinhaPorConcursoMetric.Compute,
-            ["hhi_coluna_por_concurso"] = hhiColunaPorConcursoMetric.Compute
+            ["hhi_coluna_por_concurso"] = hhiColunaPorConcursoMetric.Compute,
+            ["atraso_por_dezena"] = atrasoPorDezenaMetric.Compute,
+            ["assimetria_blocos"] = assimetriaBlocosMetric.Compute
         };
     }
 
