@@ -276,6 +276,31 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         var httpSummarizePayload = await ReadHttpJsonAsync(httpSummarizeResponse);
         Assert.True(JsonElement.DeepEquals(httpSummarizePayload, ReadMcpStructuredJson(stdioSummarizeResponse)));
         Assert.True(JsonElement.DeepEquals(httpSummarizePayload, ReadMcpStructuredJson(httpMcpSummarizeResponse)));
+
+        var generateRequest = new Dictionary<string, object?>
+        {
+            ["window_size"] = 5,
+            ["end_contest_id"] = 1005,
+            ["seed"] = 424242UL,
+            ["plan"] = new object[]
+            {
+                new Dictionary<string, object?>
+                {
+                    ["strategy_name"] = "common_repetition_frequency",
+                    ["count"] = 2
+                }
+            }
+        };
+
+        var httpGenerateResponse = await _httpClient.PostAsJsonAsync("/tools/generate_candidate_games", generateRequest);
+        Assert.Equal(HttpStatusCode.OK, httpGenerateResponse.StatusCode);
+
+        var stdioGenerateResponse = await _stdioMcpClient.CallToolAsync("generate_candidate_games", generateRequest);
+        var httpMcpGenerateResponse = await _httpMcpClient.CallToolAsync("generate_candidate_games", generateRequest);
+
+        var httpGeneratePayload = await ReadHttpJsonAsync(httpGenerateResponse);
+        Assert.True(JsonElement.DeepEquals(httpGeneratePayload, ReadMcpStructuredJson(stdioGenerateResponse)));
+        Assert.True(JsonElement.DeepEquals(httpGeneratePayload, ReadMcpStructuredJson(httpMcpGenerateResponse)));
     }
 
     [Fact]
@@ -412,6 +437,33 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         var httpSummarizeErrPayload = await ReadHttpJsonAsync(httpSummarizeErr);
         Assert.True(JsonElement.DeepEquals(httpSummarizeErrPayload, ReadMcpStructuredJson(stdioSummarizeErr)));
         Assert.True(JsonElement.DeepEquals(httpSummarizeErrPayload, ReadMcpStructuredJson(httpMcpSummarizeErr)));
+
+        var invalidGenerateRequest = new Dictionary<string, object?>
+        {
+            ["window_size"] = 5,
+            ["end_contest_id"] = 1005,
+            ["plan"] = new object[]
+            {
+                new Dictionary<string, object?>
+                {
+                    ["strategy_name"] = "common_repetition_frequency",
+                    ["count"] = 1
+                }
+            }
+        };
+
+        var httpGenerateErr = await _httpClient.PostAsJsonAsync("/tools/generate_candidate_games", invalidGenerateRequest);
+        Assert.Equal(HttpStatusCode.BadRequest, httpGenerateErr.StatusCode);
+
+        var stdioGenerateErr = await _stdioMcpClient.CallToolAsync("generate_candidate_games", invalidGenerateRequest);
+        var httpMcpGenerateErr = await _httpMcpClient.CallToolAsync("generate_candidate_games", invalidGenerateRequest);
+
+        Assert.True(stdioGenerateErr.IsError);
+        Assert.True(httpMcpGenerateErr.IsError);
+
+        var httpGenerateErrPayload = await ReadHttpJsonAsync(httpGenerateErr);
+        Assert.True(JsonElement.DeepEquals(httpGenerateErrPayload, ReadMcpStructuredJson(stdioGenerateErr)));
+        Assert.True(JsonElement.DeepEquals(httpGenerateErrPayload, ReadMcpStructuredJson(httpMcpGenerateErr)));
     }
 
     private static async Task AssertToolDiscoveryAsync(McpClient client)
@@ -423,6 +475,7 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         Assert.Contains(listedTools, tool => tool.Name is "compose_indicator_analysis");
         Assert.Contains(listedTools, tool => tool.Name is "analyze_indicator_associations");
         Assert.Contains(listedTools, tool => tool.Name is "summarize_window_patterns");
+        Assert.Contains(listedTools, tool => tool.Name is "generate_candidate_games");
     }
 
     private async Task<JsonElement> ReadHttpJsonAsync(HttpResponseMessage response)

@@ -122,6 +122,23 @@ public sealed class V0McpTools
         return ToToolResult(payload, payload is ContractErrorEnvelope);
     }
 
+    [McpServerTool(Name = "generate_candidate_games"), Description("Gera jogos candidatos por estrategia nominal simples com orcamento e determinismo.")]
+    public CallToolResult GenerateCandidateGames(
+        V0Tools tools,
+        [Description("Tamanho da janela.")] int window_size = 0,
+        [Description("Concurso final inclusivo.")] int? end_contest_id = null,
+        [Description("Seed obrigatoria para metodos sampled ou greedy_topk.")] ulong? seed = null,
+        [Description("Plano de geracao por estrategia nominal.")] IReadOnlyList<GenerateCandidatePlanItemRequest>? plan = null)
+    {
+        var payload = tools.GenerateCandidateGames(new GenerateCandidateGamesRequest(
+            WindowSize: window_size,
+            EndContestId: end_contest_id,
+            Seed: seed,
+            Plan: plan));
+
+        return ToToolResult(payload, payload is ContractErrorEnvelope);
+    }
+
     private static CallToolResult ToToolResult(object payload, bool isError)
     {
         var jsonPayload = JsonSerializer.SerializeToElement(payload, JsonOptions);

@@ -49,6 +49,18 @@ public sealed class V0CrossFieldValidator
         "iqr"
     ];
 
+    private static readonly HashSet<string> SupportedGenerationStrategies =
+    [
+        "common_repetition_frequency"
+    ];
+
+    private static readonly HashSet<string> SupportedSearchMethods =
+    [
+        "exhaustive",
+        "sampled",
+        "greedy_topk"
+    ];
+
     public void ValidateGetDrawWindow(GetDrawWindowInput input)
     {
         if (input.WindowSize <= 0)
@@ -461,6 +473,110 @@ public sealed class V0CrossFieldValidator
                         ["aggregation"] = feature.Aggregation
                     });
             }
+        }
+    }
+
+    public void ValidateGenerateCandidateGames(GenerateCandidateGamesInput input)
+    {
+        if (input.WindowSize <= 0)
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_WINDOW_SIZE",
+                message: "window_size must be greater than zero.",
+                details: new Dictionary<string, object?>
+                {
+                    ["window_size"] = input.WindowSize
+                });
+        }
+
+        if (input.Plan is null || input.Plan.Count == 0)
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_REQUEST",
+                message: "plan is required and must be non-empty.",
+                details: new Dictionary<string, object?>
+                {
+                    ["field"] = "plan"
+                });
+        }
+
+        var totalCount = 0;
+        foreach (var planItem in input.Plan)
+        {
+            if (planItem is null || string.IsNullOrWhiteSpace(planItem.StrategyName))
+            {
+                throw new ApplicationValidationException(
+                    code: "INVALID_REQUEST",
+                    message: "each plan entry must have a non-empty strategy_name.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["field"] = "plan[].strategy_name"
+                    });
+            }
+
+            if (!SupportedGenerationStrategies.Contains(planItem.StrategyName))
+            {
+                throw new ApplicationValidationException(
+                    code: "UNKNOWN_STRATEGY",
+                    message: "requested strategy is not available in this recorte.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["strategy_name"] = planItem.StrategyName
+                    });
+            }
+
+            if (planItem.Count is < 1 or > 100)
+            {
+                throw new ApplicationValidationException(
+                    code: "PLAN_BUDGET_EXCEEDED",
+                    message: "count must be between 1 and 100 for each plan item.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["strategy_name"] = planItem.StrategyName,
+                        ["count"] = planItem.Count
+                    });
+            }
+
+            totalCount += planItem.Count;
+            var effectiveSearchMethod = string.IsNullOrWhiteSpace(planItem.SearchMethod)
+                ? "greedy_topk"
+                : planItem.SearchMethod;
+
+            if (!SupportedSearchMethods.Contains(effectiveSearchMethod))
+            {
+                throw new ApplicationValidationException(
+                    code: "INVALID_REQUEST",
+                    message: "search_method is not supported.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["search_method"] = effectiveSearchMethod
+                    });
+            }
+
+            if ((string.Equals(effectiveSearchMethod, "sampled", StringComparison.Ordinal) ||
+                 string.Equals(effectiveSearchMethod, "greedy_topk", StringComparison.Ordinal)) &&
+                !input.Seed.HasValue)
+            {
+                throw new ApplicationValidationException(
+                    code: "NON_DETERMINISTIC_CONFIGURATION",
+                    message: "seed is required when search_method is sampled or greedy_topk.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["missing_field"] = "seed",
+                        ["search_method"] = effectiveSearchMethod
+                    });
+            }
+        }
+
+        if (totalCount > 250)
+        {
+            throw new ApplicationValidationException(
+                code: "PLAN_BUDGET_EXCEEDED",
+                message: "total planned count exceeds maximum budget of 250.",
+                details: new Dictionary<string, object?>
+                {
+                    ["total_count"] = totalCount
+                });
         }
     }
 }

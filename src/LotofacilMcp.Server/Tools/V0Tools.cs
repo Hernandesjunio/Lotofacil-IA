@@ -195,6 +195,32 @@ public sealed record SummarizeWindowPatternsResponse(
     [property: JsonPropertyName("coverage_threshold")] double CoverageThreshold,
     [property: JsonPropertyName("summaries")] IReadOnlyList<WindowPatternSummaryEnvelope> Summaries);
 
+public sealed record GenerateCandidatePlanItemRequest(
+    [property: JsonPropertyName("strategy_name")] string StrategyName,
+    [property: JsonPropertyName("count")] int Count,
+    [property: JsonPropertyName("search_method")] string? SearchMethod);
+
+public sealed record GenerateCandidateGamesRequest(
+    [property: JsonPropertyName("window_size")] int WindowSize,
+    [property: JsonPropertyName("end_contest_id")] int? EndContestId,
+    [property: JsonPropertyName("seed")] ulong? Seed,
+    [property: JsonPropertyName("plan")] IReadOnlyList<GenerateCandidatePlanItemRequest>? Plan);
+
+public sealed record CandidateGameEnvelope(
+    [property: JsonPropertyName("numbers")] IReadOnlyList<int> Numbers,
+    [property: JsonPropertyName("strategy_name")] string StrategyName,
+    [property: JsonPropertyName("strategy_version")] string StrategyVersion,
+    [property: JsonPropertyName("search_method")] string SearchMethod,
+    [property: JsonPropertyName("tie_break_rule")] string TieBreakRule,
+    [property: JsonPropertyName("seed_used"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ulong? SeedUsed);
+
+public sealed record GenerateCandidateGamesResponse(
+    [property: JsonPropertyName("dataset_version")] string DatasetVersion,
+    [property: JsonPropertyName("tool_version")] string ToolVersion,
+    [property: JsonPropertyName("deterministic_hash")] string DeterministicHash,
+    [property: JsonPropertyName("window")] WindowEnvelope Window,
+    [property: JsonPropertyName("candidate_games")] IReadOnlyList<CandidateGameEnvelope> CandidateGames);
+
 public sealed class V0Tools
 {
     private readonly ComputeWindowMetricsUseCase _computeWindowMetricsUseCase;
@@ -203,6 +229,7 @@ public sealed class V0Tools
     private readonly ComposeIndicatorAnalysisUseCase _composeIndicatorAnalysisUseCase;
     private readonly AnalyzeIndicatorAssociationsUseCase _analyzeIndicatorAssociationsUseCase;
     private readonly SummarizeWindowPatternsUseCase _summarizeWindowPatternsUseCase;
+    private readonly GenerateCandidateGamesUseCase _generateCandidateGamesUseCase;
     private readonly DeterministicHashService _deterministicHashService;
     private readonly string _fixturePath;
 
@@ -270,6 +297,14 @@ public sealed class V0Tools
             new IndicatorAssociationAnalyzer());
 
         _summarizeWindowPatternsUseCase = new SummarizeWindowPatternsUseCase(
+            fixtureProvider,
+            datasetVersionService,
+            new WindowResolver(),
+            windowMetricDispatcher,
+            validator,
+            mapper);
+
+        _generateCandidateGamesUseCase = new GenerateCandidateGamesUseCase(
             fixtureProvider,
             datasetVersionService,
             new WindowResolver(),
@@ -560,6 +595,51 @@ public sealed class V0Tools
                         summary.OutlierUpperFence,
                         summary.CoverageThresholdMet,
                         summary.Explanation))
+                    .ToArray());
+        }
+        catch (ApplicationValidationException ex)
+        {
+            return ToContractError(ex.Code, ex.Message, ex.Details);
+        }
+    }
+
+    public object GenerateCandidateGames(GenerateCandidateGamesRequest request)
+    {
+        try
+        {
+            var result = _generateCandidateGamesUseCase.Execute(new GenerateCandidateGamesInput(
+                WindowSize: request.WindowSize,
+                EndContestId: request.EndContestId,
+                Seed: request.Seed,
+                Plan: (request.Plan ?? Array.Empty<GenerateCandidatePlanItemRequest>())
+                    .Select(planItem => new GenerateCandidatePlanItemInput(
+                        planItem.StrategyName,
+                        planItem.Count,
+                        planItem.SearchMethod))
+                    .ToArray(),
+                FixturePath: _fixturePath));
+
+            var deterministicHash = _deterministicHashService.Compute(
+                result.DeterministicHashInput,
+                result.DatasetVersion,
+                result.ToolVersion);
+
+            return new GenerateCandidateGamesResponse(
+                DatasetVersion: result.DatasetVersion,
+                ToolVersion: result.ToolVersion,
+                DeterministicHash: deterministicHash,
+                Window: new WindowEnvelope(
+                    result.Window.Size,
+                    result.Window.StartContestId,
+                    result.Window.EndContestId),
+                CandidateGames: result.CandidateGames
+                    .Select(game => new CandidateGameEnvelope(
+                        game.Numbers.ToArray(),
+                        game.StrategyName,
+                        game.StrategyVersion,
+                        game.SearchMethod,
+                        game.TieBreakRule,
+                        game.SeedUsed))
                     .ToArray());
         }
         catch (ApplicationValidationException ex)
