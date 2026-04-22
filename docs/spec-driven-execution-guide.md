@@ -276,7 +276,7 @@ Passos atômicos:
 - Adicionar a família de pacotes `**ModelContextProtocol`** (SDK oficial C#) conforme documentação vigente do repositório `csharp-sdk`; incluir `ModelContextProtocol.AspNetCore` apenas se o transporte HTTP MCP for necessário na mesma PR.
 - Confinar atributos/tipos do SDK ao `LotofacilMcp.Server` (e a um executável stdio mínimo, se for o caso), sem referências MCP em `Domain`/`Application`.
 - Registrar `get_draw_window` e `compute_window_metrics` como tools MCP com nomes e schemas alinhados a [mcp-tool-contract.md](mcp-tool-contract.md).
-- Implementar **pelo menos um** transporte MCP: **stdio** (prioridade para hosts desktop) e/ou MCP HTTP (SSE/Streamable HTTP) no pipeline ASP.NET Core, conforme [ADR 0005](adrs/0005-transporte-mcp-e-superficie-tools-v1.md).
+- Implementar transporte MCP via **stdio** (prioridade para hosts desktop), conforme [ADR 0005](adrs/0005-transporte-mcp-e-superficie-tools-v1.md).
 - Escrever testes de integração que provem descoberta e invocação (ex.: fluxo equivalente a `tools/list` e `tools/call`) e **paridade** com a resposta dos endpoints HTTP para o mesmo input.
 - Documentar configuração mínima do host (ex.: entrada MCP no cliente) no [README.md](../README.md) ou doc operacional existente.
 
@@ -289,20 +289,6 @@ Critério mínimo de aceite adicional:
 - um host MCP desktop (ex.: Cursor) consegue iniciar o servidor local via comando e `--mcp-stdio`;
 - `tools/list` e `tools/call` funcionam para as tools em escopo;
 - paridade MCP/stdio ↔ REST `/tools/*` é provada por teste (deep-equals do JSON de payload).
-
-#### Fase 9B (opcional, fatia separada): MCP via HTTP (SSE e/ou Streamable HTTP)
-
-Justificativa: “MCP via HTTP” é uma camada de transporte diferente e historicamente foi o ponto de confusão (MCP-like REST ≠ MCP). Separar em uma fatia própria evita drift documental e mantém os passos atômicos.
-
-Regras:
-
-- o endpoint deve ser **MCP real** (capaz de `tools/list`/`tools/call`), não REST.
-- o endpoint **não** substitui `/tools/*` (compatibilidade); ele convive conforme ADR 0005.
-
-Critério mínimo de aceite adicional:
-
-- existe um endpoint MCP HTTP real (`/sse` e/ou `/mcp`) que um host MCP consegue conectar;
-- paridade MCP/HTTP ↔ REST `/tools/*` é provada por teste (deep-equals do JSON de payload).
 
 Referências:
 
@@ -401,7 +387,33 @@ Critério mínimo de aceite:
 - o drift fica classificado e rastreável;
 - documentação, testes e comportamento observado voltam a estar alinhados;
 - não permanece no código nenhuma superfície “parece MCP” mas não implementa protocolo MCP;
-- o recorte resultante fica claro para o próximo ciclo (retomar Fase 10/11 ou executar nova fatia de Fase 9B).
+- o recorte resultante fica claro para o próximo ciclo (retomar Fase 10/11 ou executar a Fase 13).
+
+### Fase 13: Transporte MCP via HTTP (SSE/Streamable HTTP)
+
+Objetivo: adicionar transporte MCP por HTTP sem reabrir a Fase 9, mantendo a distinção normativa entre protocolo MCP real e REST espelhado.
+
+Justificativa: “MCP via HTTP” é uma camada de transporte diferente e historicamente foi o ponto de confusão (MCP-like REST ≠ MCP). Tratar como etapa própria evita retrabalho retroativo e preserva a rastreabilidade da evolução.
+
+Passos atômicos:
+
+- Adicionar integração ASP.NET Core do SDK MCP (ex.: `ModelContextProtocol.AspNetCore`, conforme versão vigente).
+- Expor endpoint MCP HTTP real (`/sse` e/ou `/mcp`) capaz de responder discovery/call do protocolo.
+- Garantir convivência explícita com REST espelhado (`/tools/*`) sem declarar REST como MCP.
+- Escrever testes de integração para `tools/list` e `tools/call` no transporte HTTP MCP e validar paridade semântica com REST.
+- Atualizar documentação operacional com configuração de cliente MCP HTTP.
+
+Referências:
+
+- [ADR 0005](adrs/0005-transporte-mcp-e-superficie-tools-v1.md)
+- [mcp-tool-contract.md](mcp-tool-contract.md)
+- [contract-test-plan.md](contract-test-plan.md)
+
+Critério mínimo de aceite:
+
+- um cliente MCP conecta via HTTP (`/sse` e/ou `/mcp`) e executa `tools/list` + `tools/call`;
+- paridade MCP HTTP ↔ REST `/tools/*` é comprovada por teste;
+- `/mcp/tools/*` (quando existir) permanece tratado como REST deprecado.
 
 ## Como pedir implementação para IA
 
@@ -552,9 +564,10 @@ Se houver dúvida sobre “qual passo pedir agora para a IA”, comece sempre po
 
 **Depois da V0:**
 
-1. [Fase 9](#fase-9-transporte-mcp-protocolo-real--paridade-com-o-contrato): transporte MCP com paridade aos endpoints HTTP;
+1. [Fase 9](#fase-9-transporte-mcp-protocolo-real--paridade-com-o-contrato): transporte MCP `stdio` com paridade aos endpoints HTTP;
 2. [Fase 10](#fase-10-expandir-tools-documentadas-ondas-b-e-c): uma tool de cada vez, na ordem listada;
 3. [Fase 11](#fase-11-fechar-evidências-da-v1-transportes-mcp--catálogo-em-escopo): evidência e documentação alinhadas ao escopo V1;
-4. [Fase 12](#fase-12-correção-de-drift-desalinhamento-spec--implementação): executar quando houver desvio entre o que foi especificado e o que foi entregue.
+4. [Fase 12](#fase-12-correção-de-drift-desalinhamento-spec--implementação): executar quando houver desvio entre o que foi especificado e o que foi entregue;
+5. [Fase 13](#fase-13-transporte-mcp-via-http-ssestreamable-http): transportar MCP via HTTP como evolução explícita (sem reabrir a Fase 9).
 
 Essa ordem é a forma prática de usar spec-driven neste projeto: **spec → teste → implementação mínima → validação → próxima fatia**.

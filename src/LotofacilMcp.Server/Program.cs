@@ -11,6 +11,10 @@ if (McpStdioHost.IsStdioMode(args))
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddV0Server(builder.Configuration, builder.Environment);
+builder.Services
+    .AddMcpServer()
+    .WithHttpTransport()
+    .WithTools<V0McpTools>();
 
 var app = builder.Build();
 
@@ -21,6 +25,7 @@ app.MapGet("/", () => Results.Ok(new
 }));
 
 app.MapV0ToolEndpoints();
+app.MapMcp("/mcp");
 
 app.Run();
 

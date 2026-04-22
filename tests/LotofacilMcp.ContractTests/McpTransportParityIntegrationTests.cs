@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 
@@ -13,12 +14,13 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
     private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
 
     private HttpClient _httpClient = default!;
-    private McpClient _mcpClient = default!;
+    private McpClient _stdioMcpClient = default!;
+    private McpClient _httpMcpClient = default!;
 
     public async Task InitializeAsync()
     {
         _httpClient = _httpFactory.CreateClient();
-        _mcpClient = await McpClient.CreateAsync(new StdioClientTransport(new StdioClientTransportOptions
+        _stdioMcpClient = await McpClient.CreateAsync(new StdioClientTransport(new StdioClientTransportOptions
         {
             Name = "LotofacilMcp.Server",
             Command = "dotnet",
@@ -32,22 +34,33 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
                 "--mcp-stdio"
             ]
         }));
+
+        var mcpEndpoint = new Uri(_httpClient.BaseAddress!, "mcp");
+        _httpMcpClient = await McpClient.CreateAsync(new HttpClientTransport(
+            new HttpClientTransportOptions
+            {
+                Name = "LotofacilMcp.Server.Http",
+                Endpoint = mcpEndpoint,
+                TransportMode = HttpTransportMode.StreamableHttp
+            },
+            _httpClient,
+            NullLoggerFactory.Instance,
+            ownsHttpClient: false));
     }
 
     public async Task DisposeAsync()
     {
+        await _httpMcpClient.DisposeAsync();
+        await _stdioMcpClient.DisposeAsync();
         _httpClient.Dispose();
-        await _mcpClient.DisposeAsync();
         await _httpFactory.DisposeAsync();
     }
 
     [Fact]
     public async Task McpDiscoveryAndSuccessfulCalls_MatchHttpJsonSemantics()
     {
-        var listedTools = await _mcpClient.ListToolsAsync();
-        Assert.Contains(listedTools, tool => tool.Name is "get_draw_window");
-        Assert.Contains(listedTools, tool => tool.Name is "compute_window_metrics");
-        Assert.Contains(listedTools, tool => tool.Name is "analyze_indicator_stability");
+        await AssertToolDiscoveryAsync(_stdioMcpClient);
+        await AssertToolDiscoveryAsync(_httpMcpClient);
 
         var getDrawWindowRequest = new
         {
@@ -58,15 +71,20 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         var httpWindowResponse = await _httpClient.PostAsJsonAsync("/tools/get_draw_window", getDrawWindowRequest);
         Assert.Equal(HttpStatusCode.OK, httpWindowResponse.StatusCode);
 
-        var mcpWindowResponse = await _mcpClient.CallToolAsync("get_draw_window", new Dictionary<string, object?>
+        var stdioWindowResponse = await _stdioMcpClient.CallToolAsync("get_draw_window", new Dictionary<string, object?>
+        {
+            ["window_size"] = 3,
+            ["end_contest_id"] = 1003
+        });
+        var httpMcpWindowResponse = await _httpMcpClient.CallToolAsync("get_draw_window", new Dictionary<string, object?>
         {
             ["window_size"] = 3,
             ["end_contest_id"] = 1003
         });
 
         var httpWindowPayload = await ReadHttpJsonAsync(httpWindowResponse);
-        var mcpWindowPayload = ReadMcpStructuredJson(mcpWindowResponse);
-        Assert.True(JsonElement.DeepEquals(httpWindowPayload, mcpWindowPayload));
+        Assert.True(JsonElement.DeepEquals(httpWindowPayload, ReadMcpStructuredJson(stdioWindowResponse)));
+        Assert.True(JsonElement.DeepEquals(httpWindowPayload, ReadMcpStructuredJson(httpMcpWindowResponse)));
 
         var computeRequest = new
         {
@@ -81,7 +99,19 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         var httpComputeResponse = await _httpClient.PostAsJsonAsync("/tools/compute_window_metrics", computeRequest);
         Assert.Equal(HttpStatusCode.OK, httpComputeResponse.StatusCode);
 
-        var mcpComputeResponse = await _mcpClient.CallToolAsync("compute_window_metrics", new Dictionary<string, object?>
+        var stdioComputeResponse = await _stdioMcpClient.CallToolAsync("compute_window_metrics", new Dictionary<string, object?>
+        {
+            ["window_size"] = 3,
+            ["end_contest_id"] = 1003,
+            ["metrics"] = new object[]
+            {
+                new Dictionary<string, object?>
+                {
+                    ["name"] = "frequencia_por_dezena"
+                }
+            }
+        });
+        var httpMcpComputeResponse = await _httpMcpClient.CallToolAsync("compute_window_metrics", new Dictionary<string, object?>
         {
             ["window_size"] = 3,
             ["end_contest_id"] = 1003,
@@ -95,8 +125,8 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         });
 
         var httpComputePayload = await ReadHttpJsonAsync(httpComputeResponse);
-        var mcpComputePayload = ReadMcpStructuredJson(mcpComputeResponse);
-        Assert.True(JsonElement.DeepEquals(httpComputePayload, mcpComputePayload));
+        Assert.True(JsonElement.DeepEquals(httpComputePayload, ReadMcpStructuredJson(stdioComputeResponse)));
+        Assert.True(JsonElement.DeepEquals(httpComputePayload, ReadMcpStructuredJson(httpMcpComputeResponse)));
 
         var analyzeRequest = new
         {
@@ -114,7 +144,26 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         var httpAnalyzeResponse = await _httpClient.PostAsJsonAsync("/tools/analyze_indicator_stability", analyzeRequest);
         Assert.Equal(HttpStatusCode.OK, httpAnalyzeResponse.StatusCode);
 
-        var mcpAnalyzeResponse = await _mcpClient.CallToolAsync("analyze_indicator_stability", new Dictionary<string, object?>
+        var stdioAnalyzeResponse = await _stdioMcpClient.CallToolAsync("analyze_indicator_stability", new Dictionary<string, object?>
+        {
+            ["window_size"] = 5,
+            ["end_contest_id"] = 1005,
+            ["indicators"] = new object[]
+            {
+                new Dictionary<string, object?>
+                {
+                    ["name"] = "repeticao_concurso_anterior"
+                },
+                new Dictionary<string, object?>
+                {
+                    ["name"] = "distribuicao_linha_por_concurso",
+                    ["aggregation"] = "per_component"
+                }
+            },
+            ["top_k"] = 3,
+            ["min_history"] = 3
+        });
+        var httpMcpAnalyzeResponse = await _httpMcpClient.CallToolAsync("analyze_indicator_stability", new Dictionary<string, object?>
         {
             ["window_size"] = 5,
             ["end_contest_id"] = 1005,
@@ -135,8 +184,8 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         });
 
         var httpAnalyzePayload = await ReadHttpJsonAsync(httpAnalyzeResponse);
-        var mcpAnalyzePayload = ReadMcpStructuredJson(mcpAnalyzeResponse);
-        Assert.True(JsonElement.DeepEquals(httpAnalyzePayload, mcpAnalyzePayload));
+        Assert.True(JsonElement.DeepEquals(httpAnalyzePayload, ReadMcpStructuredJson(stdioAnalyzeResponse)));
+        Assert.True(JsonElement.DeepEquals(httpAnalyzePayload, ReadMcpStructuredJson(httpMcpAnalyzeResponse)));
     }
 
     [Fact]
@@ -151,17 +200,23 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         var httpResponse = await _httpClient.PostAsJsonAsync("/tools/compute_window_metrics", invalidRequest);
         Assert.Equal(HttpStatusCode.BadRequest, httpResponse.StatusCode);
 
-        var mcpResponse = await _mcpClient.CallToolAsync("compute_window_metrics", new Dictionary<string, object?>
+        var stdioResponse = await _stdioMcpClient.CallToolAsync("compute_window_metrics", new Dictionary<string, object?>
+        {
+            ["window_size"] = 3,
+            ["end_contest_id"] = 1003
+        });
+        var httpMcpResponse = await _httpMcpClient.CallToolAsync("compute_window_metrics", new Dictionary<string, object?>
         {
             ["window_size"] = 3,
             ["end_contest_id"] = 1003
         });
 
-        Assert.True(mcpResponse.IsError);
+        Assert.True(stdioResponse.IsError);
+        Assert.True(httpMcpResponse.IsError);
 
         var httpPayload = await ReadHttpJsonAsync(httpResponse);
-        var mcpPayload = ReadMcpStructuredJson(mcpResponse);
-        Assert.True(JsonElement.DeepEquals(httpPayload, mcpPayload));
+        Assert.True(JsonElement.DeepEquals(httpPayload, ReadMcpStructuredJson(stdioResponse)));
+        Assert.True(JsonElement.DeepEquals(httpPayload, ReadMcpStructuredJson(httpMcpResponse)));
 
         var invalidAnalyzeRequest = new
         {
@@ -178,7 +233,21 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         var httpAnalyzeResponse = await _httpClient.PostAsJsonAsync("/tools/analyze_indicator_stability", invalidAnalyzeRequest);
         Assert.Equal(HttpStatusCode.BadRequest, httpAnalyzeResponse.StatusCode);
 
-        var mcpAnalyzeResponse = await _mcpClient.CallToolAsync("analyze_indicator_stability", new Dictionary<string, object?>
+        var stdioAnalyzeResponse = await _stdioMcpClient.CallToolAsync("analyze_indicator_stability", new Dictionary<string, object?>
+        {
+            ["window_size"] = 5,
+            ["end_contest_id"] = 1005,
+            ["indicators"] = new object[]
+            {
+                new Dictionary<string, object?>
+                {
+                    ["name"] = "distribuicao_linha_por_concurso"
+                }
+            },
+            ["top_k"] = 3,
+            ["min_history"] = 3
+        });
+        var httpMcpAnalyzeResponse = await _httpMcpClient.CallToolAsync("analyze_indicator_stability", new Dictionary<string, object?>
         {
             ["window_size"] = 5,
             ["end_contest_id"] = 1005,
@@ -193,11 +262,20 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
             ["min_history"] = 3
         });
 
-        Assert.True(mcpAnalyzeResponse.IsError);
+        Assert.True(stdioAnalyzeResponse.IsError);
+        Assert.True(httpMcpAnalyzeResponse.IsError);
 
         var httpAnalyzePayload = await ReadHttpJsonAsync(httpAnalyzeResponse);
-        var mcpAnalyzePayload = ReadMcpStructuredJson(mcpAnalyzeResponse);
-        Assert.True(JsonElement.DeepEquals(httpAnalyzePayload, mcpAnalyzePayload));
+        Assert.True(JsonElement.DeepEquals(httpAnalyzePayload, ReadMcpStructuredJson(stdioAnalyzeResponse)));
+        Assert.True(JsonElement.DeepEquals(httpAnalyzePayload, ReadMcpStructuredJson(httpMcpAnalyzeResponse)));
+    }
+
+    private static async Task AssertToolDiscoveryAsync(McpClient client)
+    {
+        var listedTools = await client.ListToolsAsync();
+        Assert.Contains(listedTools, tool => tool.Name is "get_draw_window");
+        Assert.Contains(listedTools, tool => tool.Name is "compute_window_metrics");
+        Assert.Contains(listedTools, tool => tool.Name is "analyze_indicator_stability");
     }
 
     private async Task<JsonElement> ReadHttpJsonAsync(HttpResponseMessage response)
