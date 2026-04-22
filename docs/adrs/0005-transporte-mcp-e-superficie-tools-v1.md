@@ -30,20 +30,61 @@ O produto deve expor as ferramentas documentadas em [mcp-tool-contract.md](../mc
 
 **Justificativa:** hosts (IDE, clientes MCP) esperam MCP; o contrato já descreve payloads de tools — o transporte MCP é a cola operacional.
 
+### D2.1 — “MCP” significa o protocolo (não um prefixo de rota)
+
+Para evitar ambiguidades:
+
+- **MCP** refere-se ao **protocolo MCP** (JSON-RPC 2.0 + capacidades como `tools/list` e `tools/call`) sobre um transporte suportado (por exemplo `stdio`, `SSE`, `Streamable HTTP`).
+- Rotas HTTP que recebem JSON “do contrato” por `POST` (ex.: `/tools/compute_window_metrics`) são **endpoints REST de compatibilidade**, não MCP, mesmo que usem prefixos como `/mcp/...`.
+
+**Conseqüência prática:** o Cursor (e outros hosts MCP) **não** descobrem tools apontando para endpoints REST; eles precisam de um endpoint MCP real (SSE/Streamable HTTP) ou de um processo `stdio`.
+
 ### D3 — Convivência com HTTP (compatibilidade e testes)
 
-Manter **endpoints HTTP** que espelham as mesmas tools (incluindo prefixos já usados, ex.: `/tools/...`, `/mcp/tools/...`), com **a mesma semântica de request/response** que a invocação MCP, salvo o envelope do protocolo MCP nas mensagens de camada inferior.
+Manter **endpoints HTTP REST** que espelham as mesmas tools, com **a mesma semântica de request/response** do contrato (sucesso/erro), para:
+
+- compatibilidade com clientes legados;
+- depuração com `curl`/REST;
+- execução e regressão dos testes de contrato HTTP existentes.
+
+**Importante:** esses endpoints REST **não implementam** `tools/list` / `tools/call` do MCP. Eles existem como “espelho HTTP” do contrato de payloads, não como transporte MCP.
+
+#### D3.1 — Convenção de rotas REST (para reduzir confusão)
+
+- Rotas REST devem viver sob `/tools/*` (ex.: `/tools/get_draw_window`).
+- Rotas REST com prefixo `/mcp/tools/*` ficam **deprecadas** (ou podem ser removidas numa PR futura) para não induzir a leitura “isso é MCP/HTTP”.
 
 **Justificativa:** regressão por testes de contrato já existentes, clientes legados, depuração com `curl`/REST sem host MCP.
 
 ### D4 — Transportes MCP suportados (ordem de prioridade)
 
 1. **stdio** — processo filho padrão para muitos hosts desktop (ex.: subprocesso com JSON-RPC MCP sobre stdin/stdout).
-2. **HTTP (ASP.NET Core)** — quando o SDK expuser integração com o mesmo pipeline Kestrel, permitindo um único `LotofacilMcp.Server` com HTTP “legado” + rota MCP streamable/SSE conforme documentação do pacote `ModelContextProtocol.AspNetCore` (ou equivalente na versão do SDK).
+2. **HTTP (ASP.NET Core)** — expor **um endpoint MCP real** no mesmo host Kestrel, suportando pelo menos um dos transportes HTTP aceitos por hosts (ex.: Cursor):
+   - **SSE** (endpoint típico: `/sse`)
+   - **Streamable HTTP** (endpoint típico: `/mcp`)
+   conforme documentação do pacote `ModelContextProtocol.AspNetCore` (ou equivalente na versão do SDK).
 
 A equipe pode implementar **primeiro** o transporte que desbloquear o caso de uso principal (em geral **stdio** para Cursor/Claude Desktop), desde que o contrato de tools e os testes cubram esse caminho; o segundo transporte entra como fatia seguinte.
 
 **Justificativa:** ADR 0004 evitou dois hosts sem necessidade; aqui o segundo transporte é **o mesmo protocolo** com outro binding, não duas semânticas.
+
+## Superfícies e rotas (tabela explícita)
+
+Esta seção fecha a ambiguidade “MCP via HTTP” vs “HTTP de compatibilidade”.
+
+| Superfície | O que é | Como o host/cliente consome | Descoberta de tools (`tools/list`) | Invocação (`tools/call`) | Rotas/pontos típicos |
+|---|---|---|---|---|---|
+| **MCP (stdio)** | Protocolo MCP completo sobre stdin/stdout | Cursor/Claude Desktop executa um comando local e fala MCP pelo processo | **Sim** | **Sim** | Executável `LotofacilMcp.Server` com `--mcp-stdio` |
+| **MCP (HTTP/SSE)** | Protocolo MCP completo sobre HTTP com streaming (SSE) | Cursor aponta para a URL do endpoint SSE | **Sim** | **Sim** | `/sse` (endpoint MCP SSE real) |
+| **MCP (HTTP streamable)** | Protocolo MCP completo sobre HTTP streamable | Cursor aponta para a URL do endpoint MCP streamable | **Sim** | **Sim** | `/mcp` (endpoint MCP streamable real) |
+| **HTTP REST espelhado (compatibilidade)** | POSTs HTTP com o JSON do contrato das tools (sem JSON-RPC MCP) | `curl`, Postman, clientes legados, testes HTTP de contrato | **Não** | **Não** (é outra API) | `/tools/*` (ex.: `/tools/compute_window_metrics`) |
+| **HTTP REST com prefixo `/mcp/*`** | Mesmo REST espelhado acima, mas com prefixo confuso | **Não recomendado** | **Não** | **Não** | `/mcp/tools/*` (**deprecado**; pode ser removido) |
+
+### Regras normativas derivadas da tabela
+
+- “Suportar Cursor de forma transparente” significa expor **MCP stdio** e/ou **MCP HTTP (SSE/Streamable)** — nunca apenas REST.
+- Endpoints REST são permitidos como compatibilidade, mas **não** podem ser descritos como “MCP/HTTP” (apenas “HTTP espelhado” / “REST de compatibilidade”).
+- Prefixos de rota não definem protocolo: `/mcp/...` em REST continua sendo REST.
 
 ### D5 — Fronteira de dependências (inalterada em espírito)
 
@@ -93,6 +134,20 @@ Esta decisão está implementada quando:
 1. Pelo menos um **transporte MCP** (stdio ou HTTP MCP) passa testes de integração que cobrem `tools/list` e `tools/call` para as tools já em escopo.
 2. As chamadas MCP produzem **paridade semântica** com os endpoints HTTP para o mesmo JSON de argumentos e respostas de sucesso/erro de contrato.
 3. As ondas B e C seguem o [spec-driven-execution-guide.md](../spec-driven-execution-guide.md) (fases 10+) com testes de contrato por tool.
+
+### Checklist de aceite (transportes)
+
+- **MCP stdio**:
+  - o host (Cursor) consegue iniciar o servidor com `--mcp-stdio`;
+  - `tools/list` retorna pelo menos as tools da onda A;
+  - `tools/call` executa uma tool com sucesso e retorna payload de contrato em `structuredContent`.
+- **MCP HTTP (SSE e/ou Streamable HTTP)**:
+  - existe um endpoint MCP real (ex.: `/sse` e/ou `/mcp`) que um host MCP consegue conectar;
+  - o host consegue executar `tools/list` e `tools/call` via esse endpoint;
+  - a resposta MCP tem paridade semântica com o REST espelhado (mesmos campos e erros de contrato), descontando apenas o envelope do protocolo.
+- **REST espelhado** (se mantido):
+  - rotas sob `/tools/*` continuam funcionando para depuração e testes;
+  - `/mcp/tools/*` está marcado como deprecado (ou removido) para não induzir confusão.
 
 ## Referências internas
 

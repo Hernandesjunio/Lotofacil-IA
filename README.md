@@ -75,7 +75,7 @@ Para clientes MCP desktop (ex.: Cursor), use o mesmo executável `LotofacilMcp.S
 }
 ```
 
-Nesse modo o host MCP consegue descobrir e invocar as tools V0 (`get_draw_window` e `compute_window_metrics`) com a mesma semântica JSON usada nos POSTs HTTP `/tools/*`.
+Nesse modo o host MCP consegue descobrir e invocar as tools atualmente entregues no recorte V1 (`get_draw_window`, `compute_window_metrics` e `analyze_indicator_stability`) com a mesma semântica JSON usada nos POSTs HTTP `/tools/*`.
 
 ## Estrutura
 

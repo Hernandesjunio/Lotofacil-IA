@@ -1,6 +1,7 @@
 using LotofacilMcp.Application.Mapping;
 using LotofacilMcp.Application.UseCases;
 using LotofacilMcp.Application.Validation;
+using LotofacilMcp.Domain.Analytics;
 using LotofacilMcp.Domain.Metrics;
 using LotofacilMcp.Domain.Normalization;
 using LotofacilMcp.Domain.Windows;
@@ -95,6 +96,81 @@ public sealed class Phase5ApplicationUseCasesTests
         Assert.Equal("metrica_inexistente", error.Details["metric_name"]);
     }
 
+    [Fact]
+    public void AnalyzeIndicatorStabilityUseCase_ReturnsRankingWithDefaultMadn()
+    {
+        var sut = BuildAnalyzeIndicatorStabilityUseCase();
+        var input = new AnalyzeIndicatorStabilityInput(
+            WindowSize: 5,
+            EndContestId: 5,
+            Indicators:
+            [
+                new StabilityIndicatorRequestInput("repeticao_concurso_anterior", null),
+                new StabilityIndicatorRequestInput("distribuicao_linha_por_concurso", "per_component")
+            ],
+            NormalizationMethod: null,
+            TopK: 3,
+            MinHistory: 3,
+            FixturePath: GetFixturePath());
+
+        var result = sut.Execute(input);
+
+        Assert.Equal("1.0.0", result.ToolVersion);
+        Assert.StartsWith("cef-", result.DatasetVersion);
+        Assert.Equal("madn", result.NormalizationMethod);
+        Assert.Equal(5, result.Window.Size);
+        Assert.Equal(3, result.Ranking.Count);
+        Assert.All(result.Ranking, entry =>
+        {
+            Assert.InRange(entry.StabilityScore, 0d, 1d);
+            Assert.True(entry.Dispersion >= 0d);
+            Assert.False(string.IsNullOrWhiteSpace(entry.IndicatorName));
+            Assert.False(string.IsNullOrWhiteSpace(entry.Explanation));
+        });
+    }
+
+    [Fact]
+    public void AnalyzeIndicatorStabilityUseCase_WithoutVectorAggregation_ThrowsUnsupportedAggregation()
+    {
+        var sut = BuildAnalyzeIndicatorStabilityUseCase();
+        var input = new AnalyzeIndicatorStabilityInput(
+            WindowSize: 5,
+            EndContestId: 5,
+            Indicators:
+            [
+                new StabilityIndicatorRequestInput("distribuicao_linha_por_concurso", null)
+            ],
+            NormalizationMethod: "madn",
+            TopK: 3,
+            MinHistory: 3,
+            FixturePath: GetFixturePath());
+
+        var error = Assert.Throws<ApplicationValidationException>(() => sut.Execute(input));
+
+        Assert.Equal("UNSUPPORTED_AGGREGATION", error.Code);
+    }
+
+    [Fact]
+    public void AnalyzeIndicatorStabilityUseCase_WithWindowBelowMinHistory_ThrowsInsufficientHistory()
+    {
+        var sut = BuildAnalyzeIndicatorStabilityUseCase();
+        var input = new AnalyzeIndicatorStabilityInput(
+            WindowSize: 3,
+            EndContestId: 3,
+            Indicators:
+            [
+                new StabilityIndicatorRequestInput("repeticao_concurso_anterior", null)
+            ],
+            NormalizationMethod: "madn",
+            TopK: 3,
+            MinHistory: 5,
+            FixturePath: GetFixturePath());
+
+        var error = Assert.Throws<ApplicationValidationException>(() => sut.Execute(input));
+
+        Assert.Equal("INSUFFICIENT_HISTORY", error.Code);
+    }
+
     private static GetDrawWindowUseCase BuildGetDrawWindowUseCase()
     {
         return new GetDrawWindowUseCase(
@@ -114,6 +190,17 @@ public sealed class Phase5ApplicationUseCasesTests
             new FrequencyByDezenaMetric(),
             new V0CrossFieldValidator(),
             new V0RequestMapper(new DrawNormalizer()));
+    }
+
+    private static AnalyzeIndicatorStabilityUseCase BuildAnalyzeIndicatorStabilityUseCase()
+    {
+        return new AnalyzeIndicatorStabilityUseCase(
+            new SyntheticFixtureProvider(),
+            new DatasetVersionService(),
+            new WindowResolver(),
+            new V0CrossFieldValidator(),
+            new V0RequestMapper(new DrawNormalizer()),
+            new IndicatorStabilityAnalyzer());
     }
 
     private static string GetFixturePath()

@@ -12,6 +12,10 @@ public sealed record DrawView(
 
 public sealed record MetricRequestInput(string Name);
 
+public sealed record StabilityIndicatorRequestInput(
+    string Name,
+    string? Aggregation);
+
 public sealed record FrequencyMetricValueView(
     string MetricName,
     string Scope,
@@ -20,4 +24,13 @@ public sealed record FrequencyMetricValueView(
     string Version,
     WindowDescriptor Window,
     IReadOnlyList<int> Value,
+    string Explanation);
+
+public sealed record StabilityRankingEntryView(
+    string IndicatorName,
+    string Aggregation,
+    int? ComponentIndex,
+    string Shape,
+    double Dispersion,
+    double StabilityScore,
     string Explanation);

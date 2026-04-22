@@ -47,6 +47,7 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         var listedTools = await _mcpClient.ListToolsAsync();
         Assert.Contains(listedTools, tool => tool.Name is "get_draw_window");
         Assert.Contains(listedTools, tool => tool.Name is "compute_window_metrics");
+        Assert.Contains(listedTools, tool => tool.Name is "analyze_indicator_stability");
 
         var getDrawWindowRequest = new
         {
@@ -96,6 +97,46 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         var httpComputePayload = await ReadHttpJsonAsync(httpComputeResponse);
         var mcpComputePayload = ReadMcpStructuredJson(mcpComputeResponse);
         Assert.True(JsonElement.DeepEquals(httpComputePayload, mcpComputePayload));
+
+        var analyzeRequest = new
+        {
+            window_size = 5,
+            end_contest_id = 1005,
+            indicators = new object[]
+            {
+                new { name = "repeticao_concurso_anterior" },
+                new { name = "distribuicao_linha_por_concurso", aggregation = "per_component" }
+            },
+            top_k = 3,
+            min_history = 3
+        };
+
+        var httpAnalyzeResponse = await _httpClient.PostAsJsonAsync("/tools/analyze_indicator_stability", analyzeRequest);
+        Assert.Equal(HttpStatusCode.OK, httpAnalyzeResponse.StatusCode);
+
+        var mcpAnalyzeResponse = await _mcpClient.CallToolAsync("analyze_indicator_stability", new Dictionary<string, object?>
+        {
+            ["window_size"] = 5,
+            ["end_contest_id"] = 1005,
+            ["indicators"] = new object[]
+            {
+                new Dictionary<string, object?>
+                {
+                    ["name"] = "repeticao_concurso_anterior"
+                },
+                new Dictionary<string, object?>
+                {
+                    ["name"] = "distribuicao_linha_por_concurso",
+                    ["aggregation"] = "per_component"
+                }
+            },
+            ["top_k"] = 3,
+            ["min_history"] = 3
+        });
+
+        var httpAnalyzePayload = await ReadHttpJsonAsync(httpAnalyzeResponse);
+        var mcpAnalyzePayload = ReadMcpStructuredJson(mcpAnalyzeResponse);
+        Assert.True(JsonElement.DeepEquals(httpAnalyzePayload, mcpAnalyzePayload));
     }
 
     [Fact]
@@ -121,6 +162,42 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         var httpPayload = await ReadHttpJsonAsync(httpResponse);
         var mcpPayload = ReadMcpStructuredJson(mcpResponse);
         Assert.True(JsonElement.DeepEquals(httpPayload, mcpPayload));
+
+        var invalidAnalyzeRequest = new
+        {
+            window_size = 5,
+            end_contest_id = 1005,
+            indicators = new object[]
+            {
+                new { name = "distribuicao_linha_por_concurso" }
+            },
+            top_k = 3,
+            min_history = 3
+        };
+
+        var httpAnalyzeResponse = await _httpClient.PostAsJsonAsync("/tools/analyze_indicator_stability", invalidAnalyzeRequest);
+        Assert.Equal(HttpStatusCode.BadRequest, httpAnalyzeResponse.StatusCode);
+
+        var mcpAnalyzeResponse = await _mcpClient.CallToolAsync("analyze_indicator_stability", new Dictionary<string, object?>
+        {
+            ["window_size"] = 5,
+            ["end_contest_id"] = 1005,
+            ["indicators"] = new object[]
+            {
+                new Dictionary<string, object?>
+                {
+                    ["name"] = "distribuicao_linha_por_concurso"
+                }
+            },
+            ["top_k"] = 3,
+            ["min_history"] = 3
+        });
+
+        Assert.True(mcpAnalyzeResponse.IsError);
+
+        var httpAnalyzePayload = await ReadHttpJsonAsync(httpAnalyzeResponse);
+        var mcpAnalyzePayload = ReadMcpStructuredJson(mcpAnalyzeResponse);
+        Assert.True(JsonElement.DeepEquals(httpAnalyzePayload, mcpAnalyzePayload));
     }
 
     private async Task<JsonElement> ReadHttpJsonAsync(HttpResponseMessage response)

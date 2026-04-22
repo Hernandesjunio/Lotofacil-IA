@@ -71,3 +71,44 @@ Cada família de [prompt-catalog.md](prompt-catalog.md) deve mapear para pelo me
 | `test-plan.md` | O *quê* deve ser coberto (matriz completa do domínio). |
 | Este arquivo | *Como* organizar fixtures, goldens e ordem de entrega. |
 | `vertical-slice.md` | Primeiro incremento executável obrigatório. |
+
+## Fase 11 — Evidências do recorte V1 entregue (MCP + tools implementadas)
+
+Este fechamento cobre apenas o recorte V1 efetivamente implementado no repositório: transporte MCP `stdio` com paridade semântica contra HTTP para as tools já materializadas.
+
+### Escopo entregue e transportes
+
+| Tool do contrato | HTTP `/tools/*` | HTTP `/mcp/tools/*` (REST **deprecado**) | MCP `stdio` | Status no recorte |
+|------------------|------------------|----------------------|-------------|-------------------|
+| `get_draw_window` | Sim | Sim (deprecado) | Sim | Entregue (onda A) |
+| `compute_window_metrics` | Sim | Sim (deprecado) | Sim | Entregue (onda A) |
+| `analyze_indicator_stability` | Sim | Sim (deprecado) | Sim | Entregue (onda B, recorte inicial) |
+| `compose_indicator_analysis` | Não | Não | Não | Fora do recorte fechado nesta fase |
+| `analyze_indicator_associations` | Não | Não | Não | Fora do recorte fechado nesta fase |
+| `summarize_window_patterns` | Não | Não | Não | Fora do recorte fechado nesta fase |
+| `generate_candidate_games` | Não | Não | Não | Fora do recorte fechado nesta fase |
+| `explain_candidate_games` | Não | Não | Não | Fora do recorte fechado nesta fase |
+
+Justificativa explícita para as tools não implementadas: permanecem planejadas para as próximas fatias da Fase 10 no [spec-driven-execution-guide.md](spec-driven-execution-guide.md), sem declaração de V1 completa.
+
+### Suites de evidência para CI (gate do recorte)
+
+Executar estas suites como evidência mínima de fechamento do recorte V1:
+
+1. `dotnet test tests/LotofacilMcp.Domain.Tests/LotofacilMcp.Domain.Tests.csproj`
+2. `dotnet test tests/LotofacilMcp.Infrastructure.Tests/LotofacilMcp.Infrastructure.Tests.csproj`
+3. `dotnet test tests/LotofacilMcp.ContractTests/LotofacilMcp.ContractTests.csproj`
+
+Rastreabilidade principal:
+
+- Domínio e invariantes base: `tests/LotofacilMcp.Domain.Tests/`.
+- Casos de uso e validação cross-field: `tests/LotofacilMcp.Infrastructure.Tests/`.
+- Contrato e paridade MCP/HTTP (`tools/list` + `tools/call`): `tests/LotofacilMcp.ContractTests/McpTransportParityIntegrationTests.cs`.
+
+### Checklist ADR 0005 para este recorte
+
+| Critério do ADR 0005 | Evidência no recorte | Situação |
+|----------------------|----------------------|----------|
+| 1. Transporte MCP com testes de `tools/list` e `tools/call` para tools em escopo | `McpTransportParityIntegrationTests` valida descoberta e chamadas para as 3 tools entregues | Atendido |
+| 2. Paridade semântica MCP vs HTTP em sucesso/erro de contrato | `McpTransportParityIntegrationTests` usa `JsonElement.DeepEquals` para os dois caminhos | Atendido |
+| 3. Ondas B/C seguem execução spec-driven por tool | `analyze_indicator_stability` entrou com testes; demais tools de B/C permanecem fora deste fechamento | Parcial por escopo, sem declarar V1 completa |

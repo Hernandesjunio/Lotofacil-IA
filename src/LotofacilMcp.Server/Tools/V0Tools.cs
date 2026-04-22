@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using LotofacilMcp.Application.Mapping;
 using LotofacilMcp.Application.UseCases;
 using LotofacilMcp.Application.Validation;
+using LotofacilMcp.Domain.Analytics;
 using LotofacilMcp.Domain.Metrics;
 using LotofacilMcp.Domain.Normalization;
 using LotofacilMcp.Domain.Windows;
@@ -23,6 +24,18 @@ public sealed record ComputeWindowMetricsRequest(
 public sealed record GetDrawWindowRequest(
     [property: JsonPropertyName("window_size")] int WindowSize,
     [property: JsonPropertyName("end_contest_id")] int? EndContestId);
+
+public sealed record StabilityIndicatorRequestDto(
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("aggregation")] string? Aggregation);
+
+public sealed record AnalyzeIndicatorStabilityRequest(
+    [property: JsonPropertyName("window_size")] int WindowSize,
+    [property: JsonPropertyName("end_contest_id")] int? EndContestId,
+    [property: JsonPropertyName("indicators")] IReadOnlyList<StabilityIndicatorRequestDto>? Indicators,
+    [property: JsonPropertyName("normalization_method")] string? NormalizationMethod,
+    [property: JsonPropertyName("top_k")] int TopK = 5,
+    [property: JsonPropertyName("min_history")] int MinHistory = 20);
 
 public sealed record ContractError(
     [property: JsonPropertyName("code")] string Code,
@@ -65,10 +78,28 @@ public sealed record GetDrawWindowResponse(
     [property: JsonPropertyName("window")] WindowEnvelope Window,
     [property: JsonPropertyName("draws")] IReadOnlyList<DrawDto> Draws);
 
+public sealed record StabilityRankingEntryEnvelope(
+    [property: JsonPropertyName("indicator_name")] string IndicatorName,
+    [property: JsonPropertyName("aggregation")] string Aggregation,
+    [property: JsonPropertyName("component_index")] int? ComponentIndex,
+    [property: JsonPropertyName("shape")] string Shape,
+    [property: JsonPropertyName("dispersion")] double Dispersion,
+    [property: JsonPropertyName("stability_score")] double StabilityScore,
+    [property: JsonPropertyName("explanation")] string Explanation);
+
+public sealed record AnalyzeIndicatorStabilityResponse(
+    [property: JsonPropertyName("dataset_version")] string DatasetVersion,
+    [property: JsonPropertyName("tool_version")] string ToolVersion,
+    [property: JsonPropertyName("deterministic_hash")] string DeterministicHash,
+    [property: JsonPropertyName("window")] WindowEnvelope Window,
+    [property: JsonPropertyName("normalization_method")] string NormalizationMethod,
+    [property: JsonPropertyName("ranking")] IReadOnlyList<StabilityRankingEntryEnvelope> Ranking);
+
 public sealed class V0Tools
 {
     private readonly ComputeWindowMetricsUseCase _computeWindowMetricsUseCase;
     private readonly GetDrawWindowUseCase _getDrawWindowUseCase;
+    private readonly AnalyzeIndicatorStabilityUseCase _analyzeIndicatorStabilityUseCase;
     private readonly DeterministicHashService _deterministicHashService;
     private readonly string _fixturePath;
 
@@ -93,6 +124,14 @@ public sealed class V0Tools
             new WindowResolver(),
             validator,
             mapper);
+
+        _analyzeIndicatorStabilityUseCase = new AnalyzeIndicatorStabilityUseCase(
+            fixtureProvider,
+            datasetVersionService,
+            new WindowResolver(),
+            validator,
+            mapper,
+            new IndicatorStabilityAnalyzer());
 
         _deterministicHashService = new DeterministicHashService(
             new CanonicalJsonSerializer(),
@@ -170,6 +209,52 @@ public sealed class V0Tools
                     result.Window.EndContestId),
                 Draws: result.Draws
                     .Select(draw => new DrawDto(draw.ContestId, draw.DrawDate, draw.Numbers.ToArray()))
+                    .ToArray());
+        }
+        catch (ApplicationValidationException ex)
+        {
+            return ToContractError(ex.Code, ex.Message, ex.Details);
+        }
+    }
+
+    public object AnalyzeIndicatorStability(AnalyzeIndicatorStabilityRequest request)
+    {
+        try
+        {
+            var result = _analyzeIndicatorStabilityUseCase.Execute(new AnalyzeIndicatorStabilityInput(
+                WindowSize: request.WindowSize,
+                EndContestId: request.EndContestId,
+                Indicators: request.Indicators?
+                    .Select(indicator => new StabilityIndicatorRequestInput(indicator.Name, indicator.Aggregation))
+                    .ToArray(),
+                NormalizationMethod: request.NormalizationMethod,
+                TopK: request.TopK,
+                MinHistory: request.MinHistory,
+                FixturePath: _fixturePath));
+
+            var deterministicHash = _deterministicHashService.Compute(
+                result.DeterministicHashInput,
+                result.DatasetVersion,
+                result.ToolVersion);
+
+            return new AnalyzeIndicatorStabilityResponse(
+                DatasetVersion: result.DatasetVersion,
+                ToolVersion: result.ToolVersion,
+                DeterministicHash: deterministicHash,
+                Window: new WindowEnvelope(
+                    result.Window.Size,
+                    result.Window.StartContestId,
+                    result.Window.EndContestId),
+                NormalizationMethod: result.NormalizationMethod,
+                Ranking: result.Ranking
+                    .Select(entry => new StabilityRankingEntryEnvelope(
+                        entry.IndicatorName,
+                        entry.Aggregation,
+                        entry.ComponentIndex,
+                        entry.Shape,
+                        entry.Dispersion,
+                        entry.StabilityScore,
+                        entry.Explanation))
                     .ToArray());
         }
         catch (ApplicationValidationException ex)
