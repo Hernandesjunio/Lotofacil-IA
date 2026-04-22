@@ -1,5 +1,12 @@
+using LotofacilMcp.Server;
 using LotofacilMcp.Server.DependencyInjection;
 using LotofacilMcp.Server.Tools;
+
+if (McpStdioHost.IsStdioMode(args))
+{
+    await McpStdioHost.RunAsync(args);
+    return;
+}
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -17,7 +17,7 @@ public sealed class Phase5ApplicationUseCasesTests
         var sut = BuildGetDrawWindowUseCase();
         var input = new GetDrawWindowInput(
             WindowSize: 3,
-            EndContestId: 1004,
+            EndContestId: 4,
             FixturePath: GetFixturePath());
 
         var result = sut.Execute(input);
@@ -25,11 +25,11 @@ public sealed class Phase5ApplicationUseCasesTests
         Assert.Equal("1.0.0", result.ToolVersion);
         Assert.StartsWith("cef-", result.DatasetVersion);
         Assert.Equal(3, result.Window.Size);
-        Assert.Equal(1002, result.Window.StartContestId);
-        Assert.Equal(1004, result.Window.EndContestId);
-        Assert.Equal([1002, 1003, 1004], result.Draws.Select(draw => draw.ContestId).ToArray());
+        Assert.Equal(2, result.Window.StartContestId);
+        Assert.Equal(4, result.Window.EndContestId);
+        Assert.Equal([2, 3, 4], result.Draws.Select(draw => draw.ContestId).ToArray());
         Assert.Equal(3, result.DeterministicHashInput.WindowSize);
-        Assert.Equal(1004, result.DeterministicHashInput.EndContestId);
+        Assert.Equal(4, result.DeterministicHashInput.EndContestId);
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public sealed class Phase5ApplicationUseCasesTests
         var sut = BuildComputeWindowMetricsUseCase();
         var input = new ComputeWindowMetricsInput(
             WindowSize: 3,
-            EndContestId: 1003,
+            EndContestId: 3,
             Metrics: [new MetricRequestInput("frequencia_por_dezena")],
             FixturePath: GetFixturePath());
 
@@ -55,10 +55,10 @@ public sealed class Phase5ApplicationUseCasesTests
         Assert.Equal("1.0.0", metric.Version);
         Assert.Equal(result.Window, metric.Window);
         Assert.Equal(
-            [2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0],
+            [2, 1, 1, 2, 2, 3, 2, 1, 3, 2, 3, 2, 2, 2, 1, 3, 1, 1, 1, 3, 0, 0, 3, 3, 1],
             metric.Value.ToArray());
         Assert.Equal(3, result.DeterministicHashInput.WindowSize);
-        Assert.Equal(1003, result.DeterministicHashInput.EndContestId);
+        Assert.Equal(3, result.DeterministicHashInput.EndContestId);
         Assert.False(result.DeterministicHashInput.AllowPending);
         Assert.Equal("frequencia_por_dezena", Assert.Single(result.DeterministicHashInput.Metrics).Name);
     }
@@ -69,7 +69,7 @@ public sealed class Phase5ApplicationUseCasesTests
         var sut = BuildComputeWindowMetricsUseCase();
         var input = new ComputeWindowMetricsInput(
             WindowSize: 3,
-            EndContestId: 1003,
+            EndContestId: 3,
             Metrics: null,
             FixturePath: GetFixturePath());
 
@@ -85,7 +85,7 @@ public sealed class Phase5ApplicationUseCasesTests
         var sut = BuildComputeWindowMetricsUseCase();
         var input = new ComputeWindowMetricsInput(
             WindowSize: 3,
-            EndContestId: 1003,
+            EndContestId: 3,
             Metrics: [new MetricRequestInput("metrica_inexistente")],
             FixturePath: GetFixturePath());
 

@@ -54,6 +54,29 @@ Os documentos centrais dessa metodologia são:
 - [docs/contract-test-plan.md](docs/contract-test-plan.md) — ordem inicial de execução
 - [docs/spec-driven-execution-guide.md](docs/spec-driven-execution-guide.md) — passo a passo operacional
 
+## Como executar no host MCP (stdio)
+
+Para clientes MCP desktop (ex.: Cursor), use o mesmo executável `LotofacilMcp.Server` em modo `stdio`:
+
+```json
+{
+  "mcpServers": {
+    "lotofacil-ia": {
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "C:/_projeto/Lotofacil-IA/src/LotofacilMcp.Server/LotofacilMcp.Server.csproj",
+        "--",
+        "--mcp-stdio"
+      ]
+    }
+  }
+}
+```
+
+Nesse modo o host MCP consegue descobrir e invocar as tools V0 (`get_draw_window` e `compute_window_metrics`) com a mesma semântica JSON usada nos POSTs HTTP `/tools/*`.
+
 ## Estrutura
 
 | Caminho | Descrição |

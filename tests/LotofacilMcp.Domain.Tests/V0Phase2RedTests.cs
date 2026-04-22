@@ -35,25 +35,25 @@ public class V0Phase2RedTests
 
         var sut = new WindowResolver();
 
-        var window = sut.Resolve(draws, windowSize: 3, endContestId: 1004);
+        var window = sut.Resolve(draws, windowSize: 3, endContestId: 4);
 
         Assert.Equal(3, window.Size);
-        Assert.Equal(1002, window.StartContestId);
-        Assert.Equal(1004, window.EndContestId);
-        Assert.Equal([1002, 1003, 1004], window.Draws.Select(d => d.ContestId).ToArray());
+        Assert.Equal(2, window.StartContestId);
+        Assert.Equal(4, window.EndContestId);
+        Assert.Equal([2, 3, 4], window.Draws.Select(d => d.ContestId).ToArray());
     }
 
     [Fact]
     public void FrequenciaPorDezena_ComputesManualCountsOnSyntheticFixture()
     {
         var draws = LoadSyntheticFixture()
-            .Where(d => d.ContestId <= 1003)
+            .Where(d => d.ContestId <= 3)
             .Select(ToDomainDraw)
             .ToList();
         var window = new DrawWindow(
             Size: 3,
-            StartContestId: 1001,
-            EndContestId: 1003,
+            StartContestId: 1,
+            EndContestId: 3,
             Draws: draws);
         var sut = new FrequencyByDezenaMetric();
 
@@ -65,7 +65,7 @@ public class V0Phase2RedTests
         Assert.Equal("count", metric.Unit);
         Assert.Equal("1.0.0", metric.Version);
         Assert.Equal(
-            [2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0],
+            [2, 1, 1, 2, 2, 3, 2, 1, 3, 2, 3, 2, 2, 2, 1, 3, 1, 1, 1, 3, 0, 0, 3, 3, 1],
             metric.Value.ToArray());
     }
 
@@ -73,13 +73,13 @@ public class V0Phase2RedTests
     public void FrequenciaPorDezena_HasConservationProperty_15TimesWindowSize()
     {
         var draws = LoadSyntheticFixture()
-            .Where(d => d.ContestId <= 1003)
+            .Where(d => d.ContestId <= 3)
             .Select(ToDomainDraw)
             .ToList();
         var window = new DrawWindow(
             Size: 3,
-            StartContestId: 1001,
-            EndContestId: 1003,
+            StartContestId: 1,
+            EndContestId: 3,
             Draws: draws);
         var sut = new FrequencyByDezenaMetric();
 
