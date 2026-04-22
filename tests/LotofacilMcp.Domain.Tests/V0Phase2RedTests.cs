@@ -217,6 +217,36 @@ public class V0Phase2RedTests
     }
 
     [Fact]
+    public void QuantidadeVizinhosPorConcurso_OnMinimalFixture_FirstThreeContests_DeterministicSeries()
+    {
+        var window = BuildWindow(endContestIdInclusive: 3);
+        var sut = new QuantidadeVizinhosPorConcursoMetric();
+
+        var metric = sut.Compute(window);
+
+        Assert.Equal("quantidade_vizinhos_por_concurso", metric.MetricName);
+        Assert.Equal("series", metric.Scope);
+        Assert.Equal("series", metric.Shape);
+        Assert.Equal("count", metric.Unit);
+        Assert.Equal("1.0.0", metric.Version);
+        Assert.Equal(3, metric.Value.Count);
+        Assert.Equal(window.Size, metric.Value.Count);
+        Assert.Equal([7, 8, 8], metric.Value.ToArray());
+    }
+
+    [Fact]
+    public void QuantidadeVizinhosPorConcurso_SingleDraw_FullConsecutiveBlock_Has14Adjacencies()
+    {
+        var draw = new Draw(1, new DateOnly(2026, 1, 1), Enumerable.Range(1, 15).ToArray());
+        var window = new DrawWindow(1, 1, 1, [draw]);
+        var sut = new QuantidadeVizinhosPorConcursoMetric();
+
+        var metric = sut.Compute(window);
+
+        Assert.Equal(14, metric.Value[0]);
+    }
+
+    [Fact]
     public void WindowMetricDispatcher_DispatchesParesNoConcurso()
     {
         var window = BuildWindow(endContestIdInclusive: 3);
@@ -226,6 +256,18 @@ public class V0Phase2RedTests
 
         Assert.Equal("pares_no_concurso", metric.MetricName);
         Assert.Equal([8, 6, 9], metric.Value.ToArray());
+    }
+
+    [Fact]
+    public void WindowMetricDispatcher_DispatchesQuantidadeVizinhosPorConcurso()
+    {
+        var window = BuildWindow(endContestIdInclusive: 3);
+        var sut = CreateWindowMetricDispatcher();
+
+        var metric = sut.Dispatch("quantidade_vizinhos_por_concurso", window);
+
+        Assert.Equal("quantidade_vizinhos_por_concurso", metric.MetricName);
+        Assert.Equal([7, 8, 8], metric.Value.ToArray());
     }
 
     [Fact]
@@ -300,7 +342,8 @@ public class V0Phase2RedTests
             new Top10MaisSorteadosMetric(frequency),
             new Top10MenosSorteadosMetric(frequency),
             new ParesNoConcursoMetric(),
-            new RepeticaoConcursoAnteriorMetric());
+            new RepeticaoConcursoAnteriorMetric(),
+            new QuantidadeVizinhosPorConcursoMetric());
     }
 
     private sealed record FixtureRoot(

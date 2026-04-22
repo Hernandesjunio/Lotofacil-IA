@@ -12,13 +12,15 @@ public sealed class WindowMetricDispatcher
         Top10MaisSorteadosMetric top10MaisSorteadosMetric,
         Top10MenosSorteadosMetric top10MenosSorteadosMetric,
         ParesNoConcursoMetric paresNoConcursoMetric,
-        RepeticaoConcursoAnteriorMetric repeticaoConcursoAnteriorMetric)
+        RepeticaoConcursoAnteriorMetric repeticaoConcursoAnteriorMetric,
+        QuantidadeVizinhosPorConcursoMetric quantidadeVizinhosPorConcursoMetric)
     {
         ArgumentNullException.ThrowIfNull(frequencyByDezenaMetric);
         ArgumentNullException.ThrowIfNull(top10MaisSorteadosMetric);
         ArgumentNullException.ThrowIfNull(top10MenosSorteadosMetric);
         ArgumentNullException.ThrowIfNull(paresNoConcursoMetric);
         ArgumentNullException.ThrowIfNull(repeticaoConcursoAnteriorMetric);
+        ArgumentNullException.ThrowIfNull(quantidadeVizinhosPorConcursoMetric);
 
         _dispatchByMetricName = new Dictionary<string, Func<DrawWindow, WindowMetricValue>>(StringComparer.Ordinal)
         {
@@ -26,7 +28,8 @@ public sealed class WindowMetricDispatcher
             ["top10_mais_sorteados"] = top10MaisSorteadosMetric.Compute,
             ["top10_menos_sorteados"] = top10MenosSorteadosMetric.Compute,
             ["pares_no_concurso"] = paresNoConcursoMetric.Compute,
-            ["repeticao_concurso_anterior"] = repeticaoConcursoAnteriorMetric.Compute
+            ["repeticao_concurso_anterior"] = repeticaoConcursoAnteriorMetric.Compute,
+            ["quantidade_vizinhos_por_concurso"] = quantidadeVizinhosPorConcursoMetric.Compute
         };
     }
 

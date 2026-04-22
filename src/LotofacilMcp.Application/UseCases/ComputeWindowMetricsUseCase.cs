@@ -157,6 +157,8 @@ public sealed class ComputeWindowMetricsUseCase
             "Série da quantidade de dezenas pares em cada concurso da janela (ordem cronologica).",
         "repeticao_concurso_anterior" =>
             "Série |J_t ∩ J_{t-1}| na janela; comprimento N ou N-1 conforme ADR 0001 D18 (predecessor fora da janela quando existir).",
+        "quantidade_vizinhos_por_concurso" =>
+            "Série da contagem de pares consecutivos com diferença 1 (vizinhos) em cada concurso da janela (ordem crescente canônica).",
         _ => "Metrica de janela."
     };
 }

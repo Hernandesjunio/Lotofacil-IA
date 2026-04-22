@@ -9,7 +9,8 @@ public sealed class V0CrossFieldValidator
         "frequencia_por_dezena",
         "top10_mais_sorteados",
         "top10_menos_sorteados",
-        "pares_no_concurso"
+        "pares_no_concurso",
+        "quantidade_vizinhos_por_concurso"
     ];
 
     private static readonly HashSet<string> SupportedNormalizationMethods =
