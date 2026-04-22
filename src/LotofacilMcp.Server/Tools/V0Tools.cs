@@ -117,7 +117,8 @@ public sealed class V0Tools
             new WindowResolver(),
             new WindowMetricDispatcher(
                 frequencyByDezena,
-                new Top10MaisSorteadosMetric(frequencyByDezena)),
+                new Top10MaisSorteadosMetric(frequencyByDezena),
+                new Top10MenosSorteadosMetric(frequencyByDezena)),
             validator,
             mapper);
 

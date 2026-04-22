@@ -151,6 +151,8 @@ public sealed class ComputeWindowMetricsUseCase
         "frequencia_por_dezena" => "Contagem de ocorrencias por dezena na janela resolvida.",
         "top10_mais_sorteados" =>
             "Dez dezenas com maior frequencia na janela; empates resolvidos por dezena ascendente.",
+        "top10_menos_sorteados" =>
+            "Dez dezenas com menor frequencia na janela; empates resolvidos por dezena ascendente.",
         _ => "Metrica de janela."
     };
 }

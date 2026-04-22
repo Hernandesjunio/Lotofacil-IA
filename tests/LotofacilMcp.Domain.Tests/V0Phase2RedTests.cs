@@ -117,6 +117,22 @@ public class V0Phase2RedTests
     }
 
     [Fact]
+    public void WindowMetricDispatcher_DispatchesTop10MenosSorteados()
+    {
+        var window = BuildWindow(endContestIdInclusive: 3);
+        var sut = CreateWindowMetricDispatcher();
+
+        var metric = sut.Dispatch("top10_menos_sorteados", window);
+
+        Assert.Equal("top10_menos_sorteados", metric.MetricName);
+        Assert.Equal("window", metric.Scope);
+        Assert.Equal("dezena_list[10]", metric.Shape);
+        Assert.Equal("dimensionless", metric.Unit);
+        Assert.Equal("1.0.0", metric.Version);
+        Assert.Equal([21, 22, 2, 3, 8, 15, 17, 18, 19, 25], metric.Value.ToArray());
+    }
+
+    [Fact]
     public void Top10MaisSorteados_TieBreakUsesAscendingDezenaWhenFrequenciesMatch()
     {
         var draw = new Draw(
@@ -133,6 +149,25 @@ public class V0Phase2RedTests
         var metric = sut.Compute(window);
 
         Assert.Equal([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], metric.Value.ToArray());
+    }
+
+    [Fact]
+    public void Top10MenosSorteados_TieBreakUsesAscendingDezenaWhenFrequenciesMatch()
+    {
+        var draw = new Draw(
+            1,
+            new DateOnly(2026, 1, 1),
+            Enumerable.Range(1, 15).ToArray());
+        var window = new DrawWindow(
+            Size: 1,
+            StartContestId: 1,
+            EndContestId: 1,
+            Draws: [draw]);
+        var sut = new Top10MenosSorteadosMetric(new FrequencyByDezenaMetric());
+
+        var metric = sut.Compute(window);
+
+        Assert.Equal([16, 17, 18, 19, 20, 21, 22, 23, 24, 25], metric.Value.ToArray());
     }
 
     [Fact]
@@ -188,7 +223,10 @@ public class V0Phase2RedTests
     private static WindowMetricDispatcher CreateWindowMetricDispatcher()
     {
         var frequency = new FrequencyByDezenaMetric();
-        return new WindowMetricDispatcher(frequency, new Top10MaisSorteadosMetric(frequency));
+        return new WindowMetricDispatcher(
+            frequency,
+            new Top10MaisSorteadosMetric(frequency),
+            new Top10MenosSorteadosMetric(frequency));
     }
 
     private sealed record FixtureRoot(
