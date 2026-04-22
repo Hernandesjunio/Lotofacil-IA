@@ -121,7 +121,8 @@ public sealed class V0Tools
                 new Top10MenosSorteadosMetric(frequencyByDezena),
                 new ParesNoConcursoMetric(),
                 new RepeticaoConcursoAnteriorMetric(),
-                new QuantidadeVizinhosPorConcursoMetric()),
+                new QuantidadeVizinhosPorConcursoMetric(),
+                new SequenciaMaximaVizinhosPorConcursoMetric()),
             validator,
             mapper);
 

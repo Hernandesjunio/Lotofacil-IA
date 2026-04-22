@@ -343,7 +343,8 @@ public class V0Phase2RedTests
             new Top10MenosSorteadosMetric(frequency),
             new ParesNoConcursoMetric(),
             new RepeticaoConcursoAnteriorMetric(),
-            new QuantidadeVizinhosPorConcursoMetric());
+            new QuantidadeVizinhosPorConcursoMetric(),
+            new SequenciaMaximaVizinhosPorConcursoMetric());
     }
 
     private sealed record FixtureRoot(

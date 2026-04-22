@@ -232,30 +232,8 @@ public sealed class IndicatorStabilityAnalyzer
         return count;
     }
 
-    private static int ComputeMaxNeighborRun(Draw draw)
-    {
-        var currentRun = 1;
-        var maxRun = 1;
-
-        for (var index = 1; index < draw.Numbers.Count; index++)
-        {
-            if (draw.Numbers[index] - draw.Numbers[index - 1] == 1)
-            {
-                currentRun++;
-            }
-            else
-            {
-                currentRun = 1;
-            }
-
-            if (currentRun > maxRun)
-            {
-                maxRun = currentRun;
-            }
-        }
-
-        return maxRun;
-    }
+    private static int ComputeMaxNeighborRun(Draw draw) =>
+        VizinhosConsecutivos.MaxConsecutiveAdjacencyRunLength(draw.Numbers);
 
     private static double[] ExpandToPresenceVector(IReadOnlyList<int> numbers)
     {
