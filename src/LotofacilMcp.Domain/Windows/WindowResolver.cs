@@ -50,6 +50,7 @@ public sealed class WindowResolver
             Size: windowSize,
             StartContestId: windowDraws[0].ContestId,
             EndContestId: windowDraws[^1].ContestId,
-            Draws: windowDraws);
+            Draws: windowDraws,
+            PrecedingDraw: startIndex > 0 ? draws[startIndex - 1] : null);
     }
 }

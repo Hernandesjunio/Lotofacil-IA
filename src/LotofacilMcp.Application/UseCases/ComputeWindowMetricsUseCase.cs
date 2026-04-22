@@ -155,6 +155,8 @@ public sealed class ComputeWindowMetricsUseCase
             "Dez dezenas com menor frequencia na janela; empates resolvidos por dezena ascendente.",
         "pares_no_concurso" =>
             "Série da quantidade de dezenas pares em cada concurso da janela (ordem cronologica).",
+        "repeticao_concurso_anterior" =>
+            "Série |J_t ∩ J_{t-1}| na janela; comprimento N ou N-1 conforme ADR 0001 D18 (predecessor fora da janela quando existir).",
         _ => "Metrica de janela."
     };
 }

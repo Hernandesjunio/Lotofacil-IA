@@ -1,3 +1,4 @@
+using LotofacilMcp.Domain.Metrics;
 using LotofacilMcp.Domain.Models;
 using LotofacilMcp.Domain.Windows;
 
@@ -78,7 +79,7 @@ public sealed class IndicatorStabilityAnalyzer
         {
             "repeticao_concurso_anterior" => IndicatorSeriesData.FromScalarSeries(
                 "series",
-                ComputeRepetitionSeries(window.Draws)),
+                RepeticaoConcursoAnteriorSeries.Build(window)),
             "pares_no_concurso" => IndicatorSeriesData.FromScalarSeries(
                 "series",
                 window.Draws.Select(CountEvenNumbers).ToArray()),
@@ -210,17 +211,6 @@ public sealed class IndicatorStabilityAnalyzer
             .Sum() / (values.Count - 1);
         var stdDev = Math.Sqrt(variance);
         return stdDev / mean;
-    }
-
-    private static int[] ComputeRepetitionSeries(IReadOnlyList<Draw> draws)
-    {
-        var repetitions = new int[draws.Count - 1];
-        for (var index = 1; index < draws.Count; index++)
-        {
-            repetitions[index - 1] = draws[index].Numbers.Intersect(draws[index - 1].Numbers).Count();
-        }
-
-        return repetitions;
     }
 
     private static int CountEvenNumbers(Draw draw)

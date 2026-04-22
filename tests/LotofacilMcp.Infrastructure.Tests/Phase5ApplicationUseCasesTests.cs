@@ -264,7 +264,8 @@ public sealed class Phase5ApplicationUseCasesTests
             frequency,
             new Top10MaisSorteadosMetric(frequency),
             new Top10MenosSorteadosMetric(frequency),
-            new ParesNoConcursoMetric());
+            new ParesNoConcursoMetric(),
+            new RepeticaoConcursoAnteriorMetric());
     }
 
     private static AnalyzeIndicatorStabilityUseCase BuildAnalyzeIndicatorStabilityUseCase()

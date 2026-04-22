@@ -8,7 +8,8 @@ public sealed record DrawWindow
         int Size,
         int StartContestId,
         int EndContestId,
-        IReadOnlyList<Draw> Draws)
+        IReadOnlyList<Draw> Draws,
+        Draw? PrecedingDraw = null)
     {
         if (Size <= 0)
         {
@@ -35,10 +36,16 @@ public sealed record DrawWindow
             throw new DomainInvariantViolationException("window boundaries must match first and last draw contest_id.");
         }
 
+        if (PrecedingDraw is not null && PrecedingDraw.ContestId >= StartContestId)
+        {
+            throw new DomainInvariantViolationException("preceding draw contest_id must be before start_contest_id.");
+        }
+
         this.Size = Size;
         this.StartContestId = StartContestId;
         this.EndContestId = EndContestId;
         this.Draws = Draws.ToArray();
+        this.PrecedingDraw = PrecedingDraw;
     }
 
     public int Size { get; }
@@ -48,4 +55,10 @@ public sealed record DrawWindow
     public int EndContestId { get; }
 
     public IReadOnlyList<Draw> Draws { get; }
+
+    /// <summary>
+    /// Sorteio imediatamente anterior ao primeiro da janela no histórico ordenado (ADR 0001 D18);
+    /// nulo se a janela começa no primeiro concurso disponível.
+    /// </summary>
+    public Draw? PrecedingDraw { get; }
 }

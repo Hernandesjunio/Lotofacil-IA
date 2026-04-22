@@ -41,6 +41,8 @@ public class V0Phase2RedTests
         Assert.Equal(2, window.StartContestId);
         Assert.Equal(4, window.EndContestId);
         Assert.Equal([2, 3, 4], window.Draws.Select(d => d.ContestId).ToArray());
+        Assert.NotNull(window.PrecedingDraw);
+        Assert.Equal(1, window.PrecedingDraw!.ContestId);
     }
 
     [Fact]
@@ -227,6 +229,20 @@ public class V0Phase2RedTests
     }
 
     [Fact]
+    public void WindowMetricDispatcher_DispatchesRepeticaoConcursoAnterior()
+    {
+        var window = BuildWindow(endContestIdInclusive: 3);
+        var sut = CreateWindowMetricDispatcher();
+
+        var metric = sut.Dispatch("repeticao_concurso_anterior", window);
+
+        Assert.Equal("repeticao_concurso_anterior", metric.MetricName);
+        Assert.Equal("series", metric.Scope);
+        Assert.Equal(2, metric.Value.Count);
+        Assert.Equal(RepeticaoConcursoAnteriorSeries.Build(window), metric.Value);
+    }
+
+    [Fact]
     public void WindowMetricDispatcher_WithUnknownMetric_ThrowsDomainInvariantViolation()
     {
         var window = BuildWindow(endContestIdInclusive: 3);
@@ -283,7 +299,8 @@ public class V0Phase2RedTests
             frequency,
             new Top10MaisSorteadosMetric(frequency),
             new Top10MenosSorteadosMetric(frequency),
-            new ParesNoConcursoMetric());
+            new ParesNoConcursoMetric(),
+            new RepeticaoConcursoAnteriorMetric());
     }
 
     private sealed record FixtureRoot(
