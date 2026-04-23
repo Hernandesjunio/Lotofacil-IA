@@ -112,6 +112,9 @@ public sealed class IndicatorStabilityAnalyzer
             "distribuicao_coluna_por_concurso" => IndicatorSeriesData.FromVectorSeries(
                 "series_of_count_vector[5]",
                 window.Draws.Select(draw => ComputeColumnDistribution(draw.Numbers)).ToArray()),
+            "entropia_linha_por_concurso" => IndicatorSeriesData.FromScalarSeries(
+                "series",
+                window.Draws.Select(ComputeRowEntropy).ToArray()),
             _ => throw new DomainInvariantViolationException($"unknown indicator requested: {indicator.Name}.")
         };
 
@@ -285,6 +288,13 @@ public sealed class IndicatorStabilityAnalyzer
         }
 
         return values;
+    }
+
+    private static double ComputeRowEntropy(Draw draw)
+    {
+        Span<int> rowCounts = stackalloc int[5];
+        VolanteRowColumnCounts.FillRowCounts(draw, rowCounts);
+        return ShannonEntropyBits.FromNonNegativeCounts(rowCounts);
     }
 
     private static double ComputeL2Norm(IReadOnlyList<double> values)

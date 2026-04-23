@@ -1,0 +1,6 @@
+{
+  "dataset_version": "cef-2026-04-20-sha860356bb",
+  "method": "spearman",
+  "expected_association_strength": 0.22941573387056174,
+  "magnitude_tolerance": 1e-12
+}
