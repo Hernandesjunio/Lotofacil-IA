@@ -105,6 +105,20 @@ Rastreabilidade principal:
 - Casos de uso e validação cross-field: `tests/LotofacilMcp.Infrastructure.Tests/`.
 - Contrato e paridade MCP/HTTP (`tools/list` + `tools/call`) para stdio e `/mcp`: `tests/LotofacilMcp.ContractTests/McpTransportParityIntegrationTests.cs`.
 
+## GAPS de contrato, coerência cruzada e interação pares–entropia (ADR 0006)
+
+Bateria normativa a acrescentar **quando a implementação** acompanhar o [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) e o contrato atualizados na mesma linha.
+
+| Cenário | Objetivo | Referência de payload / fixture |
+|---------|----------|---------------------------------|
+| **A — Erro congelado `UNKNOWN_METRIC`** | `compute_window_metrics` com métrica canónica ainda fechada na rota; assert `code`, `details.metric_name` e, se existir, `allowed_metrics`. | [mcp-tool-contract.md](mcp-tool-contract.md) secção *Disponibilidade em `compute_window_metrics`*. |
+| **B — Coerência explain / compute** | Se `explain_candidate_games` ou geração referem uma métrica, e `compute_window_metrics` a rejeita na mesma build, teste de regressão documenta o comportamento até a promoção. | [metric-catalog.md](metric-catalog.md) *Disponibilidade normativa*; [generation-strategies.md](generation-strategies.md). |
+| **C — `min_history` > janela** | `analyze_indicator_stability` com `min_history` maior que `window_size` resolvido; esperado `INSUFFICIENT_HISTORY` com `details` numéricos. | [mcp-tool-contract.md](mcp-tool-contract.md) `analyze_indicator_stability`. |
+| **D — `stability_check` sem suporte** | Request a `analyze_indicator_associations` **com** `stability_check` em build **sem** implementação; esperado `UNSUPPORTED_STABILITY_CHECK` (e não sucesso vazio). | ADR 0006 D2. |
+| **E — Pares × entropia de linha (Spearman)** | Mesma `window_size` e `end_contest_id` em `window_long_real.json` (ou `synthetic_min_window.json` equivalente); `items` = `pares_no_concurso` + `entropia_linha_por_concurso`; `method: spearman`; assert magnitude reprodutível. | [test-plan.md](test-plan.md) § Cenário canónico; ADR 0006 D5. |
+
+A ordem de gravação dos goldens e a fixture escolhida seguem a mesma regra de *Atualização de golden* (secção *Fixtures douradas* acima).
+
 ### Checklist ADR 0005 para este recorte
 
 | Critério do ADR 0005 | Evidência no recorte | Situação |

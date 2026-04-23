@@ -531,6 +531,7 @@ Critério mínimo de aceite:
 
 Nota operacional: template para pedidos atômicos
 
+- Catálogo completo de **pedidos atômicos por fase** (0–20 do guia e **extensões** posteriores, ex. Fase 21 alinhada ao [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md)): [fases-execucao-templates.md](fases-execucao-templates.md). O nome do ficheiro **não** fixa a quantidade de fases; novas entregas normativas podem acrescentar secções no mesmo padrão.
 - O template abaixo pode (e deve) ser usado para gerar “pedidos atômicos” para implementação, mantendo o fluxo spec-driven:
 
 ```md
@@ -625,6 +626,8 @@ Depois da V0, cada nova entrega deve seguir sempre esta ordem operacional:
 7. validar contrato nos dois caminhos quando a tool já existir em ambos;
 8. atualizar docs se a semântica tiver mudado.
 
+Mudanças de **inter-tool, disponibilidade de métricas em rota, pipeline, fluidez, erros `UNSUPPORTED_STABILITY_CHECK` / pistas de `UNKNOWN_METRIC` ou bateria GAPS** (pares–entropia) devem seguir o [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) em **conjunto** com [mcp-tool-contract.md](mcp-tool-contract.md), [metric-catalog.md](metric-catalog.md), [contract-test-plan.md](contract-test-plan.md) e [test-plan.md](test-plan.md) na **mesma entrega lógica** (spec coerente, testes, depois código), sem alterar a ordem base acima além de referenciar explicitamente a matriz e os cenários A–E do *contract-test-plan*.
+
 Se durante esse ciclo surgir desalinhamento explícito entre spec e implementação, interromper a fatia atual e executar a [Fase 12](#fase-12-correção-de-drift-desalinhamento-spec--implementação) antes de seguir.
 
 Além dessa ordem operacional, a progressão de conteúdo deve ir do mais simples para o mais complexo:
@@ -673,8 +676,10 @@ Criar novo documento apenas quando houver pergunta concreta que os atuais não r
 
 ## Checklist de início da execução
 
+- Pedidos atômicos por fase (e extensões) consultáveis em [fases-execucao-templates.md](fases-execucao-templates.md)
 - Arquitetura congelada no [ADR 0004](adrs/0004-estrutura-arquitetural-inicial-mcp-dotnet10.md)
 - Superfície MCP + rollout de tools conforme [ADR 0005](adrs/0005-transporte-mcp-e-superficie-tools-v1.md) (quando pós-V0)
+- Inter-tool, disponibilidade, pipeline, GAPS: [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) quando a entrega mexe nesses temas
 - V0 confirmada em [vertical-slice.md](vertical-slice.md)
 - Ordem de teste confirmada em [contract-test-plan.md](contract-test-plan.md)
 - Métrica inicial confirmada em [metric-catalog.md](metric-catalog.md)

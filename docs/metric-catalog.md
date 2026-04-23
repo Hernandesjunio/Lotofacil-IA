@@ -2,7 +2,7 @@
 
 **Navegação:** [← Brief (índice)](brief.md) · [README](../README.md)
 
-Fonte de verdade semântica das métricas da V1 ampliada. Alinha-se a [mcp-tool-contract.md](mcp-tool-contract.md), [generation-strategies.md](generation-strategies.md) e aos ADRs [0001](adrs/0001-fechamento-semantico-e-determinismo-v1.md) e [0002](adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md).
+Fonte de verdade semântica das métricas da V1 ampliada. Alinha-se a [mcp-tool-contract.md](mcp-tool-contract.md), [generation-strategies.md](generation-strategies.md) e aos ADRs [0001](adrs/0001-fechamento-semantico-e-determinismo-v1.md), [0002](adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md) e [0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) (disponibilidade por rota, pipeline, correlação pares–entropia canónica em testes).
 
 Para **interpretação em linguagem simples**, **o que cada métrica observa** e **exemplos de uso** por nome, ver [metric-glossary.md](metric-glossary.md) (complemento pedagógico; fórmulas e versões permanecem aqui).
 
@@ -109,6 +109,19 @@ Os campos da Tabela 1 e seus valores controlados estão definidos na seção **L
 | Entropias são reportadas em bits e, quando aplicável, com `H_norm`. | Comparabilidade entre métricas e filtros; `H_norm ∈ [0,1]` facilita scores e limites declarados (ADR 0001 D6). |
 | "Persistência" significa regularidade observada na janela ou no histórico declarado; não implica previsão. | Alinha linguagem do projeto ao escopo não preditivo do [brief](brief.md). |
 | Séries temporais obtidas a partir dos concursos continuam com `scope = "series"`; o catálogo não reintroduz `scope = "draw"`. | Consistência com o contrato MCP até existir métrica canônica com escopo `draw` (ADR 0001 D13). |
+
+## Disponibilidade normativa (catálogo × `compute_window_metrics`)
+
+- **O catálogo (Tabelas 1 e 2)** indica o que a métrica *é*; a tool `compute_window_metrics` indica o que uma **build** *expõe* em JSON, para uma janela explícita. A matriz e o padrão de *promoção* estão em [ADR 0006 D1](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md).  
+- **Recorte mínimo (V0 documental):** a [vertical-slice.md](vertical-slice.md) exige, para a primeira fatia, **sucesso** apenas de `frequencia_por_dezena@1.0.0` por `compute_window_metrics`. Nomes canónicos adicionais nessa tabela, quando pedidos antes de serem ligados a esta rota na build, justificam resposta de erro de contrato documentada (`UNKNOWN_METRIC` com `details`), não ambiguidade.  
+- **V1 alvo (contrato expandido):** `compute_window_metrics` aplica a todas as métricas cujo `Janela` e `Scope` forem coerentes com a Tabela 1, com paridade ao [mcp-tool-contract.md](mcp-tool-contract.md).  
+- **Coesão:** métricas consumidas em [generation-strategies.md](generation-strategies.md) ou explicadas em `explain_candidate_games` devem confluir, ao longo dos incrementos, com a mesma disponibilidade canónica; até lá, o plano de testes reforça testes de GAPS (ver [test-plan.md](test-plan.md) e [contract-test-plan.md](contract-test-plan.md)).
+
+| Situação | Onde a ler |
+|----------|------------|
+| Nome fora de Tabela 1 | Sempre `UNKNOWN_METRIC` (não está no catálogo). |
+| Nome canónico, rota ainda fechada na build | `UNKNOWN_METRIC` com `details.metric_name` (e, se existir, lista do subconjunto aceite). |
+| Janela curta e `min_history` em análise de estabilidade | Regra em `analyze_indicator_stability` (ver [ADR 0006 D4](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md)). |
 
 ## Tabela 1 — Identificação e tipagem
 

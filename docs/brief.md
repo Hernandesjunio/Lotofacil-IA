@@ -94,6 +94,7 @@ Exemplos adicionais de prompts de teste ficam em [prompt-catalog.md](prompt-cata
 - O sistema deve permitir comparar estratégias e composições dinâmicas sem reescrever o cálculo canônico.
 - O contrato MCP deve ser claro o suficiente para automação por IA sem ambiguidade semântica.
 - O catálogo de prompts e o plano de testes devem cobrir 100% das famílias de cálculo do domínio documentado.
+- A **disponibilidade** de cada métrica em cada rota, o **pipeline mínimo** de tools (fluidez sem defaults ocultos) e a semântica de respostas parciais/erros (ex. estabilidade de associação) seguem [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md), em conjunto com o contrato MCP e o [metric-catalog.md](metric-catalog.md).
 
 ## Referências
 
@@ -104,6 +105,7 @@ Exemplos adicionais de prompts de teste ficam em [prompt-catalog.md](prompt-cata
 - [prompt-catalog.md](prompt-catalog.md) — prompts cobertos pelo MCP para testes
 - [test-plan.md](test-plan.md) — matriz de cobertura de testes do domínio
 - [spec-driven-execution-guide.md](spec-driven-execution-guide.md) — ordem prática de execução, passos atômicos e uso dos specs na implementação
+- [fases-execucao-templates.md](fases-execucao-templates.md) — pedidos atômicos por fase (0–20 do guia e extensões, ex. Fase 21 / ADR 0006)
 - [live-openai-integration-pipeline.md](live-openai-integration-pipeline.md) — integração real com API OpenAI, suíte mínima L1–L5 e esteira GitHub dedicada
 - [vertical-slice.md](vertical-slice.md) — primeira fatia de implementação (dados → métrica única → MCP)
 - [contract-test-plan.md](contract-test-plan.md) — ordem de execução, fixtures douradas e matriz de testes de contrato
@@ -111,3 +113,5 @@ Exemplos adicionais de prompts de teste ficam em [prompt-catalog.md](prompt-cata
 - [adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md](adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md) — ampliação da V1 para composições dinâmicas, correlações e filtros
 - [adrs/0003-processo-desenvolvimento-bmad-vs-spec-driven.md](adrs/0003-processo-desenvolvimento-bmad-vs-spec-driven.md) — spec-driven como padrão; BMAD opcional
 - [adrs/0004-estrutura-arquitetural-inicial-mcp-dotnet10.md](adrs/0004-estrutura-arquitetural-inicial-mcp-dotnet10.md) — estrutura arquitetural inicial congelada para V0/V1 em .NET 10
+- [adrs/0005-transporte-mcp-e-superficie-tools-v1.md](adrs/0005-transporte-mcp-e-superficie-tools-v1.md) — transporte MCP, convivência com HTTP, rollout de tools
+- [adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) — inter-tool, disponibilidade de métricas, pipeline, fluidez, testes de GAPS e pares–entropia

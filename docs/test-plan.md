@@ -126,7 +126,7 @@ Requisitos e suíte mínima de **cinco** cenários (**L1–L5**): [live-openai-i
 | `compute_window_metrics` | múltiplas métricas com shapes distintos | `metrics` ausente, métrica desconhecida |
 | `analyze_indicator_stability` | escalar, vetorial e série vetorial | sem agregação, método inválido |
 | `compose_indicator_analysis` | `weighted_rank`, `threshold_filter`, `joint_profile`, `stability_rank` | pesos incorretos, target incompatível |
-| `analyze_indicator_associations` | `spearman` e `pearson` | séries incompatíveis, método inválido |
+| `analyze_indicator_associations` | `spearman` e `pearson`; cenário pares×entropia (secção *Cenário canónico*) | séries incompatíveis, método inválido; com `stability_check` e build sem suporte → `UNSUPPORTED_STABILITY_CHECK` |
 | `summarize_window_patterns` | cobertura, moda, IQR, percentis | feature incompatível ou sem agregação |
 | `generate_candidate_games` | estratégias fixas e `declared_composite_profile` | seed ausente, orçamento excedido, exclusões conflitantes |
 | `explain_candidate_games` | breakdown completo de score e exclusões | jogo fora do domínio ou payload inválido |
@@ -166,6 +166,32 @@ Agregações:
 | `pearson` | correlação linear detectada corretamente | série constante ou incompatível |
 | `rolling_window` | estabilidade da associação por subjanela | subjanela maior que a janela |
 
+## Cenário canónico: pares e entropia de linha (interação, não causalidade)
+
+Pergunta descritiva: *quando, na janela, a quantidade de pares por concurso varia, como co-move a entropia de linha nesses mesmos concursos?* — sem afirmar causalidade.
+
+| Elemento | Valor |
+|----------|--------|
+| Tool | `analyze_indicator_associations` |
+| Itens (séries alinhadas) | `pares_no_concurso`, `entropia_linha_por_concurso` (ambas Tabela 1) |
+| Método canónico (este cenário) | `spearman` (robusto; ver contrato) |
+| Teste positivo | Mesmo `(fixture, window_size, end_contest_id, dataset_version)` produz a mesma magnitude (e `deterministic_hash` conforme a tool) |
+| Leitura permitida | co-movimento / correlação na janela |
+| Leitura proibida | “um causa o outro” fora de experiência controlada (ver [metric-glossary.md](metric-glossary.md), glossário “correlação” e [brief.md](brief.md)) |
+
+O mesmo padrão pode ser replicado para outras pares (ex. `entropia_coluna_por_concurso`) em testes adicionais; o [prompt-catalog.md](prompt-catalog.md) inclui prompt 42 para roteamento.
+
+**Referência normativa:** [ADR 0006 D5](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) e tabela de GAPS em [contract-test-plan.md](contract-test-plan.md).
+
+## GAPS e parâmetros de janela (disponibilidade, estabilidade)
+
+| Código / tema | O que o teste cobre |
+|---------------|---------------------|
+| `UNKNOWN_METRIC` com `details` em `compute_window_metrics` | Rota ainda com allowlist; payload congelado quando a política ainda restringe nomes (ver [mcp-tool-contract.md](mcp-tool-contract.md)). |
+| Coerência geração/explicar vs. `compute` | Estratégia ou `explain` referem métrica; `compute` rejeita; comportamento rastreável até promoção. |
+| `min_history` vs. `window_size` em `analyze_indicator_stability` | `min_history` &gt; tamanho resolvido da janela → `INSUFFICIENT_HISTORY` com `details` (ver ADR 0006 D4). |
+| `UNSUPPORTED_STABILITY_CHECK` | Request a `analyze_indicator_associations` com `stability_check` e build sem a camada de estabilidade. |
+
 ## Cobertura das estratégias de geração
 
 | Estratégia | Casos positivos obrigatórios | Casos negativos obrigatórios |
@@ -203,6 +229,8 @@ Todos os erros documentados em [mcp-tool-contract.md](mcp-tool-contract.md) prec
 1. provoque o erro;
 2. valide `code`, `message` e `details`;
 3. valide que o código veio da tool correta.
+
+Exemplos de erros cujo acréscimo ou aperto de semântica acompanha [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md): `INSUFFICIENT_HISTORY` com `min_history` explícito; `UNKNOWN_METRIC` com `details.metric_name` em `compute_window_metrics` quando a allowlist ainda restringe o catálogo; `UNSUPPORTED_STABILITY_CHECK` em `analyze_indicator_associations`.
 
 ## Cobertura E2E por prompt
 

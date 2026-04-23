@@ -152,6 +152,7 @@ Esta decisão está implementada quando:
 ## Referências internas
 
 - [ADR 0004](0004-estrutura-arquitetural-inicial-mcp-dotnet10.md)
+- [ADR 0006](0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) (disponibilidade por rota, semântica de *stability_check* com erosão de ambiguidade, pipeline de tools)
 - [mcp-tool-contract.md](../mcp-tool-contract.md)
 - [spec-driven-execution-guide.md](../spec-driven-execution-guide.md)
 - [vertical-slice.md](../vertical-slice.md)

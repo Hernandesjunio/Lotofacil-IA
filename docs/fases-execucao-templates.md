@@ -1,6 +1,8 @@
-# Templates atômicos - Fases 0 a 20
+# Templates atômicos de execução
 
-Este documento transforma todas as fases do `docs/spec-driven-execution-guide.md` (0 a 20) em pedidos atômicos prontos para uso com IA, preservando o formato normativo de template.
+**Navegação:** [← Brief (índice)](brief.md) · [spec-driven-execution-guide.md](spec-driven-execution-guide.md)
+
+Este documento transforma as fases do [spec-driven-execution-guide.md](spec-driven-execution-guide.md) (numeradas 0 a 20 no guia) em **pedidos atômicos** prontos para uso com IA, preservando o formato normativo de template. A **contagem de fases no guia não é teto** — secções adicionais (a partir da *Fase 21* abaixo) estendem o roteiro quando surgem entregas normativas (ex. [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md)) sem reabrir a numeração fechada do guia; novas fases seguem o **mesmo padrão** (bloco `Implemente apenas…`, referências, arquivos, regras, critério de pronto).
 
 ## Fase 0 - Congelar a base
 
@@ -314,6 +316,7 @@ Referências obrigatórias:
 - docs/mcp-tool-contract.md
 - docs/contract-test-plan.md
 - docs/adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md
+- docs/adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md (se a tool mexe em disponibilidade, pipeline, GAPS, `stability_check` ou pares–entropia)
 - docs/metric-catalog.md
 - docs/generation-strategies.md (quando aplicável)
 
@@ -902,4 +905,137 @@ Critério de pronto:
 - há teste negativo de contrato para input inválido;
 - há teste positivo determinístico com fixture;
 - payload de explicação contém ranking e breakdown rastreáveis.
+```
+
+## Fase 21 - ADR 0006: disponibilidade por rota, pipeline, GAPS, estabilidade de associação e pares–entropia
+
+*Extensão pós–Fase 20. Norma: [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md). Alinha [mcp-tool-contract.md](mcp-tool-contract.md), [metric-catalog.md](metric-catalog.md), [contract-test-plan.md](contract-test-plan.md) e [test-plan.md](test-plan.md) na mesma entrega lógica quando a implementação acompanhar.*
+
+### Template 21.1 - Matriz catálogo × `compute_window_metrics` e erros com `details`
+
+```md
+Implemente apenas a conformidade da rota `compute_window_metrics` com a matriz de disponibilidade e mensagens de `UNKNOWN_METRIC` com `details.metric_name` (e `allowed_metrics` quando aplicável), alinhada à secção *Disponibilidade* do contrato e à tabela do [metric-catalog.md](metric-catalog.md).
+
+Referências obrigatórias:
+- docs/adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md (D1)
+- docs/mcp-tool-contract.md (tool `compute_window_metrics`, tabela de erros)
+- docs/metric-catalog.md (Disponibilidade normativa)
+- docs/vertical-slice.md (recorte mínimo V0 vs. extensão)
+- docs/contract-test-plan.md (GAPS, cenário A)
+- docs/test-plan.md (GAPS)
+
+Arquivos esperados:
+- src/LotofacilMcp.Application/ (validação de allowlist por build, se aplicável)
+- src/LotofacilMcp.Domain/ (opcional: registro de métricas expostas)
+- tests/LotofacilMcp.ContractTests/ e/ou tests/LotofacilMcp.Infrastructure.Tests/
+
+Regras:
+- não extrapolar além do recorte citado;
+- manter TDD;
+- não alterar semântica de métricas no catálogo — apenas rota, erros e pistas;
+- manter paridade HTTP + MCP.
+
+Critério de pronto:
+- teste congelado do payload de erro (cenário A) passa;
+- documentação e `tool_version` rastreáveis.
+```
+
+### Template 21.2 - `analyze_indicator_stability`: `min_history` vs. janela e `INSUFFICIENT_HISTORY`
+
+```md
+Implemente apenas a validação de `min_history` em relação ao tamanho efetivo da janela resolvida em `analyze_indicator_stability`, emitindo `INSUFFICIENT_HISTORY` com `details` coerentes (ADR 0006 D4).
+
+Referências obrigatórias:
+- docs/adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md (D4)
+- docs/mcp-tool-contract.md (`analyze_indicator_stability`)
+- docs/contract-test-plan.md (GAPS, cenário C)
+- docs/test-plan.md (GAPS)
+
+Arquivos esperados:
+- src/LotofacilMcp.Application/
+- tests/LotofacilMcp.ContractTests/
+
+Regras:
+- não extrapolar além do recorte citado;
+- manter TDD;
+- não introduzir default mágico de `min_history` no servidor;
+- manter paridade HTTP + MCP.
+
+Critério de pronto:
+- teste negativo com `min_history` > janela efetiva passa com código e `details` corretos.
+```
+
+### Template 21.3 - `analyze_indicator_associations`: `stability_check` implementado ou `UNSUPPORTED_STABILITY_CHECK`
+
+```md
+Implemente apenas o comportamento de `stability_check` em `analyze_indicator_associations`: ou cálculo de estabilidade em subjanelas conforme contrato, ou erro `UNSUPPORTED_STABILITY_CHECK` quando o request declara `stability_check` e a build ainda não suporta (ADR 0006 D2).
+
+Referências obrigatórias:
+- docs/adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md (D2)
+- docs/mcp-tool-contract.md (semântica de `stability_check`, tabela de erros)
+- docs/contract-test-plan.md (GAPS, cenário D)
+
+Arquivos esperados:
+- src/LotofacilMcp.Domain/ ou Application/
+- src/LotofacilMcp.Server/
+- tests/LotofacilMcp.ContractTests/
+
+Regras:
+- não extrapolar além do recorte citado;
+- manter TDD;
+- sucesso sem `stability_check` no request continua a devolver magnitude global;
+- manter paridade HTTP + MCP.
+
+Critério de pronto:
+- teste com `stability_check` e build sem suporte emite `UNSUPPORTED_STABILITY_CHECK`, ou teste de sucesso com subjanelas passa (conforme escolha de implementação nesta entrega);
+- sem sucesso “vazio” quando o cliente pediu `stability_check` explicitamente.
+```
+
+### Template 21.4 - Bateria GAPS (B, E) e coerência explain / geração vs. `compute`
+
+```md
+Implemente apenas testes (e ajustes mínimos de código) para: (B) coerência entre `explain_candidate_games`/estratégias e `compute_window_metrics` quando a métrica ainda não está na rota; (E) teste de contrato determinístico do cenário pares–entropia (Spearman entre `pares_no_concurso` e `entropia_linha_por_concurso`, mesma janela), conforme [test-plan.md](test-plan.md) e ADR 0006 D5.
+
+Referências obrigatórias:
+- docs/adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md (D5, D6)
+- docs/contract-test-plan.md (GAPS B, E)
+- docs/test-plan.md (Cenário canónico, GAPS)
+- docs/generation-strategies.md
+- tests/fixtures/ (golden conforme convenção)
+
+Arquivos esperados:
+- tests/LotofacilMcp.ContractTests/
+- tests/fixtures/ ou `tests/fixtures/golden/`
+
+Regras:
+- não extrapolar além do recorte citado;
+- golden revisado em PR com mudança intencional de semântica;
+- linguagem descritiva nos asserts/comentários de intenção de teste.
+
+Critério de pronto:
+- (B) regressão documentada ou resolvida por promoção de métrica na mesma PR, conforme decisão;
+- (E) magnitude reprodutível ou tolerância fixa no teste, com `dataset_version` estável.
+```
+
+### Template 21.5 - (Opcional) Esteira L6 — roteamento prompt pares–entropia
+
+```md
+Implemente ou estenda apenas o teste de integração real (OpenAI) com o cenário L6 descrito em [live-openai-integration-pipeline.md](live-openai-integration-pipeline.md), usando o prompt da [prompt-catalog.md](prompt-catalog.md) §3 item 10, sem exigir L6 no gate mínimo L1–L5.
+
+Referências obrigatórias:
+- docs/live-openai-integration-pipeline.md
+- docs/prompt-catalog.md
+- docs/mcp-tool-contract.md
+
+Arquivos esperados:
+- pasta de testes de integração / workflow GitHub (conforme o repositório)
+
+Regras:
+- controlar custo e `OPENAI_MAX_ROUNDS`;
+- validar tool `analyze_indicator_associations` e janela explícita;
+- não exigir determinismo do LLM, apenas roteamento e resposta de servidor conforme contrato.
+
+Critério de pronto:
+- L6 conclui sem exceção não tratada, quando a suíte estendida estiver ativa;
+- falha de L6 não quebra a definição de suíte mínima de cinco cenários, até promoção a bloqueador.
 ```

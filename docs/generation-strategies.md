@@ -250,3 +250,7 @@ score = Σ_i w_i * component_i(jogo, janela)
 | `slot_weighted` | sim | sim | sim | sim | **sim** |
 | `outlier_candidate` | sim | sim | sim | sim | **sim** |
 | `declared_composite_profile` | sim | sim | sim | sim | **sim** |
+
+## Alinhamento com `compute_window_metrics` e explicação (ADR 0006 D6)
+
+Cada linha acima descreve **semântica e versão** da estratégia; a implementação concreta pode, num recorte, oferecer **subconjunto** de estratégias ativas. Enquanto uma métrica for consumida no score (ex. `repeticao_concurso_anterior@1.0.0` na estratégia `common_repetition_frequency` abaixo) mas ainda **não** puder ser pedida com sucesso em `compute_window_metrics` na mesma build, a divergência é tratavel como *GAP* de produto/validator, não como ambiguidade de fórmula, conforme [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) e [test-plan.md](test-plan.md). A **fluidez** desejada (janela → lote de métricas / associação → geração → explicar) fica no pipeline documentado no [mcp-tool-contract.md](mcp-tool-contract.md) e [metric-catalog.md](metric-catalog.md).

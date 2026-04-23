@@ -43,6 +43,10 @@ sequenceDiagram
 - Autenticação, throttling e quotas (permanecem fora da V0 e podem continuar desabilitados por `feature toggle` na V1 inicial).
 - Persistência e fontes diferentes do arquivo fixture.
 
+### Nota: documento mínimo vs. servidor em evolução
+
+A tabela *Escopo da fatia* acima descreve o **recorte mínimo normativo** para o encerramento da V0. Um servidor em desenvolvimento pode, **após** esse encerramento, adicionar métricas, tools e transportes; isso **não** muda, retroativamente, a definição de “V0 pronta” (critérios obrigatórios e matriz de testes) neste arquivo. A **matriz** catálogo × `compute_window_metrics` por build e a **cadeia de tools** recomendada (fluidez) estão em [metric-catalog.md](metric-catalog.md) (secção *Disponibilidade normativa*) e [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) — para o consumidor saber, por `tool_version`, o que a instância aceita.
+
 ## Critérios de aceite (obrigatórios)
 
 1. **Contrato**: resposta de `compute_window_metrics` com um único request `{ "name": "frequencia_por_dezena" }` inclui `MetricValue` com `metric_name`, `scope = window`, `shape = vector_by_dezena`, `unit = count`, `version = 1.0.0`, `window` explícito, `value` como vetor de 25 inteiros não negativos, `explanation` preenchida.

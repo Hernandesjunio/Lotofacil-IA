@@ -41,6 +41,8 @@ Para que os `docs/` “validem” em conjunto: cada família de prompt positivo 
    - Tools esperadas: `analyze_indicator_associations`
 9. "Compare a correlação de Spearman entre pares e vizinhos com a correlação de Spearman entre repetição e entropia de linha nos últimos 100 concursos."
    - Tools esperadas: `analyze_indicator_associations`
+10. "Nos últimos 100 concursos, qual a magnitude da associação (Spearman) entre `pares_no_concurso` e `entropia_linha_por_concurso` na **mesma janela**? Descreva apenas co-movimento na janela, sem inferir que um *causa* o outro."
+   - Tools esperadas: `analyze_indicator_associations` (cenário canónico [test-plan.md](test-plan.md), [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) D5)
 
 ## 4. Padrões históricos
 

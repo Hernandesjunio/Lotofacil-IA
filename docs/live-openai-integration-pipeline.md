@@ -83,6 +83,8 @@ Cada linha é **um** teste de integração real independente. Os textos dos prom
 | **L4** | §4 item 10 — padrão em vizinhos, pares e entropia (últimos 20) | `summarize_window_patterns` | Agregações permitidas; escopo de janela respeitado. |
 | **L5** | §10 item 30 — geração com `declared_composite_profile`, `greedy_topk`, `seed` 424242 | `generate_candidate_games` | `seed` e estratégia respeitados; perfil composto com pesos que somam 1; saída explicável. |
 
+Cenário **L6 (recomendado, não substitui o mínimo de cinco acima):** [prompt-catalog.md](prompt-catalog.md) §3 item 10 (Spearman entre `pares_no_concurso` e `entropia_linha_por_concurso` na mesma janela, leitura não causal) com `analyze_indicator_associations` — alinhado a [ADR 0006 D5](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) e [test-plan.md](test-plan.md) secção *Cenário canónico*. A esteira **pode** adicionar L6 quando a implementação e os goldens cobrirem o caso; a falha de L6 não define regressão de “suíte mínima” até a equipa promover o cenário a bloqueador.
+
 **Prompts negativos (catálogo §12):** não fazem parte desta **suíte mínima de cinco** positivos. O [test-plan.md](test-plan.md) exige cobertura E2E separada para os prompts 37–41; a implementação pode incluir **um ou mais** testes live adicionais para negativos, mas o **custo** e a **estabilidade** devem ser avaliados — preferir testes determinísticos para negativos quando possível.
 
 ## 7. Critérios de aceite por execução

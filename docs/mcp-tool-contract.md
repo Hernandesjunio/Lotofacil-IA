@@ -28,6 +28,28 @@ O contrato está organizado em camadas. Para validar uma implementação ou um P
 **Validação prática:** para cada tool, verifique (a) rejeição de inputs inválidos com o código de erro certo, (b) presença dos campos obrigatórios no output conforme invariantes, (c) reprodutibilidade quando o contrato exige `seed` ou `deterministic_hash`.
 
 7. **Lacunas de parâmetro em linguagem natural** — quando um pedido do usuário não puder ser mapeado sem ambiguidade para o JSON da tool, o fluxo deve obter dados faltantes por **perguntas específicas** (seção *Integração com agentes: lacunas de parâmetros e esclarecimento*, abaixo), nunca por inferência oculta no servidor.
+8. **Inter-tool, disponibilidade e pipeline** — recorte de métricas por rota, padrão de cadeia de tools (fluidez), `stability_check` em associações e códigos de erro associados estão normatizados em [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md). O catálogo de métricas e a tabela *Disponibilidade normativa* em [metric-catalog.md](metric-catalog.md) desambiguam “nome canónico” vs. “aceite nesta tool nesta build”.
+
+## Disponibilidade de métricas, pipeline mínimo e performance do fluxo
+
+### Catálogo vs. `compute_window_metrics`
+
+- O [metric-catalog.md](metric-catalog.md) define **nomes, fórmulas, formas e versões**; uma build pode, num recorte, implementar `compute_window_metrics` apenas para um **subconjunto** alinhado à [vertical-slice.md](vertical-slice.md) e extensões documentadas.  
+- `UNKNOWN_METRIC` com `details.metric_name` preenchido indica, neste contexto, **nome conhecido no catálogo mas ainda não utilizável nesta rota ou nesta build**; o servidor **deve** preencher `details` com pistas auditáveis (p.ex. `allowed_metrics` fechado ou mensagem canónica) e manter o `tool_version` rastreável, conforme [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) D1.  
+- Isto **não** contradiu o `UNKNOWN_METRIC` para strings que não estão no catálogo: aí a correção continua a ser ajustar o request ou o catálogo, não a implementação adivinhar o nome.
+
+### Pipeline mínimo recomendado (reprodutível, sem defaults ocultos)
+
+Padrão descriptivo para análise de janela, interação entre indicadores e candidatos, respeitando a mesma janela explícita (`window_size`, `end_contest_id`, `dataset_version`):
+
+1. `get_draw_window` quando o cliente precisar do recorte bruto; caso contrário, as tools seguintes materializam a janela da mesma forma.  
+2. `compute_window_metrics` com a lista `metrics` **explícita**; ou, conforme a pergunta, ir direto a análise.  
+3. `analyze_indicator_stability`, `analyze_indicator_associations` e/ou `summarize_window_patterns` **conforme necessidade**, todos com a mesma janela.  
+4. `generate_candidate_games` (com `seed` e `plan` onde o contrato exigir) e, em seguida, `explain_candidate_games` para os mesmos parâmetros de janela e lista de jogos.  
+
+A **fluidez** é obtida com **menos *round-trips** explícitos (lote de métricas no passo 2) e com documentação alinhada à [generation-strategies.md](generation-strategies.md), não com defaults não documentados no servidor.
+
+**Validação:** testes de integração e de contrato devem referir-se a estes passos nos planos [contract-test-plan.md](contract-test-plan.md) e [test-plan.md](test-plan.md) quando validarem GAPS e cenários de correlação (ver ADR 0006 D3 e D5).
 
 ## Integração com agentes: lacunas de parâmetros e esclarecimento
 
@@ -395,6 +417,12 @@ Calcular métricas canônicas para uma janela.
 - Métricas com **Status** `pendente de detalhamento` no [metric-catalog.md](metric-catalog.md) exigem `allow_pending: true`.
 - Parâmetros de métrica devem ser explícitos em `params`; o servidor não infere defaults semânticos escondidos.
 
+#### Disponibilidade em `compute_window_metrics` (D1, ADR 0006)
+
+- A tool pode recusar uma métrica cujo **nome** está no [metric-catalog.md](metric-catalog.md) com `UNKNOWN_METRIC` quando a **implementação** da build ainda não expuser essa métrica nesta rota; nesse caso `details.metric_name` identifica o pedido e, quando possível, `details` inclui a lista de nomes **efetivamente** aceites.  
+- O recorte mínimo documentado em [vertical-slice.md](vertical-slice.md) exige, para fechamento da V0, apenas `frequencia_por_dezena@1.0.0` em sucesso; outras entradas seguem a matriz em [metric-catalog.md](metric-catalog.md) e a decisão [ADR 0006 D1](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md).  
+- **Coesão com geração/explicar:** se `explain_candidate_games` ou estratégias referem internamente `repeticao_concurso_anterior` (ou outra), mas `compute_window_metrics` a rejeita nesta build, o teste de coerência cruzada em [test-plan.md](test-plan.md) aplica-se até a métrica ser promovida (ver *GAPS*, [contract-test-plan.md](contract-test-plan.md)).
+
 #### Observações
 
 - `scope`, `shape`, `unit` e `version` são sempre explícitos.
@@ -443,7 +471,7 @@ Comparar indicadores em uma janela e identificar quais apresentam menor volatili
 - **Objetivo:** comparar *estabilidade relativa* entre indicadores na mesma janela, não “qual indicador é melhor para apostar”.
 - **`indicators`:** cada item precisa de `aggregation` quando a série subjacente for vetorial ou multivalor; sem isso → `UNSUPPORTED_AGGREGATION` ou `INCOMPATIBLE_INDICATOR_FOR_STABILITY`.
 - **`normalization_method`:** `madn` (mediana absoluta normalizada) reduz sensibilidade a outliers extremos na comparação de volatilidade; outro método só se suportado e compatível com os sinais dos dados.
-- **`top_k` / `min_history`:** limitam o ranking e exigem histórico mínimo para estatística estável; `min_history` maior que janela disponível → falha clara (`INSUFFICIENT_HISTORY` ou regra documentada no catálogo).
+- **`top_k` / `min_history`:** limitam o ranking e exigem histórico mínimo para estatística estável. Se `min_history` for **estritamente maior** que a quantidade de concursos resolvida na janela, a tool **deve** falhar com `INSUFFICIENT_HISTORY` e `details` que incluam, quando possível, `min_history` requisitado e tamanho efetivo da janela; não devolver ranking “meio vazio” sem indicação de regra, conforme [ADR 0006 D4](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md). O default exemplificado de `20` no contrato é **ilustrativo**; o cliente ajusta à janela.
 
 ##### Catálogo fechado de `normalization_method`
 
@@ -572,6 +600,8 @@ Medir associações entre séries de indicadores compatíveis.
 - uma estatística de estabilidade (ex.: MADN dos valores de correlação nas subjanelas, ou proporção de subjanelas com mesmo sinal), declarada no payload;
 - contagem de subjanelas avaliadas;
 - separação explícita entre “magnitude global na janela” e “estabilidade em subjanelas”.
+
+**`stability_check` não implementado nesta build:** se o request inclui `stability_check` e a build **não** implementa a camada de estabilidade, a resposta **deve** ser erro `UNSUPPORTED_STABILITY_CHECK` (ver tabela de erros), e não sucesso com campos de estabilidade nulos/omitidos *sem* sinal claro. Se o request **omitir** `stability_check`, a resposta fornece a magnitude global da associação; campos de estabilidade de subjanela permanecem omitidos ou, se o schema reservar campo, o contrato de tipagem é o da versão de tool. Ver [ADR 0006 D2](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md).
 
 ### 6. `summarize_window_patterns`
 
@@ -761,6 +791,7 @@ Formato sugerido:
 | `UNSUPPORTED_TRANSFORM` | transformação de composição não suportada | composição, geração |
 | `UNSUPPORTED_NORMALIZATION_METHOD` | método incompatível com a série | estabilidade |
 | `UNSUPPORTED_ASSOCIATION_METHOD` | método de associação não suportado | associações |
+| `UNSUPPORTED_STABILITY_CHECK` | cálculo de `stability_check` em subjanelas ainda não disponível nesta build, embora o request o tenha declarado; magnitude global é obrigatória no caminho de sucesso quando a estabilidade não for pedida | associações |
 | `UNSUPPORTED_PATTERN_FEATURE` | feature não suportada em resumo de padrões | padrões |
 | `INCOMPATIBLE_INDICATOR_FOR_STABILITY` | indicador sem shape compatível para ranking | estabilidade |
 | `INCOMPATIBLE_COMPOSITION` | componentes incompatíveis entre si ou com o target | composição, geração |
@@ -807,7 +838,7 @@ N/A (documentação). Opcionalmente, ferramentas podem retornar um campo `defini
 ### Grupos de erros (leitura rápida para validação)
 
 - **Request e dados de entrada:** `INVALID_REQUEST`, `INVALID_WINDOW_SIZE`, `INVALID_CONTEST_ID`, `INVALID_REFERENCE_WINDOW` — falha antes ou semântica inválida do recorte; validar JSON Schema e existência de concursos.
-- **Catálogo fechado:** `UNKNOWN_METRIC`, `UNKNOWN_STRATEGY`, `UNSUPPORTED_*` — o cliente pediu algo fora do que a V1 implementa; a correção é ajustar o request ou estender o catálogo na documentação, não “adivinhar” no servidor.
+- **Catálogo fechado e rotas parciais:** `UNKNOWN_METRIC` numa rota, `UNKNOWN_STRATEGY` na geração, `UNSUPPORTED_STABILITY_CHECK` (associações) — ajustar o request, estender o **catálogo/ADR** e alinhar a build; o servidor não adivinha nomes, nem responde sucesso com `stability_check` faltando quando o cliente o pediu, conforme [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md).
 - **Compatibilidade dimensional:** `INCOMPATIBLE_INDICATOR_FOR_STABILITY`, `INCOMPATIBLE_COMPOSITION` — combinação de métricas, `target` ou agregações não faz sentido matematicamente para aquela tool.
 - **Geração e orçamento:** `STRUCTURAL_EXCLUSION_CONFLICT`, `PLAN_BUDGET_EXCEEDED`, `NON_DETERMINISTIC_CONFIGURATION` — plano impossível, excesso de `count` ou falta de `seed` onde o contrato exige determinismo.
 - **Infraestrutura e limites:** `INSUFFICIENT_HISTORY`, `DATASET_UNAVAILABLE`, `UNAUTHORIZED`, `RATE_LIMITED`, `QUOTA_EXCEEDED`, `INTERNAL_ERROR` — dados, credenciais, política de uso ou bug encapsulado; `INTERNAL_ERROR` deve ser raro e com identificador de suporte (hash) quando aplicável.
@@ -831,7 +862,7 @@ Cada item abaixo é um critério de aceite binário: sem ele, a implementação 
 2. `compute_window_metrics` retorna valores idênticos em execuções repetidas, com `shape` explícito.
 3. `analyze_indicator_stability` rejeita vetoriais sem `aggregation` e usa `madn` por default.
 4. `compose_indicator_analysis` rejeita pesos que não somam 1 e componentes incompatíveis.
-5. `analyze_indicator_associations` rejeita associação sem redução explícita de série vetorial.
+5. `analyze_indicator_associations` rejeita associação sem redução explícita de série vetorial; com `stability_check` no request e build sem suporte à estabilidade em subjanelas, emite `UNSUPPORTED_STABILITY_CHECK` (ADR 0006 D2).
 6. `summarize_window_patterns` calcula cobertura, moda e faixa típica de forma determinística.
 7. `generate_candidate_games` respeita orçamento, seed, filtros estruturais e estratégia composta declarada.
 8. `explain_candidate_games` retorna ranking de estratégias e detalhamento de exclusões.
