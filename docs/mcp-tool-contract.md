@@ -684,9 +684,14 @@ Esta tool é normatizada em [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v
 #### Regras
 
 - `aggregates` é obrigatório e deve ser não vazio.
-- `aggregate_type` é um enum fechado; valores fora da lista → `UNSUPPORTED_AGGREGATE_TYPE`.
+- `aggregate_type` é enum fechado, com apenas:
+  - `histogram_scalar_series`
+  - `topk_patterns_count_vector5_series`
+  - `histogram_count_vector5_series_per_position_matrix`
+  Valores fora da lista → `UNSUPPORTED_AGGREGATE_TYPE`.
 - A tool opera em **batch**: múltiplos agregados no mesmo request para reduzir round-trips.
 - Proibição de defaults semânticos ocultos: bucketização e dimensões de matriz devem ser declaradas no request.
+- Cada item de `aggregates[]` deve declarar `source_metric_name`, `aggregate_type` e `params` (objeto). O servidor não infere `params` ausentes.
 
 #### Semântica e validação
 
@@ -701,12 +706,14 @@ Esta tool é normatizada em [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v
 - **Parâmetros:** `params.bucket_spec` é obrigatório:
   - `{ "bucket_values": [...] }` (discreto), ou
   - `{ "min": <number>, "max": <number>, "width": <number> }` (contínuo/discretizado).
+- **Validação de parâmetros:** `bucket_spec` deve usar **exatamente um** modo (discreto ou contínuo). Mistura de modos ou ausência de campos obrigatórios → `INVALID_REQUEST`.
 - **Output:** `buckets[]` ordenados por `x` ascendente, cada um com `{ x, count, ratio? }`.
 
 ##### `aggregate_type = topk_patterns_count_vector5_series`
 
 - **Fonte:** métrica `shape="series_of_count_vector[5]"`.
 - **Parâmetros:** `params.top_k` obrigatório.
+- **Validação de parâmetros:** `top_k` deve ser inteiro `>= 1`; caso contrário → `INVALID_REQUEST`.
 - **Output:** `items[]` com `{ pattern:[5], count, ratio? }`, ordenados por:
   1) `count desc`
   2) `pattern` lexicográfico asc (desempate determinístico)
@@ -715,7 +722,9 @@ Esta tool é normatizada em [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v
 
 - **Fonte:** métrica `shape="series_of_count_vector[5]"`.
 - **Parâmetros:** `params.value_min` e `params.value_max` obrigatórios; definem o eixo de valores e as dimensões.
+- **Validação de parâmetros:** `value_min` e `value_max` devem ser inteiros com `value_min <= value_max`; caso contrário → `INVALID_REQUEST`.
 - **Output:** `matrix[5][K]` (matriz cheia) com contagens por posição `1..5` × valor `value_min..value_max`, onde `K = value_max - value_min + 1`.
+- **Ordenação canônica dos eixos:** linhas em `position` asc (`1..5`) e colunas em `value` asc (`value_min..value_max`).
 
 ### 7. `generate_candidate_games`
 
@@ -863,6 +872,8 @@ Formato sugerido:
 | `UNSUPPORTED_ASSOCIATION_METHOD` | método de associação não suportado | associações |
 | `UNSUPPORTED_STABILITY_CHECK` | cálculo de `stability_check` em subjanelas ainda não disponível nesta build, embora o request o tenha declarado; magnitude global é obrigatória no caminho de sucesso quando a estabilidade não for pedida | associações |
 | `UNSUPPORTED_PATTERN_FEATURE` | feature não suportada em resumo de padrões | padrões |
+| `UNSUPPORTED_AGGREGATE_TYPE` | tipo de agregado fora do enum fechado da tool de agregados | agregados |
+| `UNSUPPORTED_SHAPE` | shape/scope da métrica fonte incompatível com o agregado solicitado | agregados |
 | `INCOMPATIBLE_INDICATOR_FOR_STABILITY` | indicador sem shape compatível para ranking | estabilidade |
 | `INCOMPATIBLE_COMPOSITION` | componentes incompatíveis entre si ou com o target | composição, geração |
 | `STRUCTURAL_EXCLUSION_CONFLICT` | exclusões tornam o plano inviável ou contraditório | geração |
@@ -934,11 +945,12 @@ Cada item abaixo é um critério de aceite binário: sem ele, a implementação 
 4. `compose_indicator_analysis` rejeita pesos que não somam 1 e componentes incompatíveis.
 5. `analyze_indicator_associations` rejeita associação sem redução explícita de série vetorial; com `stability_check` no request e build sem suporte à estabilidade em subjanelas, emite `UNSUPPORTED_STABILITY_CHECK` (ADR 0006 D2).
 6. `summarize_window_patterns` calcula cobertura, moda e faixa típica de forma determinística.
-7. `generate_candidate_games` respeita orçamento, seed, filtros estruturais e estratégia composta declarada.
-8. `explain_candidate_games` retorna ranking de estratégias e detalhamento de exclusões.
-9. `divergencia_kl` nunca retorna `+∞` ou `NaN` para janelas `N >= 5`.
-10. Toda família de prompt documentada em [prompt-catalog.md](prompt-catalog.md) deve ter ao menos um teste positivo e um negativo em [test-plan.md](test-plan.md).
-11. Em pelo menos um fluxo de integração (E2E ou teste de agente), um pedido **não** mapeável sem lacunas deve resultar em esclarecimento com campos explícitos ou em `INVALID_REQUEST` **sem** execução com parâmetros supostos pelo modelo.
+7. `summarize_window_aggregates` valida enum fechado de `aggregate_type`, parâmetros obrigatórios por tipo, compatibilidade de shape e ordenação/desempates canônicos de forma determinística.
+8. `generate_candidate_games` respeita orçamento, seed, filtros estruturais e estratégia composta declarada.
+9. `explain_candidate_games` retorna ranking de estratégias e detalhamento de exclusões.
+10. `divergencia_kl` nunca retorna `+∞` ou `NaN` para janelas `N >= 5`.
+11. Toda família de prompt documentada em [prompt-catalog.md](prompt-catalog.md) deve ter ao menos um teste positivo e um negativo em [test-plan.md](test-plan.md).
+12. Em pelo menos um fluxo de integração (E2E ou teste de agente), um pedido **não** mapeável sem lacunas deve resultar em esclarecimento com campos explícitos ou em `INVALID_REQUEST` **sem** execução com parâmetros supostos pelo modelo.
 
 ## Avaliação de viabilidade
 
@@ -950,6 +962,7 @@ Cada item abaixo é um critério de aceite binário: sem ele, a implementação 
 - `compose_indicator_analysis`
 - `analyze_indicator_associations`
 - `summarize_window_patterns`
+- `summarize_window_aggregates`
 - `generate_candidate_games`
 - `explain_candidate_games`
 
@@ -965,7 +978,7 @@ Cada item abaixo é um critério de aceite binário: sem ele, a implementação 
 A V1 completa e testável fica composta por:
 
 1. histórico canônico local com `dataset_version` derivado;
-2. as 8 tools acima;
+2. as 9 tools acima;
 3. catálogo de métricas fechado;
 4. estratégias e filtros estruturais fechados;
 5. catálogo de prompts de teste;

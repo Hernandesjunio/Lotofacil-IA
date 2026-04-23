@@ -17,6 +17,9 @@ Complementa [test-plan.md](test-plan.md) com **ordem de implementação**, **lay
    - histogramas sobre séries escalares (`histogram_scalar_series`) com bucketização explícita;
    - top-k de padrões sobre séries de vetores `[5]` (`topk_patterns_count_vector5_series`);
    - matriz cheia por posição×valor (`histogram_count_vector5_series_per_position_matrix`) com limites explícitos.
+   - validação do enum fechado de `aggregate_type` e rejeição de tipos fora do catálogo;
+   - validação de parâmetros obrigatórios por tipo, sem defaults semânticos ocultos;
+   - validação de ordenação canônica e desempates determinísticos por tipo.
 
 ## Layout de fixtures (convênio)
 
@@ -57,6 +60,22 @@ Documentação de referência: [mcp-tool-contract.md](mcp-tool-contract.md).
 | `summarize_window_aggregates` | Validação de `aggregate_type`, bucket spec/matriz, compatibilidade de `shape` e ordenação canônica. |
 | `generate_candidate_games` | `seed`, estratégia, versão, exclusões reportadas. |
 | `explain_candidate_games` | Breakdown e métricas declaradas. |
+
+### Matriz mínima — Fase B.1 (`summarize_window_aggregates`)
+
+| Caso | Esperado |
+|------|----------|
+| `aggregate_type` fora do enum fechado | Erro `UNSUPPORTED_AGGREGATE_TYPE`. |
+| `histogram_scalar_series` com `bucket_values` explícitos | Sucesso com `buckets[]` ordenados por `x` asc e contagens determinísticas. |
+| `histogram_scalar_series` com `bucket_spec` ausente/incompleto ou modo misto | Erro `INVALID_REQUEST` (sem inferência de bucketização). |
+| `topk_patterns_count_vector5_series` com `top_k` válido | Sucesso com `items[]` ordenados por `count desc` e desempate lexicográfico de `pattern` asc. |
+| `topk_patterns_count_vector5_series` sem `top_k` ou `top_k < 1` | Erro `INVALID_REQUEST`. |
+| `histogram_count_vector5_series_per_position_matrix` com `value_min`/`value_max` válidos | Sucesso com `matrix[5][K]` cheia, linhas por posição asc e colunas por valor asc. |
+| `histogram_count_vector5_series_per_position_matrix` sem limites ou com `value_min > value_max` | Erro `INVALID_REQUEST`. |
+| `aggregate_type` incompatível com `shape`/`scope` da fonte | Erro `UNSUPPORTED_SHAPE`. |
+| Request com múltiplos agregados | Resposta preserva a ordem de `aggregates[]` do request. |
+
+**Observação de contrato:** os testes da Fase B.1 devem sempre explicitar bucketização (`bucket_values` ou `min/max/width`) e dimensões de matriz (`value_min/value_max`) no request; ausência não pode ser compensada por default semântico no servidor.
 
 ## Matriz — Fase C (métrica × tipo de teste)
 

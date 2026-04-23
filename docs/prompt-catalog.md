@@ -15,6 +15,19 @@ Este documento lista prompts de referência para testes funcionais, E2E e valida
 
 Para que os `docs/` “validem” em conjunto: cada família de prompt positivo deve ser mapeável às tools sem lacuna de parâmetro obrigatório; cenários em que o modelo não consiga inferir argumentos devem ser cobertos por **perguntas específicas** do agente (e, na implementação opcional, erros estruturados do servidor), conforme a seção *Integração com agentes* em [mcp-tool-contract.md](mcp-tool-contract.md).
 
+## Prompts que exigem agregados canônicos (ADR 0007)
+
+Nestes prompts, o roteamento esperado deve incluir `summarize_window_aggregates`, com `aggregate_type` e parâmetros explícitos no request (sem defaults ocultos para bucketização/dimensões):
+
+1. "Nos últimos 100 concursos, mostre o histograma da quantidade de pares por concurso com buckets declarados de 0 a 15."
+   - Tools esperadas: `summarize_window_aggregates`
+2. "Quais são os 10 padrões de distribuição por linha mais frequentes na janela de 120 concursos, com desempate determinístico?"
+   - Tools esperadas: `summarize_window_aggregates`
+3. "Monte a matriz posição×valor da distribuição por coluna na janela de 80 concursos, declarando `value_min` e `value_max`."
+   - Tools esperadas: `summarize_window_aggregates`
+4. "Na mesma janela, compare o histograma de pares e o top-k de padrões de linha em uma única chamada."
+   - Tools esperadas: `summarize_window_aggregates` (batch de `aggregates[]`)
+
 ## 1. Estabilidade de indicadores
 
 1. "Quais indicadores estão mais estáveis com menor variação entre os últimos 20 resultados?"

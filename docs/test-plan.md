@@ -128,9 +128,29 @@ Requisitos e suíte mínima de **cinco** cenários (**L1–L5**): [live-openai-i
 | `compose_indicator_analysis` | `weighted_rank`, `threshold_filter`, `joint_profile`, `stability_rank` | pesos incorretos, target incompatível |
 | `analyze_indicator_associations` | `spearman` e `pearson`; cenário pares×entropia (secção *Cenário canónico*) | séries incompatíveis, método inválido; com `stability_check` e build sem suporte → `UNSUPPORTED_STABILITY_CHECK` |
 | `summarize_window_patterns` | cobertura, moda, IQR, percentis | feature incompatível ou sem agregação |
-| `summarize_window_aggregates` | histogramas canônicos, top-k de padrões e matrizes cheias derivadas de métricas de janela | `aggregates` ausente, `aggregate_type` inválido, bucket spec inválida, fonte incompatível (`UNSUPPORTED_SHAPE`), métrica desconhecida |
+| `summarize_window_aggregates` | histograma escalar com `bucket_values` explícitos, top-k de padrões com desempate lexicográfico e matriz cheia `5xK` com eixos declarados | `aggregates` ausente/vazio, `aggregate_type` inválido, parâmetros obrigatórios ausentes por tipo, bucket spec ambígua, fonte incompatível (`UNSUPPORTED_SHAPE`), métrica desconhecida |
 | `generate_candidate_games` | estratégias fixas e `declared_composite_profile` | seed ausente, orçamento excedido, exclusões conflitantes |
 | `explain_candidate_games` | breakdown completo de score e exclusões | jogo fora do domínio ou payload inválido |
+
+## Cobertura de agregados canônicos (`summarize_window_aggregates`)
+
+Cada `aggregate_type` do enum fechado deve ter:
+
+- 1 teste positivo com validação de forma, ordenação canônica e determinismo;
+- 1 teste negativo de parâmetros obrigatórios ausentes/inválidos;
+- 1 teste negativo de compatibilidade de shape da métrica fonte.
+
+Tipos cobertos:
+
+- `histogram_scalar_series`
+  - Positivo: buckets ordenados por `x` asc com bucketização explícita.
+  - Negativo: `bucket_spec` ausente, misto (discreto + contínuo) ou incompleto.
+- `topk_patterns_count_vector5_series`
+  - Positivo: `items` ordenados por `count desc` e desempate por `pattern` lexicográfico asc.
+  - Negativo: `top_k` ausente, não inteiro ou `< 1`.
+- `histogram_count_vector5_series_per_position_matrix`
+  - Positivo: matriz cheia `matrix[5][K]` com eixo de posição `1..5` e eixo de valor `value_min..value_max` em ordem ascendente.
+  - Negativo: `value_min`/`value_max` ausentes, não inteiros ou `value_min > value_max`.
 
 ## Cobertura de agregações
 
@@ -253,8 +273,9 @@ Os seguintes cenários precisam ser repetidos múltiplas vezes sobre a mesma fix
 4. `compose_indicator_analysis`
 5. `analyze_indicator_associations`
 6. `summarize_window_patterns`
-7. `generate_candidate_games`
-8. `explain_candidate_games`
+7. `summarize_window_aggregates`
+8. `generate_candidate_games`
+9. `explain_candidate_games`
 
 Critério de aceitação: mesma entrada gera mesmo `deterministic_hash` em 100% das execuções.
 
