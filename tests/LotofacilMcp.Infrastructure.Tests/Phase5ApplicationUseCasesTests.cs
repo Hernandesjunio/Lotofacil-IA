@@ -325,6 +325,8 @@ public sealed class Phase5ApplicationUseCasesTests
         var error = Assert.Throws<ApplicationValidationException>(() => sut.Execute(input));
 
         Assert.Equal("INSUFFICIENT_HISTORY", error.Code);
+        Assert.Equal(5, error.Details["min_history"]);
+        Assert.Equal(3, error.Details["effective_window_size"]);
     }
 
     private static GetDrawWindowUseCase BuildGetDrawWindowUseCase()

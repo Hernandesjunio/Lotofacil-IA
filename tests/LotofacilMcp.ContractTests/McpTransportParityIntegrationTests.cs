@@ -409,6 +409,40 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         Assert.True(JsonElement.DeepEquals(httpAnalyzePayload, ReadMcpStructuredJson(stdioAnalyzeResponse)));
         Assert.True(JsonElement.DeepEquals(httpAnalyzePayload, ReadMcpStructuredJson(httpMcpAnalyzeResponse)));
 
+        var minHistoryGapRequest = new Dictionary<string, object?>
+        {
+            ["window_size"] = 3,
+            ["end_contest_id"] = 1003,
+            ["indicators"] = new object[]
+            {
+                new Dictionary<string, object?>
+                {
+                    ["name"] = "repeticao_concurso_anterior"
+                }
+            },
+            ["top_k"] = 3,
+            ["min_history"] = 4
+        };
+
+        var httpMinHistoryGapResponse = await _httpClient.PostAsJsonAsync("/tools/analyze_indicator_stability", minHistoryGapRequest);
+        Assert.Equal(HttpStatusCode.BadRequest, httpMinHistoryGapResponse.StatusCode);
+
+        var stdioMinHistoryGapResponse = await _stdioMcpClient.CallToolAsync("analyze_indicator_stability", minHistoryGapRequest);
+        var httpMcpMinHistoryGapResponse = await _httpMcpClient.CallToolAsync("analyze_indicator_stability", minHistoryGapRequest);
+
+        Assert.True(stdioMinHistoryGapResponse.IsError);
+        Assert.True(httpMcpMinHistoryGapResponse.IsError);
+
+        var httpMinHistoryGapPayload = await ReadHttpJsonAsync(httpMinHistoryGapResponse);
+        Assert.True(JsonElement.DeepEquals(httpMinHistoryGapPayload, ReadMcpStructuredJson(stdioMinHistoryGapResponse)));
+        Assert.True(JsonElement.DeepEquals(httpMinHistoryGapPayload, ReadMcpStructuredJson(httpMcpMinHistoryGapResponse)));
+
+        var minHistoryGapError = httpMinHistoryGapPayload.GetProperty("error");
+        Assert.Equal("INSUFFICIENT_HISTORY", minHistoryGapError.GetProperty("code").GetString());
+        var minHistoryGapDetails = minHistoryGapError.GetProperty("details");
+        Assert.Equal(4, minHistoryGapDetails.GetProperty("min_history").GetInt32());
+        Assert.Equal(3, minHistoryGapDetails.GetProperty("effective_window_size").GetInt32());
+
         var invalidAssociationRequest = new Dictionary<string, object?>
         {
             ["window_size"] = 5,

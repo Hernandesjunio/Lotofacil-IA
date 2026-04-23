@@ -75,6 +75,7 @@ public sealed class AnalyzeIndicatorStabilityUseCase
         try
         {
             var window = _windowResolver.Resolve(normalizedDraws, input.WindowSize, input.EndContestId);
+            ValidateMinHistoryAgainstResolvedWindow(input.MinHistory, window.Draws.Count);
             var analysis = _analyzer.Analyze(
                 window,
                 input.Indicators!
@@ -162,5 +163,22 @@ public sealed class AnalyzeIndicatorStabilityUseCase
             code: "INCOMPATIBLE_INDICATOR_FOR_STABILITY",
             message: ex.Message,
             details: new Dictionary<string, object?>());
+    }
+
+    private static void ValidateMinHistoryAgainstResolvedWindow(int minHistory, int effectiveWindowSize)
+    {
+        if (minHistory <= effectiveWindowSize)
+        {
+            return;
+        }
+
+        throw new ApplicationValidationException(
+            code: "INSUFFICIENT_HISTORY",
+            message: "min_history exceeds the effective resolved window size.",
+            details: new Dictionary<string, object?>
+            {
+                ["min_history"] = minHistory,
+                ["effective_window_size"] = effectiveWindowSize
+            });
     }
 }
