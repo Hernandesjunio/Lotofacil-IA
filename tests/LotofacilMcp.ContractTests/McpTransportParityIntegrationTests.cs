@@ -469,6 +469,40 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         Assert.True(JsonElement.DeepEquals(httpAssocPayload, ReadMcpStructuredJson(stdioAssocErr)));
         Assert.True(JsonElement.DeepEquals(httpAssocPayload, ReadMcpStructuredJson(httpMcpAssocErr)));
 
+        var unsupportedStabilityCheckRequest = new Dictionary<string, object?>
+        {
+            ["window_size"] = 5,
+            ["end_contest_id"] = 1005,
+            ["method"] = "spearman",
+            ["top_k"] = 3,
+            ["items"] = new object[]
+            {
+                new Dictionary<string, object?> { ["name"] = "repeticao_concurso_anterior" },
+                new Dictionary<string, object?> { ["name"] = "pares_no_concurso" }
+            },
+            ["stability_check"] = new Dictionary<string, object?>
+            {
+                ["method"] = "rolling_window",
+                ["subwindow_size"] = 3
+            }
+        };
+
+        var httpUnsupportedStabilityCheck = await _httpClient.PostAsJsonAsync("/tools/analyze_indicator_associations", unsupportedStabilityCheckRequest);
+        Assert.Equal(HttpStatusCode.BadRequest, httpUnsupportedStabilityCheck.StatusCode);
+
+        var stdioUnsupportedStabilityCheck = await _stdioMcpClient.CallToolAsync("analyze_indicator_associations", unsupportedStabilityCheckRequest);
+        var httpMcpUnsupportedStabilityCheck = await _httpMcpClient.CallToolAsync("analyze_indicator_associations", unsupportedStabilityCheckRequest);
+
+        Assert.True(stdioUnsupportedStabilityCheck.IsError);
+        Assert.True(httpMcpUnsupportedStabilityCheck.IsError);
+
+        var httpUnsupportedStabilityCheckPayload = await ReadHttpJsonAsync(httpUnsupportedStabilityCheck);
+        Assert.True(JsonElement.DeepEquals(httpUnsupportedStabilityCheckPayload, ReadMcpStructuredJson(stdioUnsupportedStabilityCheck)));
+        Assert.True(JsonElement.DeepEquals(httpUnsupportedStabilityCheckPayload, ReadMcpStructuredJson(httpMcpUnsupportedStabilityCheck)));
+        Assert.Equal(
+            "UNSUPPORTED_STABILITY_CHECK",
+            httpUnsupportedStabilityCheckPayload.GetProperty("error").GetProperty("code").GetString());
+
         var invalidSummarizeRequest = new Dictionary<string, object?>
         {
             ["window_size"] = 5,

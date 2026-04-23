@@ -545,8 +545,8 @@ public sealed class V0Tools
         if (request.StabilityCheck is not null)
         {
             return ToContractError(
-                "INVALID_REQUEST",
-                "stability_check is not supported in this recorte.",
+                "UNSUPPORTED_STABILITY_CHECK",
+                "stability_check subwindow computation is not supported in this build.",
                 new Dictionary<string, object?>
                 {
                     ["field"] = "stability_check"

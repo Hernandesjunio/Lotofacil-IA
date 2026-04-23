@@ -76,4 +76,29 @@ public sealed class Phase19AnalyzeIndicatorAssociationsContractTests
         var error = Assert.IsType<ContractErrorEnvelope>(response).Error;
         Assert.Equal("UNSUPPORTED_AGGREGATION", error.Code);
     }
+
+    [Fact]
+    public void AnalyzeIndicatorAssociations_WithStabilityCheckInUnsupportedBuild_ReturnsUnsupportedStabilityCheck()
+    {
+        var sut = new V0Tools();
+        var request = new AnalyzeIndicatorAssociationsRequest(
+            WindowSize: 5,
+            EndContestId: 1005,
+            Items:
+            [
+                new AssociationItemRequest("repeticao_concurso_anterior", null),
+                new AssociationItemRequest("pares_no_concurso", null)
+            ],
+            Method: "spearman",
+            TopK: 3,
+            StabilityCheck: new
+            {
+                method = "rolling_window",
+                subwindow_size = 3
+            });
+
+        var response = sut.AnalyzeIndicatorAssociations(request);
+        var error = Assert.IsType<ContractErrorEnvelope>(response).Error;
+        Assert.Equal("UNSUPPORTED_STABILITY_CHECK", error.Code);
+    }
 }
