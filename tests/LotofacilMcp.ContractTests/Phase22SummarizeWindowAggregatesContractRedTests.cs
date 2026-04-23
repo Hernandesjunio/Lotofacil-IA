@@ -237,6 +237,23 @@ public sealed class Phase22SummarizeWindowAggregatesContractRedTests
         }
     }
 
+    [Fact]
+    public void SummarizeWindowAggregates_CanonicalFixture_MatchesGoldenEvidence()
+    {
+        var response = InvokeSummarizeWindowAggregates(BuildCanonicalRequestForFixture(), GetCanonicalFixturePath());
+        using var json = JsonSerializer.SerializeToDocument(response);
+        var root = json.RootElement;
+        var golden = LoadCanonicalAggregatesGolden();
+
+        Assert.Equal(golden.WindowSize, root.GetProperty("window").GetProperty("size").GetInt32());
+        Assert.Equal(golden.WindowStartContestId, root.GetProperty("window").GetProperty("start_contest_id").GetInt32());
+        Assert.Equal(golden.WindowEndContestId, root.GetProperty("window").GetProperty("end_contest_id").GetInt32());
+
+        var aggregates = root.GetProperty("aggregates");
+        Assert.Equal(golden.Aggregates.GetArrayLength(), aggregates.GetArrayLength());
+        Assert.True(JsonElement.DeepEquals(golden.Aggregates, aggregates));
+    }
+
     private static Dictionary<string, object?> BuildCanonicalRequestForFixture()
     {
         return new Dictionary<string, object?>
@@ -311,4 +328,34 @@ public sealed class Phase22SummarizeWindowAggregatesContractRedTests
             "fixtures",
             "aggregates_canonical_small_window.json");
     }
+
+    private static CanonicalAggregatesGolden LoadCanonicalAggregatesGolden()
+    {
+        var repositoryRoot = Path.GetFullPath(
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var goldenPath = Path.Combine(
+            repositoryRoot,
+            "tests",
+            "fixtures",
+            "golden",
+            "phase22",
+            "summarize-window-aggregates.canonical-small-window.golden.json");
+
+        using var json = JsonDocument.Parse(File.ReadAllText(goldenPath));
+        var root = json.RootElement;
+        var window = root.GetProperty("window");
+        var aggregates = root.GetProperty("aggregates").Clone();
+
+        return new CanonicalAggregatesGolden(
+            WindowSize: window.GetProperty("size").GetInt32(),
+            WindowStartContestId: window.GetProperty("start_contest_id").GetInt32(),
+            WindowEndContestId: window.GetProperty("end_contest_id").GetInt32(),
+            Aggregates: aggregates);
+    }
+
+    private sealed record CanonicalAggregatesGolden(
+        int WindowSize,
+        int WindowStartContestId,
+        int WindowEndContestId,
+        JsonElement Aggregates);
 }

@@ -146,6 +146,14 @@ Bateria normativa a acrescentar **quando a implementação** acompanhar o [ADR 0
 
 A ordem de gravação dos goldens e a fixture escolhida seguem a mesma regra de *Atualização de golden* (secção *Fixtures douradas* acima).
 
+### Evidência específica — Fase B.1 (`summarize_window_aggregates`)
+
+Este recorte fecha apenas a validação final de paridade e evidências da tool de agregados, sem ampliar `aggregate_type` nem semântica:
+
+- Paridade MCP/HTTP em sucesso e erro para `summarize_window_aggregates` em `tests/LotofacilMcp.ContractTests/McpTransportParityIntegrationTests.cs`.
+- Determinismo (`deterministic_hash`) para request repetido da mesma tool na suíte de paridade e nos testes de contrato da fase.
+- Golden auditável em `tests/fixtures/golden/phase22/summarize-window-aggregates.canonical-small-window.golden.json`, ancorado na fixture `tests/fixtures/aggregates_canonical_small_window.json`.
+
 ### Checklist ADR 0005 para este recorte
 
 | Critério do ADR 0005 | Evidência no recorte | Situação |

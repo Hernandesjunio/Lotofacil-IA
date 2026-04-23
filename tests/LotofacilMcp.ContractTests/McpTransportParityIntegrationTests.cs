@@ -277,6 +277,68 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         Assert.True(JsonElement.DeepEquals(httpSummarizePayload, ReadMcpStructuredJson(stdioSummarizeResponse)));
         Assert.True(JsonElement.DeepEquals(httpSummarizePayload, ReadMcpStructuredJson(httpMcpSummarizeResponse)));
 
+        var summarizeAggregatesRequest = new Dictionary<string, object?>
+        {
+            ["window_size"] = 5,
+            ["end_contest_id"] = 1005,
+            ["aggregates"] = new object[]
+            {
+                new Dictionary<string, object?>
+                {
+                    ["id"] = "pairs_histogram",
+                    ["source_metric_name"] = "pares_no_concurso",
+                    ["aggregate_type"] = "histogram_scalar_series",
+                    ["params"] = new Dictionary<string, object?>
+                    {
+                        ["bucket_spec"] = new Dictionary<string, object?>
+                        {
+                            ["bucket_values"] = new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 }
+                        },
+                        ["include_ratios"] = true
+                    }
+                },
+                new Dictionary<string, object?>
+                {
+                    ["id"] = "rows_topk",
+                    ["source_metric_name"] = "distribuicao_linha_por_concurso",
+                    ["aggregate_type"] = "topk_patterns_count_vector5_series",
+                    ["params"] = new Dictionary<string, object?>
+                    {
+                        ["top_k"] = 3,
+                        ["include_ratios"] = true
+                    }
+                },
+                new Dictionary<string, object?>
+                {
+                    ["id"] = "rows_matrix",
+                    ["source_metric_name"] = "distribuicao_linha_por_concurso",
+                    ["aggregate_type"] = "histogram_count_vector5_series_per_position_matrix",
+                    ["params"] = new Dictionary<string, object?>
+                    {
+                        ["value_min"] = 0,
+                        ["value_max"] = 5
+                    }
+                }
+            }
+        };
+
+        var httpSummarizeAggregatesResponse = await _httpClient.PostAsJsonAsync("/tools/summarize_window_aggregates", summarizeAggregatesRequest);
+        Assert.Equal(HttpStatusCode.OK, httpSummarizeAggregatesResponse.StatusCode);
+
+        var stdioSummarizeAggregatesResponse = await _stdioMcpClient.CallToolAsync("summarize_window_aggregates", summarizeAggregatesRequest);
+        var httpMcpSummarizeAggregatesResponse = await _httpMcpClient.CallToolAsync("summarize_window_aggregates", summarizeAggregatesRequest);
+
+        var httpSummarizeAggregatesPayload = await ReadHttpJsonAsync(httpSummarizeAggregatesResponse);
+        Assert.True(JsonElement.DeepEquals(httpSummarizeAggregatesPayload, ReadMcpStructuredJson(stdioSummarizeAggregatesResponse)));
+        Assert.True(JsonElement.DeepEquals(httpSummarizeAggregatesPayload, ReadMcpStructuredJson(httpMcpSummarizeAggregatesResponse)));
+
+        var repeatedHttpSummarizeAggregatesResponse = await _httpClient.PostAsJsonAsync("/tools/summarize_window_aggregates", summarizeAggregatesRequest);
+        Assert.Equal(HttpStatusCode.OK, repeatedHttpSummarizeAggregatesResponse.StatusCode);
+        var repeatedHttpSummarizeAggregatesPayload = await ReadHttpJsonAsync(repeatedHttpSummarizeAggregatesResponse);
+        Assert.Equal(
+            httpSummarizeAggregatesPayload.GetProperty("deterministic_hash").GetString(),
+            repeatedHttpSummarizeAggregatesPayload.GetProperty("deterministic_hash").GetString());
+
         var generateRequest = new Dictionary<string, object?>
         {
             ["window_size"] = 5,
@@ -531,6 +593,41 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         Assert.True(JsonElement.DeepEquals(httpSummarizeErrPayload, ReadMcpStructuredJson(stdioSummarizeErr)));
         Assert.True(JsonElement.DeepEquals(httpSummarizeErrPayload, ReadMcpStructuredJson(httpMcpSummarizeErr)));
 
+        var invalidSummarizeAggregatesRequest = new Dictionary<string, object?>
+        {
+            ["window_size"] = 5,
+            ["end_contest_id"] = 1005,
+            ["aggregates"] = new object[]
+            {
+                new Dictionary<string, object?>
+                {
+                    ["id"] = "invalid_aggregate_type",
+                    ["source_metric_name"] = "pares_no_concurso",
+                    ["aggregate_type"] = "not_supported",
+                    ["params"] = new Dictionary<string, object?>
+                    {
+                        ["bucket_spec"] = new Dictionary<string, object?>
+                        {
+                            ["bucket_values"] = new[] { 0, 1, 2, 3, 4, 5 }
+                        }
+                    }
+                }
+            }
+        };
+
+        var httpSummarizeAggregatesErr = await _httpClient.PostAsJsonAsync("/tools/summarize_window_aggregates", invalidSummarizeAggregatesRequest);
+        Assert.Equal(HttpStatusCode.BadRequest, httpSummarizeAggregatesErr.StatusCode);
+
+        var stdioSummarizeAggregatesErr = await _stdioMcpClient.CallToolAsync("summarize_window_aggregates", invalidSummarizeAggregatesRequest);
+        var httpMcpSummarizeAggregatesErr = await _httpMcpClient.CallToolAsync("summarize_window_aggregates", invalidSummarizeAggregatesRequest);
+
+        Assert.True(stdioSummarizeAggregatesErr.IsError);
+        Assert.True(httpMcpSummarizeAggregatesErr.IsError);
+
+        var httpSummarizeAggregatesErrPayload = await ReadHttpJsonAsync(httpSummarizeAggregatesErr);
+        Assert.True(JsonElement.DeepEquals(httpSummarizeAggregatesErrPayload, ReadMcpStructuredJson(stdioSummarizeAggregatesErr)));
+        Assert.True(JsonElement.DeepEquals(httpSummarizeAggregatesErrPayload, ReadMcpStructuredJson(httpMcpSummarizeAggregatesErr)));
+
         var invalidGenerateRequest = new Dictionary<string, object?>
         {
             ["window_size"] = 5,
@@ -590,6 +687,7 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         Assert.Contains(listedTools, tool => tool.Name is "compose_indicator_analysis");
         Assert.Contains(listedTools, tool => tool.Name is "analyze_indicator_associations");
         Assert.Contains(listedTools, tool => tool.Name is "summarize_window_patterns");
+        Assert.Contains(listedTools, tool => tool.Name is "summarize_window_aggregates");
         Assert.Contains(listedTools, tool => tool.Name is "generate_candidate_games");
         Assert.Contains(listedTools, tool => tool.Name is "explain_candidate_games");
     }
