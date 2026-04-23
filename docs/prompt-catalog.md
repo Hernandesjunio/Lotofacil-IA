@@ -55,7 +55,7 @@ Para que os `docs/` “validem” em conjunto: cada família de prompt positivo 
 13. "Quais deslocamentos raros para linha 1 e linha 5 apareceram na janela recente?"
     - Tools esperadas: `summarize_window_patterns`
 14. "Quais padrões de coluna cobriram pelo menos 80% dos sorteios?"
-    - Tools esperadas: `summarize_window_patterns`
+    - Tools esperadas: `summarize_window_aggregates` (top-k de padrões), `compute_window_metrics` (fonte)
 
 ## 5. Slots
 
@@ -87,7 +87,7 @@ Para que os `docs/` “validem” em conjunto: cada família de prompt positivo 
 ## 8. Pares, ímpares e vizinhos
 
 24. "Qual é o ponto de equilíbrio descritivo entre pares e ímpares nos últimos 100 concursos?"
-    - Tools esperadas: `summarize_window_patterns`
+    - Tools esperadas: `summarize_window_aggregates` (histograma), `compute_window_metrics` (fonte)
 25. "Mostre a variação histórica da quantidade de vizinhos nos últimos 80 concursos."
     - Tools esperadas: `compute_window_metrics`, `summarize_window_patterns`
 26. "Existe correlação de Spearman entre pares e quantidade de vizinhos nos últimos 100 concursos?"
@@ -96,7 +96,7 @@ Para que os `docs/` “validem” em conjunto: cada família de prompt positivo 
 ## 9. Linha, coluna e entropia
 
 27. "Analise a quantidade de ocorrência por linha e por coluna e me diga quais perfis são mais comuns."
-    - Tools esperadas: `compute_window_metrics`, `summarize_window_patterns`
+    - Tools esperadas: `compute_window_metrics` (fontes), `summarize_window_aggregates` (top-k e/ou matriz por posição×valor)
 28. "Use entropia de linha 50% e HHI 50% para identificar jogos estruturalmente raros na janela recente."
     - Tools esperadas: `summarize_window_patterns`, `compose_indicator_analysis`
 29. "Quais indicadores espaciais parecem mais estáveis: entropia de linha, entropia de coluna, HHI de linha ou HHI de coluna?"

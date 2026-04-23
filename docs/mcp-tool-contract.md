@@ -647,6 +647,76 @@ Resumir padrões dominantes, faixas típicas, cobertura percentual e eventos rar
 
 **Validação:** o output deve declarar explicitamente `Q1`, `median`, `Q3`, `IQR`, cobertura observada e contagens (total e outliers quando aplicável).
 
+### 6.5. `summarize_window_aggregates`
+
+#### Finalidade
+
+Produzir **agregados canônicos** (histogramas, padrões e matrizes) a partir de métricas canônicas na mesma janela, sem retornar payload acoplado a UI.
+
+Esta tool é normatizada em [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md).
+
+#### Input
+
+```json
+{
+  "window_size": 20,
+  "end_contest_id": 3400,
+  "aggregates": [
+    {
+      "id": "pairs_histogram",
+      "source_metric_name": "pares_no_concurso",
+      "aggregate_type": "histogram_scalar_series",
+      "params": {
+        "bucket_spec": { "bucket_values": [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15] },
+        "include_ratios": true
+      }
+    },
+    {
+      "id": "row_pattern_topk",
+      "source_metric_name": "distribuicao_linha_por_concurso",
+      "aggregate_type": "topk_patterns_count_vector5_series",
+      "params": { "top_k": 10, "include_ratios": true }
+    }
+  ]
+}
+```
+
+#### Regras
+
+- `aggregates` é obrigatório e deve ser não vazio.
+- `aggregate_type` é um enum fechado; valores fora da lista → `UNSUPPORTED_AGGREGATE_TYPE`.
+- A tool opera em **batch**: múltiplos agregados no mesmo request para reduzir round-trips.
+- Proibição de defaults semânticos ocultos: bucketização e dimensões de matriz devem ser declaradas no request.
+
+#### Semântica e validação
+
+- **`source_metric_name`:** nome canônico no catálogo. Se o nome não existir → `UNKNOWN_METRIC`.  
+  Se o nome existir no catálogo, mas a build ainda não disponibilizar a métrica necessária para compor o agregado nesta rota, a tool pode responder `UNKNOWN_METRIC` com `details` coerentes com a política do projeto (ver ADR 0006 D1).
+- **Compatibilidade de shape:** o servidor valida se o `aggregate_type` é compatível com o `shape`/`scope` da métrica fonte; incompatibilidade → `UNSUPPORTED_SHAPE` (ou erro equivalente documentado na tabela de erros).
+- **Ordem canônica:** a resposta preserva a ordem de `aggregates` do request; dentro de cada agregado aplica a ordenação canônica do tipo.
+
+##### `aggregate_type = histogram_scalar_series`
+
+- **Fonte:** métrica `scope="series"` e `shape="series"`.
+- **Parâmetros:** `params.bucket_spec` é obrigatório:
+  - `{ "bucket_values": [...] }` (discreto), ou
+  - `{ "min": <number>, "max": <number>, "width": <number> }` (contínuo/discretizado).
+- **Output:** `buckets[]` ordenados por `x` ascendente, cada um com `{ x, count, ratio? }`.
+
+##### `aggregate_type = topk_patterns_count_vector5_series`
+
+- **Fonte:** métrica `shape="series_of_count_vector[5]"`.
+- **Parâmetros:** `params.top_k` obrigatório.
+- **Output:** `items[]` com `{ pattern:[5], count, ratio? }`, ordenados por:
+  1) `count desc`
+  2) `pattern` lexicográfico asc (desempate determinístico)
+
+##### `aggregate_type = histogram_count_vector5_series_per_position_matrix`
+
+- **Fonte:** métrica `shape="series_of_count_vector[5]"`.
+- **Parâmetros:** `params.value_min` e `params.value_max` obrigatórios; definem o eixo de valores e as dimensões.
+- **Output:** `matrix[5][K]` (matriz cheia) com contagens por posição `1..5` × valor `value_min..value_max`, onde `K = value_max - value_min + 1`.
+
 ### 7. `generate_candidate_games`
 
 #### Finalidade

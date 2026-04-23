@@ -115,3 +115,4 @@ Exemplos adicionais de prompts de teste ficam em [prompt-catalog.md](prompt-cata
 - [adrs/0004-estrutura-arquitetural-inicial-mcp-dotnet10.md](adrs/0004-estrutura-arquitetural-inicial-mcp-dotnet10.md) — estrutura arquitetural inicial congelada para V0/V1 em .NET 10
 - [adrs/0005-transporte-mcp-e-superficie-tools-v1.md](adrs/0005-transporte-mcp-e-superficie-tools-v1.md) — transporte MCP, convivência com HTTP, rollout de tools
 - [adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) — inter-tool, disponibilidade de métricas, pipeline, fluidez, testes de GAPS e pares–entropia
+- [adrs/0007-agregados-canonicos-de-janela-v1.md](adrs/0007-agregados-canonicos-de-janela-v1.md) — agregados canônicos (histogramas, padrões e matrizes) via `summarize_window_aggregates`

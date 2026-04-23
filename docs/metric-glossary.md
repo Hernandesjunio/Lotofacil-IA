@@ -348,5 +348,6 @@ Documento pedagógico complementar ao catálogo técnico em [metric-catalog.md](
 
 ## Manutenção
 
+- **Agregados canônicos (histogramas/padrões/matrizes):** não são “métricas novas” do catálogo. São derivações determinísticas sobre métricas canônicas, expostas pela tool `summarize_window_aggregates` conforme [mcp-tool-contract.md](mcp-tool-contract.md) e [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md). Isso evita acoplar o contrato a formatos de gráfico e garante ordenação/desempates canônicos no servidor.
 - Alterações de fórmula, versão ou tipo: editar primeiro [metric-catalog.md](metric-catalog.md), depois alinhar entradas aqui se a interpretação mudar.
 - Métricas novas: adicionar linha nas tabelas do catálogo e seção correspondente neste glossário.

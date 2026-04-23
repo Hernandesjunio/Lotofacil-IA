@@ -11,6 +11,13 @@ Complementa [test-plan.md](test-plan.md) com **ordem de implementação**, **lay
 3. **Fase C — Golden por métrica**: para cada linha das tabelas de métricas em `test-plan.md`, associar fixture e valores esperados congelados.
 4. **Fase D — Integração e E2E**: janela real curta/longa, prompts de `prompt-catalog.md`, determinismo repetido (seção “Cobertura de determinismo” em `test-plan.md`).
 
+**Extensão planejada (após ADR 0007):**
+
+5. **Fase B.1 — Agregados canônicos (tool `summarize_window_aggregates`)**: adicionar fixtures pequenas e goldens específicos para:
+   - histogramas sobre séries escalares (`histogram_scalar_series`) com bucketização explícita;
+   - top-k de padrões sobre séries de vetores `[5]` (`topk_patterns_count_vector5_series`);
+   - matriz cheia por posição×valor (`histogram_count_vector5_series_per_position_matrix`) com limites explícitos.
+
 ## Layout de fixtures (convênio)
 
 Armazenar sob `tests/fixtures/` (ou equivalente na linguagem escolhida):
@@ -47,6 +54,7 @@ Documentação de referência: [mcp-tool-contract.md](mcp-tool-contract.md).
 | `compose_indicator_analysis` | Componentes, pesos e operador explícitos; erros de composição. |
 | `analyze_indicator_associations` | Método permitido; séries compatíveis. |
 | `summarize_window_patterns` | Agregações e features compatíveis. |
+| `summarize_window_aggregates` | Validação de `aggregate_type`, bucket spec/matriz, compatibilidade de `shape` e ordenação canônica. |
 | `generate_candidate_games` | `seed`, estratégia, versão, exclusões reportadas. |
 | `explain_candidate_games` | Breakdown e métricas declaradas. |
 

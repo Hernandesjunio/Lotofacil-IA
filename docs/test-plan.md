@@ -128,6 +128,7 @@ Requisitos e suíte mínima de **cinco** cenários (**L1–L5**): [live-openai-i
 | `compose_indicator_analysis` | `weighted_rank`, `threshold_filter`, `joint_profile`, `stability_rank` | pesos incorretos, target incompatível |
 | `analyze_indicator_associations` | `spearman` e `pearson`; cenário pares×entropia (secção *Cenário canónico*) | séries incompatíveis, método inválido; com `stability_check` e build sem suporte → `UNSUPPORTED_STABILITY_CHECK` |
 | `summarize_window_patterns` | cobertura, moda, IQR, percentis | feature incompatível ou sem agregação |
+| `summarize_window_aggregates` | histogramas canônicos, top-k de padrões e matrizes cheias derivadas de métricas de janela | `aggregates` ausente, `aggregate_type` inválido, bucket spec inválida, fonte incompatível (`UNSUPPORTED_SHAPE`), métrica desconhecida |
 | `generate_candidate_games` | estratégias fixas e `declared_composite_profile` | seed ausente, orçamento excedido, exclusões conflitantes |
 | `explain_candidate_games` | breakdown completo de score e exclusões | jogo fora do domínio ou payload inválido |
 

@@ -2,7 +2,7 @@
 
 **Navegação:** [← Brief (índice)](brief.md) · [spec-driven-execution-guide.md](spec-driven-execution-guide.md)
 
-Este documento transforma as fases do [spec-driven-execution-guide.md](spec-driven-execution-guide.md) (numeradas 0 a 20 no guia) em **pedidos atômicos** prontos para uso com IA, preservando o formato normativo de template. A **contagem de fases no guia não é teto** — secções adicionais (a partir da *Fase 21* abaixo) estendem o roteiro quando surgem entregas normativas (ex. [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md)) sem reabrir a numeração fechada do guia; novas fases seguem o **mesmo padrão** (bloco `Implemente apenas…`, referências, arquivos, regras, critério de pronto).
+Este documento transforma as fases do [spec-driven-execution-guide.md](spec-driven-execution-guide.md) (numeradas 0 a 20 no guia) em **pedidos atômicos** prontos para uso com IA, preservando o formato normativo de template. A **contagem de fases no guia não é teto** — secções adicionais (a partir da *Fase 21* abaixo) estendem o roteiro quando surgem entregas normativas (ex.: [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) e [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md)) sem reabrir a numeração fechada do guia; novas fases seguem o **mesmo padrão** (bloco `Implemente apenas…`, referências, arquivos, regras, critério de pronto).
 
 ## Fase 0 - Congelar a base
 
@@ -1038,4 +1038,63 @@ Regras:
 Critério de pronto:
 - L6 conclui sem exceção não tratada, quando a suíte estendida estiver ativa;
 - falha de L6 não quebra a definição de suíte mínima de cinco cenários, até promoção a bloqueador.
+```
+
+## Fase 22 - ADR 0007: agregados canônicos (histogramas, padrões e matrizes) via `summarize_window_aggregates`
+
+*Extensão pós–Fase 20. Norma: [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md). Alinha `summarize_window_aggregates` em [mcp-tool-contract.md](mcp-tool-contract.md), roteamento em [prompt-catalog.md](prompt-catalog.md), e testes em [test-plan.md](test-plan.md) + [contract-test-plan.md](contract-test-plan.md) na mesma entrega lógica quando a implementação acompanhar.*
+
+### Template 22.1 - Contrato fechado da tool `summarize_window_aggregates` (schema + erros + exemplos)
+
+```md
+Implemente apenas a atualização do contrato e dos documentos de teste para introduzir a tool `summarize_window_aggregates` (sem codar a tool ainda).
+
+Referências obrigatórias:
+- docs/adrs/0007-agregados-canonicos-de-janela-v1.md
+- docs/mcp-tool-contract.md
+- docs/test-plan.md
+- docs/contract-test-plan.md
+- docs/prompt-catalog.md
+
+Arquivos esperados:
+- docs/mcp-tool-contract.md (seção da tool, tipos e regras)
+- docs/test-plan.md (linha de cobertura por tool)
+- docs/contract-test-plan.md (matriz mínima + fase B.1 de agregados)
+- docs/prompt-catalog.md (prompts que exigem agregados com tools esperadas)
+
+Regras:
+- não extrapolar além do recorte citado;
+- `aggregate_type` deve ser enum fechado; parâmetros obrigatórios por tipo;
+- proibir defaults semânticos ocultos: bucketização e dimensões de matriz são declaradas no request;
+- declarar ordenação canônica e desempates no contrato;
+- manter linguagem descritiva (sem prometer “chance de sair”).
+
+Critério de pronto:
+- contrato da tool está fechado com regras de validação e ordenação;
+- plano de testes descreve casos positivos/negativos;
+- prompts roteiam para a tool nova onde apropriado.
+```
+
+### Template 22.2 - Testes de contrato (vermelhos) para agregados canônicos
+
+```md
+Implemente apenas os testes de contrato (vermelhos primeiro) para `summarize_window_aggregates`: validação de request, determinismo (`deterministic_hash`) e ordenação canônica.
+
+Referências obrigatórias:
+- docs/mcp-tool-contract.md (seção `summarize_window_aggregates`)
+- docs/contract-test-plan.md (Fase B.1)
+- docs/adrs/0007-agregados-canonicos-de-janela-v1.md
+
+Arquivos esperados:
+- tests/LotofacilMcp.ContractTests/
+- tests/fixtures/ (novas fixtures pequenas se necessário)
+
+Regras:
+- não codar a implementação da tool antes dos testes falharem pelo motivo certo;
+- incluir testes negativos: `aggregates` ausente, `aggregate_type` inválido, bucket spec inválida, bounds inválidos, `UNKNOWN_METRIC`, `UNSUPPORTED_SHAPE`;
+- incluir teste de repetição do mesmo request para afirmar determinismo de payload e hash.
+
+Critério de pronto:
+- testes falham pelo motivo correto antes da implementação;
+- casos de ordenação canônica são explicitamente verificados.
 ```
