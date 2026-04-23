@@ -1,0 +1,74 @@
+name: Live OpenAI integration
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_l6_extended:
+        description: "Run optional L6 scenario (non-blocking)"
+        type: boolean
+        required: false
+        default: false
+      openai_max_rounds:
+        description: "Maximum OpenAI tool-calling rounds per scenario"
+        type: string
+        required: false
+        default: "6"
+
+jobs:
+  live-openai:
+    name: Live OpenAI integration suite
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4o-mini' }}
+      OPENAI_BASE_URL: ${{ vars.OPENAI_BASE_URL }}
+      OPENAI_MAX_ROUNDS: ${{ inputs.openai_max_rounds }}
+      LIVE_OPENAI_MAX_ROUNDS: ${{ inputs.openai_max_rounds }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Verify solution exists
+        id: sln
+        shell: bash
+        run: |
+          if [[ -f "LotofacilMcp.sln" ]]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "LotofacilMcp.sln not found: skipping live suite."
+          fi
+
+      - name: Fail if OPENAI_API_KEY is missing
+        if: ${{ steps.sln.outputs.exists == 'true' && env.OPENAI_API_KEY == '' }}
+        run: |
+          echo "OPENAI_API_KEY secret is required for live OpenAI integration."
+          exit 1
+
+      - name: Restore solution
+        if: ${{ steps.sln.outputs.exists == 'true' }}
+        run: dotnet restore "LotofacilMcp.sln"
+
+      - name: Minimum LiveOpenAI gate (L1-L5)
+        if: ${{ steps.sln.outputs.exists == 'true' }}
+        run: >
+          dotnet test "tests/LotofacilMcp.ContractTests/LotofacilMcp.ContractTests.csproj"
+          --configuration Release
+          --no-restore
+          --filter "Category=LiveOpenAI&Suite=Minimum"
+
+      - name: Extended L6 scenario (non-blocking until promotion)
+        if: ${{ steps.sln.outputs.exists == 'true' && inputs.run_l6_extended }}
+        continue-on-error: true
+        env:
+          LIVE_OPENAI_ENABLE_L6: "true"
+        run: >
+          dotnet test "tests/LotofacilMcp.ContractTests/LotofacilMcp.ContractTests.csproj"
+          --configuration Release
+          --no-restore
+          --filter "Category=LiveOpenAI&Scenario=L6"

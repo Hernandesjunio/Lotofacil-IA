@@ -94,6 +94,35 @@ Para clientes MCP que conectam por URL, execute o servidor web normalmente e apo
 
 Observação: `/mcp` é o endpoint MCP real (protocolo). Já `/tools/*` e `/mcp/tools/*` continuam sendo rotas REST de compatibilidade.
 
+## Integração real com OpenAI (live)
+
+Para a esteira dedicada de integração real com OpenAI (tool calling), use:
+
+- contrato e critérios: [docs/live-openai-integration-pipeline.md](docs/live-openai-integration-pipeline.md)
+- prompts de referência (inclui cenário L6): [docs/prompt-catalog.md](docs/prompt-catalog.md)
+- contrato MCP validado na resposta do servidor: [docs/mcp-tool-contract.md](docs/mcp-tool-contract.md)
+- workflow dedicado: [`.github/workflows/live-openai-integration.yml`](.github/workflows/live-openai-integration.yml)
+- teste de integração live (L6 estendido): [`tests/LotofacilMcp.ContractTests/LiveOpenAiIntegrationPipelineTests.cs`](tests/LotofacilMcp.ContractTests/LiveOpenAiIntegrationPipelineTests.cs)
+
+### Execução local (L6 estendido opcional)
+
+Defina ambiente com custo controlado e rode apenas o cenário L6:
+
+```bash
+export OPENAI_API_KEY="..."
+export OPENAI_MODEL="gpt-4o-mini"
+export OPENAI_MAX_ROUNDS="6"
+export LIVE_OPENAI_ENABLE_L6="true"
+dotnet test "tests/LotofacilMcp.ContractTests/LotofacilMcp.ContractTests.csproj" --configuration Release --filter "Category=LiveOpenAI&Scenario=L6"
+```
+
+### Execução no GitHub Actions
+
+- Abra o workflow [`.github/workflows/live-openai-integration.yml`](.github/workflows/live-openai-integration.yml) na aba Actions.
+- Execute via `workflow_dispatch`.
+- Para incluir o cenário L6, marque `run_l6_extended=true`.
+- O L6 roda como extensão `non-blocking` até promoção a bloqueador; o gate mínimo permanece L1–L5.
+
 ## Estrutura
 
 | Caminho | Descrição |
@@ -107,6 +136,8 @@ Observação: `/mcp` é o endpoint MCP real (protocolo). Já `/tools/*` e `/mcp/
 | `src/LotofacilMcp.Infrastructure/` | Providers, dataset versioning, canonical JSON e observabilidade |
 | `src/LotofacilMcp.Server/` | Servidor HTTP/MCP, tools, DI e toggles operacionais |
 | `tests/fixtures/` | Dados e fixtures de teste (convênio em [contract-test-plan.md](docs/contract-test-plan.md)) |
+| [`.github/workflows/live-openai-integration.yml`](.github/workflows/live-openai-integration.yml) | Workflow dedicado para suíte `LiveOpenAI` com L6 opcional |
+| [`tests/LotofacilMcp.ContractTests/LiveOpenAiIntegrationPipelineTests.cs`](tests/LotofacilMcp.ContractTests/LiveOpenAiIntegrationPipelineTests.cs) | Teste de integração real OpenAI (cenário L6 estendido, não bloqueador) |
 
 ## Documentação
 
