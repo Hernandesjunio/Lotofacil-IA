@@ -122,6 +122,21 @@ public sealed class V0McpTools
         return ToToolResult(payload, payload is ContractErrorEnvelope);
     }
 
+    [McpServerTool(Name = "summarize_window_aggregates"), Description("Produz agregados canonicos de janela (histograma escalar, top-k de padroes e matriz por posicao).")]
+    public CallToolResult SummarizeWindowAggregates(
+        V0Tools tools,
+        [Description("Tamanho da janela.")] int window_size = 0,
+        [Description("Concurso final inclusivo.")] int? end_contest_id = null,
+        [Description("Lista de agregados canonicos com metrica fonte, tipo e params explicitos.")] IReadOnlyList<WindowAggregateRequestDto>? aggregates = null)
+    {
+        var payload = tools.SummarizeWindowAggregates(new SummarizeWindowAggregatesRequest(
+            WindowSize: window_size,
+            EndContestId: end_contest_id,
+            Aggregates: aggregates));
+
+        return ToToolResult(payload, payload is ContractErrorEnvelope);
+    }
+
     [McpServerTool(Name = "generate_candidate_games"), Description("Gera jogos candidatos por estrategia nominal simples com orcamento e determinismo.")]
     public CallToolResult GenerateCandidateGames(
         V0Tools tools,

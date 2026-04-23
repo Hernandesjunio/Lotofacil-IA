@@ -1,5 +1,6 @@
 using LotofacilMcp.Application.Composition;
 using LotofacilMcp.Application.UseCases;
+using System.Text.Json;
 
 namespace LotofacilMcp.Application.Validation;
 
@@ -41,6 +42,13 @@ public sealed class V0CrossFieldValidator
         "exhaustive",
         "sampled",
         "greedy_topk"
+    ];
+
+    private static readonly HashSet<string> SupportedAggregateTypes =
+    [
+        "histogram_scalar_series",
+        "topk_patterns_count_vector5_series",
+        "histogram_count_vector5_series_per_position_matrix"
     ];
 
     public void ValidateGetDrawWindow(GetDrawWindowInput input)
@@ -658,6 +666,214 @@ public sealed class V0CrossFieldValidator
 
                 previous = number;
             }
+        }
+    }
+
+    public void ValidateSummarizeWindowAggregates(SummarizeWindowAggregatesInput input)
+    {
+        if (input.WindowSize <= 0)
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_WINDOW_SIZE",
+                message: "window_size must be greater than zero.",
+                details: new Dictionary<string, object?>
+                {
+                    ["window_size"] = input.WindowSize
+                });
+        }
+
+        if (input.Aggregates is null || input.Aggregates.Count == 0)
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_REQUEST",
+                message: "aggregates is required and must be non-empty.",
+                details: new Dictionary<string, object?>
+                {
+                    ["missing_field"] = "aggregates"
+                });
+        }
+
+        foreach (var aggregate in input.Aggregates)
+        {
+            if (aggregate is null)
+            {
+                throw new ApplicationValidationException(
+                    code: "INVALID_REQUEST",
+                    message: "aggregate entries must be objects.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["field"] = "aggregates[]"
+                    });
+            }
+
+            if (string.IsNullOrWhiteSpace(aggregate.SourceMetricName))
+            {
+                throw new ApplicationValidationException(
+                    code: "INVALID_REQUEST",
+                    message: "source_metric_name is required.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["field"] = "aggregates[].source_metric_name"
+                    });
+            }
+
+            if (string.IsNullOrWhiteSpace(aggregate.AggregateType))
+            {
+                throw new ApplicationValidationException(
+                    code: "INVALID_REQUEST",
+                    message: "aggregate_type is required.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["field"] = "aggregates[].aggregate_type"
+                    });
+            }
+
+            if (!SupportedAggregateTypes.Contains(aggregate.AggregateType))
+            {
+                throw new ApplicationValidationException(
+                    code: "UNSUPPORTED_AGGREGATE_TYPE",
+                    message: "aggregate_type is not supported.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["aggregate_type"] = aggregate.AggregateType
+                    });
+            }
+
+            if (aggregate.Params.ValueKind != JsonValueKind.Object)
+            {
+                throw new ApplicationValidationException(
+                    code: "INVALID_REQUEST",
+                    message: "params must be an object.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["field"] = "aggregates[].params"
+                    });
+            }
+
+            switch (aggregate.AggregateType)
+            {
+                case "histogram_scalar_series":
+                    ValidateHistogramScalarSeriesParams(aggregate.Params);
+                    break;
+                case "topk_patterns_count_vector5_series":
+                    ValidateTopkPatternsParams(aggregate.Params);
+                    break;
+                case "histogram_count_vector5_series_per_position_matrix":
+                    ValidateMatrixParams(aggregate.Params);
+                    break;
+            }
+        }
+    }
+
+    private static void ValidateHistogramScalarSeriesParams(JsonElement parameters)
+    {
+        if (!parameters.TryGetProperty("bucket_spec", out var bucketSpec) || bucketSpec.ValueKind != JsonValueKind.Object)
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_REQUEST",
+                message: "bucket_spec is required for histogram_scalar_series.",
+                details: new Dictionary<string, object?>
+                {
+                    ["field"] = "aggregates[].params.bucket_spec"
+                });
+        }
+
+        var hasBucketValues = bucketSpec.TryGetProperty("bucket_values", out var bucketValues);
+        var hasMin = bucketSpec.TryGetProperty("min", out _);
+        var hasMax = bucketSpec.TryGetProperty("max", out _);
+        var hasWidth = bucketSpec.TryGetProperty("width", out _);
+
+        var usesDiscrete = hasBucketValues;
+        var usesContinuous = hasMin || hasMax || hasWidth;
+        if (usesDiscrete == usesContinuous)
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_REQUEST",
+                message: "bucket_spec must use exactly one mode (bucket_values or min/max/width).",
+                details: new Dictionary<string, object?>
+                {
+                    ["field"] = "aggregates[].params.bucket_spec"
+                });
+        }
+
+        if (usesDiscrete && (bucketValues.ValueKind != JsonValueKind.Array || bucketValues.GetArrayLength() == 0))
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_REQUEST",
+                message: "bucket_values must be a non-empty array.",
+                details: new Dictionary<string, object?>
+                {
+                    ["field"] = "aggregates[].params.bucket_spec.bucket_values"
+                });
+        }
+
+        if (usesContinuous && (!hasMin || !hasMax || !hasWidth))
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_REQUEST",
+                message: "continuous bucket_spec requires min, max and width.",
+                details: new Dictionary<string, object?>
+                {
+                    ["field"] = "aggregates[].params.bucket_spec"
+                });
+        }
+    }
+
+    private static void ValidateTopkPatternsParams(JsonElement parameters)
+    {
+        if (!parameters.TryGetProperty("top_k", out var topKElement) ||
+            topKElement.ValueKind != JsonValueKind.Number ||
+            !topKElement.TryGetInt32(out var topK) ||
+            topK < 1)
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_REQUEST",
+                message: "top_k must be an integer greater than zero.",
+                details: new Dictionary<string, object?>
+                {
+                    ["field"] = "aggregates[].params.top_k"
+                });
+        }
+    }
+
+    private static void ValidateMatrixParams(JsonElement parameters)
+    {
+        if (!parameters.TryGetProperty("value_min", out var valueMinElement) ||
+            valueMinElement.ValueKind != JsonValueKind.Number ||
+            !valueMinElement.TryGetInt32(out var valueMin))
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_REQUEST",
+                message: "value_min must be an integer.",
+                details: new Dictionary<string, object?>
+                {
+                    ["field"] = "aggregates[].params.value_min"
+                });
+        }
+
+        if (!parameters.TryGetProperty("value_max", out var valueMaxElement) ||
+            valueMaxElement.ValueKind != JsonValueKind.Number ||
+            !valueMaxElement.TryGetInt32(out var valueMax))
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_REQUEST",
+                message: "value_max must be an integer.",
+                details: new Dictionary<string, object?>
+                {
+                    ["field"] = "aggregates[].params.value_max"
+                });
+        }
+
+        if (valueMin > valueMax)
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_REQUEST",
+                message: "value_min must be less than or equal to value_max.",
+                details: new Dictionary<string, object?>
+                {
+                    ["value_min"] = valueMin,
+                    ["value_max"] = valueMax
+                });
         }
     }
 }

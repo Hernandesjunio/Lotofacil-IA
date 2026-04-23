@@ -10,6 +10,7 @@ public static class V0ToolEndpoints
         MapToolRoute(endpoints, "/tools/compose_indicator_analysis", HandleComposeIndicatorAnalysisAsync);
         MapToolRoute(endpoints, "/tools/analyze_indicator_associations", HandleAnalyzeIndicatorAssociationsAsync);
         MapToolRoute(endpoints, "/tools/summarize_window_patterns", HandleSummarizeWindowPatternsAsync);
+        MapToolRoute(endpoints, "/tools/summarize_window_aggregates", HandleSummarizeWindowAggregatesAsync);
         MapToolRoute(endpoints, "/tools/generate_candidate_games", HandleGenerateCandidateGamesAsync);
         MapToolRoute(endpoints, "/tools/explain_candidate_games", HandleExplainCandidateGamesAsync);
 
@@ -20,6 +21,7 @@ public static class V0ToolEndpoints
         MapToolRoute(endpoints, "/mcp/tools/compose_indicator_analysis", HandleComposeIndicatorAnalysisAsync);
         MapToolRoute(endpoints, "/mcp/tools/analyze_indicator_associations", HandleAnalyzeIndicatorAssociationsAsync);
         MapToolRoute(endpoints, "/mcp/tools/summarize_window_patterns", HandleSummarizeWindowPatternsAsync);
+        MapToolRoute(endpoints, "/mcp/tools/summarize_window_aggregates", HandleSummarizeWindowAggregatesAsync);
         MapToolRoute(endpoints, "/mcp/tools/generate_candidate_games", HandleGenerateCandidateGamesAsync);
         MapToolRoute(endpoints, "/mcp/tools/explain_candidate_games", HandleExplainCandidateGamesAsync);
 
@@ -113,6 +115,20 @@ public static class V0ToolEndpoints
         }
 
         var response = tools.SummarizeWindowPatterns(toolRequest!);
+        return response is ContractErrorEnvelope errorEnvelope
+            ? Results.BadRequest(errorEnvelope)
+            : Results.Ok(response);
+    }
+
+    private static async Task<IResult> HandleSummarizeWindowAggregatesAsync(HttpRequest request, V0Tools tools)
+    {
+        var (toolRequest, bindingError) = await ToolRequestBinding.BindAsync<SummarizeWindowAggregatesRequest>(request);
+        if (bindingError is not null)
+        {
+            return Results.BadRequest(bindingError);
+        }
+
+        var response = tools.SummarizeWindowAggregates(toolRequest!);
         return response is ContractErrorEnvelope errorEnvelope
             ? Results.BadRequest(errorEnvelope)
             : Results.Ok(response);

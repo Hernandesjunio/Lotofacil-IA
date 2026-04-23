@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using System.Text.Json;
 using LotofacilMcp.Application.Mapping;
 using LotofacilMcp.Application.UseCases;
 using LotofacilMcp.Application.Validation;
@@ -195,6 +196,45 @@ public sealed record SummarizeWindowPatternsResponse(
     [property: JsonPropertyName("coverage_threshold")] double CoverageThreshold,
     [property: JsonPropertyName("summaries")] IReadOnlyList<WindowPatternSummaryEnvelope> Summaries);
 
+public sealed record WindowAggregateRequestDto(
+    [property: JsonPropertyName("id")] string? Id,
+    [property: JsonPropertyName("source_metric_name")] string? SourceMetricName,
+    [property: JsonPropertyName("aggregate_type")] string? AggregateType,
+    [property: JsonPropertyName("params")] JsonElement Params);
+
+public sealed record SummarizeWindowAggregatesRequest(
+    [property: JsonPropertyName("window_size")] int WindowSize,
+    [property: JsonPropertyName("end_contest_id")] int? EndContestId,
+    [property: JsonPropertyName("aggregates")] IReadOnlyList<WindowAggregateRequestDto>? Aggregates);
+
+public sealed record HistogramBucketEnvelope(
+    [property: JsonPropertyName("x")] double X,
+    [property: JsonPropertyName("count")] int Count,
+    [property: JsonPropertyName("ratio"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] double? Ratio);
+
+public sealed record PatternCountItemEnvelope(
+    [property: JsonPropertyName("pattern")] IReadOnlyList<int> Pattern,
+    [property: JsonPropertyName("count")] int Count,
+    [property: JsonPropertyName("ratio"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] double? Ratio);
+
+public sealed record WindowAggregateEnvelope(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("source_metric_name")] string SourceMetricName,
+    [property: JsonPropertyName("aggregate_type")] string AggregateType,
+    [property: JsonPropertyName("buckets"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        IReadOnlyList<HistogramBucketEnvelope>? Buckets,
+    [property: JsonPropertyName("items"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        IReadOnlyList<PatternCountItemEnvelope>? Items,
+    [property: JsonPropertyName("matrix"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        IReadOnlyList<IReadOnlyList<int>>? Matrix);
+
+public sealed record SummarizeWindowAggregatesResponse(
+    [property: JsonPropertyName("dataset_version")] string DatasetVersion,
+    [property: JsonPropertyName("tool_version")] string ToolVersion,
+    [property: JsonPropertyName("deterministic_hash")] string DeterministicHash,
+    [property: JsonPropertyName("window")] WindowEnvelope Window,
+    [property: JsonPropertyName("aggregates")] IReadOnlyList<WindowAggregateEnvelope> Aggregates);
+
 public sealed record GenerateCandidatePlanItemRequest(
     [property: JsonPropertyName("strategy_name")] string StrategyName,
     [property: JsonPropertyName("count")] int Count,
@@ -271,6 +311,7 @@ public sealed class V0Tools
     private readonly ComposeIndicatorAnalysisUseCase _composeIndicatorAnalysisUseCase;
     private readonly AnalyzeIndicatorAssociationsUseCase _analyzeIndicatorAssociationsUseCase;
     private readonly SummarizeWindowPatternsUseCase _summarizeWindowPatternsUseCase;
+    private readonly SummarizeWindowAggregatesUseCase _summarizeWindowAggregatesUseCase;
     private readonly GenerateCandidateGamesUseCase _generateCandidateGamesUseCase;
     private readonly ExplainCandidateGamesUseCase _explainCandidateGamesUseCase;
     private readonly DeterministicHashService _deterministicHashService;
@@ -340,6 +381,14 @@ public sealed class V0Tools
             new IndicatorAssociationAnalyzer());
 
         _summarizeWindowPatternsUseCase = new SummarizeWindowPatternsUseCase(
+            fixtureProvider,
+            datasetVersionService,
+            new WindowResolver(),
+            windowMetricDispatcher,
+            validator,
+            mapper);
+
+        _summarizeWindowAggregatesUseCase = new SummarizeWindowAggregatesUseCase(
             fixtureProvider,
             datasetVersionService,
             new WindowResolver(),
@@ -646,6 +695,63 @@ public sealed class V0Tools
                         summary.OutlierUpperFence,
                         summary.CoverageThresholdMet,
                         summary.Explanation))
+                    .ToArray());
+        }
+        catch (ApplicationValidationException ex)
+        {
+            return ToContractError(ex.Code, ex.Message, ex.Details);
+        }
+    }
+
+    public object SummarizeWindowAggregates(SummarizeWindowAggregatesRequest request)
+    {
+        try
+        {
+            var result = _summarizeWindowAggregatesUseCase.Execute(new SummarizeWindowAggregatesInput(
+                WindowSize: request.WindowSize,
+                EndContestId: request.EndContestId,
+                Aggregates: request.Aggregates?
+                    .Select(aggregate => new WindowAggregateRequestInput(
+                        Id: aggregate.Id ?? string.Empty,
+                        SourceMetricName: aggregate.SourceMetricName ?? string.Empty,
+                        AggregateType: aggregate.AggregateType ?? string.Empty,
+                        Params: aggregate.Params.ValueKind is JsonValueKind.Undefined
+                            ? JsonSerializer.SerializeToElement(new Dictionary<string, object?>())
+                            : aggregate.Params.Clone()))
+                    .ToArray(),
+                FixturePath: _fixturePath));
+
+            var deterministicHash = _deterministicHashService.Compute(
+                result.DeterministicHashInput,
+                result.DatasetVersion,
+                result.ToolVersion);
+
+            return new SummarizeWindowAggregatesResponse(
+                DatasetVersion: result.DatasetVersion,
+                ToolVersion: result.ToolVersion,
+                DeterministicHash: deterministicHash,
+                Window: new WindowEnvelope(
+                    result.Window.Size,
+                    result.Window.StartContestId,
+                    result.Window.EndContestId),
+                Aggregates: result.Aggregates
+                    .Select(aggregate => new WindowAggregateEnvelope(
+                        Id: aggregate.Id,
+                        SourceMetricName: aggregate.SourceMetricName,
+                        AggregateType: aggregate.AggregateType,
+                        Buckets: aggregate.Buckets?
+                            .Select(bucket => new HistogramBucketEnvelope(
+                                bucket.X,
+                                bucket.Count,
+                                bucket.Ratio))
+                            .ToArray(),
+                        Items: aggregate.Items?
+                            .Select(item => new PatternCountItemEnvelope(
+                                item.Pattern.ToArray(),
+                                item.Count,
+                                item.Ratio))
+                            .ToArray(),
+                        Matrix: aggregate.Matrix))
                     .ToArray());
         }
         catch (ApplicationValidationException ex)
