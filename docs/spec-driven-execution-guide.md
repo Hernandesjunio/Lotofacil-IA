@@ -531,6 +531,39 @@ Critério mínimo de aceite:
   - pelo menos 1 teste positivo determinístico com fixture;
   - exposição em HTTP + MCP no mesmo recorte (salvo exceção documentada).
 
+### Fase 22: Implementar `summarize_window_aggregates` (ADR 0007) em sequência spec-first
+
+Objetivo: materializar agregados canônicos de janela (histogramas, top-k de padrões e matriz por posição×valor) com enum fechado, parâmetros explícitos por tipo, ordenação/desempates canônicos e determinismo auditável.
+
+Sequência obrigatória (não pular etapas):
+
+1. **22.1 — Fechamento de contrato/documentação antes de código**
+   - Atualizar [mcp-tool-contract.md](mcp-tool-contract.md), [test-plan.md](test-plan.md), [contract-test-plan.md](contract-test-plan.md) e [prompt-catalog.md](prompt-catalog.md) conforme [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md).
+   - Fechar `aggregate_type` como enum e declarar validações/ordenação.
+2. **22.2 — Testes de contrato vermelhos (request, erros, determinismo, ordenação)**
+   - Escrever testes antes da implementação da tool.
+   - Cobrir negativos mínimos: `aggregates` ausente, `aggregate_type` inválido, bucket spec inválida, bounds inválidos, `UNKNOWN_METRIC`, `UNSUPPORTED_SHAPE`.
+3. **22.3 — Implementação mínima da tool e exposição HTTP + MCP**
+   - Implementar `Application`/`Server` para os três `aggregate_type` do recorte inicial, sem defaults semânticos ocultos.
+   - Expor no mesmo recorte em HTTP espelhado e MCP.
+4. **22.4 — Paridade + evidências (incluindo goldens quando estável)**
+   - Validar paridade semântica MCP ↔ HTTP para sucesso e erro.
+   - Congelar fixtures/goldens de agregados quando payload estiver estável e auditável.
+
+Referências obrigatórias:
+
+- [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md)
+- [mcp-tool-contract.md](mcp-tool-contract.md)
+- [contract-test-plan.md](contract-test-plan.md)
+- [test-plan.md](test-plan.md)
+- [prompt-catalog.md](prompt-catalog.md)
+
+Critério mínimo de aceite:
+
+- `summarize_window_aggregates` possui contrato fechado e testes de contrato cobrindo validação, determinismo e ordenação canônica;
+- implementação passa nos testes da fase 22 sem defaults ocultos;
+- paridade MCP/HTTP e evidências de fixture/golden estão registradas.
+
 Nota operacional: template para pedidos atômicos
 
 - Catálogo completo de **pedidos atômicos por fase** (0–20 do guia e **extensões** posteriores, ex.: Fase 21 alinhada ao [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) e Fase 22 alinhada ao [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md)): [fases-execucao-templates.md](fases-execucao-templates.md). O nome do ficheiro **não** fixa a quantidade de fases; novas entregas normativas podem acrescentar secções no mesmo padrão.

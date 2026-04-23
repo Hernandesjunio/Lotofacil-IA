@@ -1098,3 +1098,60 @@ Critério de pronto:
 - testes falham pelo motivo correto antes da implementação;
 - casos de ordenação canônica são explicitamente verificados.
 ```
+
+### Template 22.3 - Implementação mínima da tool `summarize_window_aggregates` (após testes vermelhos)
+
+```md
+Implemente apenas a primeira versão funcional de `summarize_window_aggregates`, fazendo os testes de contrato da fase 22.2 passarem sem afrouxar regras de validação.
+
+Referências obrigatórias:
+- docs/adrs/0007-agregados-canonicos-de-janela-v1.md
+- docs/mcp-tool-contract.md (seção `summarize_window_aggregates`)
+- docs/contract-test-plan.md (Fase B.1)
+- docs/test-plan.md (cobertura por tool + agregados canônicos)
+
+Arquivos esperados:
+- src/LotofacilMcp.Application/
+- src/LotofacilMcp.Server/
+- tests/LotofacilMcp.ContractTests/ (ajustes mínimos só se necessário para refletir schema final)
+
+Regras:
+- não extrapolar além do recorte citado;
+- implementar apenas os `aggregate_type` do recorte inicial do ADR 0007;
+- manter enum fechado e parâmetros obrigatórios por tipo;
+- não introduzir defaults semânticos ocultos (bucketização e bounds sempre explícitos no request);
+- preservar ordenação canônica e desempates determinísticos.
+
+Critério de pronto:
+- testes de contrato da 22.2 passam;
+- erros mínimos (`UNSUPPORTED_AGGREGATE_TYPE`, `UNSUPPORTED_SHAPE`, `INVALID_REQUEST`, `UNKNOWN_METRIC`) são emitidos conforme contrato;
+- resposta preserva ordem de `aggregates[]` do request e `deterministic_hash` estável.
+```
+
+### Template 22.4 - Paridade MCP/HTTP e evidências de agregados (fixtures/goldens)
+
+```md
+Implemente apenas a validação final de paridade e evidências da `summarize_window_aggregates`, sem ampliar escopo funcional da tool.
+
+Referências obrigatórias:
+- docs/adrs/0007-agregados-canonicos-de-janela-v1.md
+- docs/mcp-tool-contract.md
+- docs/contract-test-plan.md (Fase B.1)
+- docs/test-plan.md (determinismo + cobertura por tool)
+
+Arquivos esperados:
+- tests/LotofacilMcp.ContractTests/ (paridade MCP/HTTP para sucesso e erro)
+- tests/fixtures/ e/ou tests/fixtures/golden/
+- docs/contract-test-plan.md (se precisar registrar evidência específica)
+
+Regras:
+- não extrapolar além do recorte citado;
+- não adicionar novo `aggregate_type` nesta etapa;
+- provar paridade semântica MCP ↔ HTTP para o mesmo request;
+- congelar golden apenas quando o payload estiver estável e auditável.
+
+Critério de pronto:
+- chamadas MCP e HTTP retornam payload semanticamente equivalente para sucesso e erro;
+- determinismo (`deterministic_hash`) permanece estável para requests repetidos;
+- fixtures/goldens de agregados ficam rastreáveis e coerentes com o contrato.
+```
