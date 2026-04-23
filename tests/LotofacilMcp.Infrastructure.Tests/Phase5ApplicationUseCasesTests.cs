@@ -46,7 +46,7 @@ public sealed class Phase5ApplicationUseCasesTests
         var result = sut.Execute(input);
 
         var metric = Assert.Single(result.Metrics);
-        Assert.Equal("1.0.0", result.ToolVersion);
+        Assert.Equal("1.1.0", result.ToolVersion);
         Assert.StartsWith("cef-", result.DatasetVersion);
         Assert.Equal(3, result.Window.Size);
         Assert.Equal("frequencia_por_dezena", metric.MetricName);
@@ -94,6 +94,26 @@ public sealed class Phase5ApplicationUseCasesTests
 
         Assert.Equal("UNKNOWN_METRIC", error.Code);
         Assert.Equal("metrica_inexistente", error.Details["metric_name"]);
+        Assert.False(error.Details.ContainsKey("allowed_metrics"));
+    }
+
+    [Fact]
+    public void ComputeWindowMetricsUseCase_WithKnownCatalogMetricOutsideRouteAllowlist_ThrowsUnknownMetricWithAllowedList()
+    {
+        var sut = BuildComputeWindowMetricsUseCase();
+        var input = new ComputeWindowMetricsInput(
+            WindowSize: 3,
+            EndContestId: 3,
+            Metrics: [new MetricRequestInput("repeticao_concurso_anterior")],
+            FixturePath: GetFixturePath());
+
+        var error = Assert.Throws<ApplicationValidationException>(() => sut.Execute(input));
+
+        Assert.Equal("UNKNOWN_METRIC", error.Code);
+        Assert.Equal("repeticao_concurso_anterior", error.Details["metric_name"]);
+        var allowedMetrics = Assert.IsType<string[]>(error.Details["allowed_metrics"]);
+        Assert.Contains("frequencia_por_dezena", allowedMetrics);
+        Assert.DoesNotContain("repeticao_concurso_anterior", allowedMetrics);
     }
 
     [Fact]

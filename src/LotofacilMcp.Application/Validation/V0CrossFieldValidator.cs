@@ -5,24 +5,6 @@ namespace LotofacilMcp.Application.Validation;
 
 public sealed class V0CrossFieldValidator
 {
-    private static readonly HashSet<string> SupportedComputeWindowMetrics =
-    [
-        "frequencia_por_dezena",
-        "top10_mais_sorteados",
-        "top10_menos_sorteados",
-        "pares_no_concurso",
-        "quantidade_vizinhos_por_concurso",
-        "sequencia_maxima_vizinhos_por_concurso",
-        "distribuicao_linha_por_concurso",
-        "distribuicao_coluna_por_concurso",
-        "entropia_linha_por_concurso",
-        "entropia_coluna_por_concurso",
-        "hhi_linha_por_concurso",
-        "hhi_coluna_por_concurso",
-        "atraso_por_dezena",
-        "assimetria_blocos"
-    ];
-
     private static readonly HashSet<string> SupportedComposeTransforms =
     [
         "normalize_max",
@@ -112,14 +94,26 @@ public sealed class V0CrossFieldValidator
                     });
             }
 
-            if (!SupportedComputeWindowMetrics.Contains(metric.Name))
+            if (!MetricAvailabilityCatalog.IsKnownMetric(metric.Name))
             {
                 throw new ApplicationValidationException(
                     code: "UNKNOWN_METRIC",
-                    message: "requested metric is not available in V0.",
+                    message: "metric name is not listed in the metric catalog.",
                     details: new Dictionary<string, object?>
                     {
                         ["metric_name"] = metric.Name
+                    });
+            }
+
+            if (!MetricAvailabilityCatalog.IsExposedInComputeWindowMetrics(metric.Name))
+            {
+                throw new ApplicationValidationException(
+                    code: "UNKNOWN_METRIC",
+                    message: "requested metric is known in the catalog but unavailable in this compute_window_metrics build.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["metric_name"] = metric.Name,
+                        ["allowed_metrics"] = MetricAvailabilityCatalog.GetComputeWindowMetricsAllowedMetrics().ToArray()
                     });
             }
         }
