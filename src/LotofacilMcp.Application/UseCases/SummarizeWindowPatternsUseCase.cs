@@ -104,9 +104,9 @@ public sealed class SummarizeWindowPatternsUseCase
                     input.EndContestId,
                     input.Features.ToArray(),
                     input.CoverageThreshold,
-                    "iqr"),
+                    input.RangeMethod),
                 Window: windowView,
-                RangeMethod: "iqr",
+                RangeMethod: input.RangeMethod,
                 CoverageThreshold: input.CoverageThreshold,
                 Summaries: summaries);
         }
@@ -139,7 +139,7 @@ public sealed class SummarizeWindowPatternsUseCase
 
         return new WindowPatternSummaryView(
             MetricName: feature.MetricName,
-            Aggregation: "identity",
+            Aggregation: string.IsNullOrWhiteSpace(feature.Aggregation) ? "identity" : feature.Aggregation,
             Mode: mode,
             Q1: q1,
             Median: median,

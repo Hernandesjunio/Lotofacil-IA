@@ -15,6 +15,23 @@ public sealed class Phase19SummarizeWindowPatternsContractTests
         CoverageThreshold: 0.8,
         RangeMethod: "iqr");
 
+    private static SummarizeWindowPatternsRequest BuildExpandedScalarRequest() => new(
+        WindowSize: 5,
+        EndContestId: 1005,
+        Features:
+        [
+            new WindowPatternFeatureRequest("pares_no_concurso", null),
+            new WindowPatternFeatureRequest("repeticao_concurso_anterior", null),
+            new WindowPatternFeatureRequest("quantidade_vizinhos_por_concurso", null),
+            new WindowPatternFeatureRequest("sequencia_maxima_vizinhos_por_concurso", null),
+            new WindowPatternFeatureRequest("entropia_linha_por_concurso", null),
+            new WindowPatternFeatureRequest("entropia_coluna_por_concurso", null),
+            new WindowPatternFeatureRequest("hhi_linha_por_concurso", null),
+            new WindowPatternFeatureRequest("hhi_coluna_por_concurso", null)
+        ],
+        CoverageThreshold: 0.8,
+        RangeMethod: "iqr");
+
     [Fact]
     public void SummarizeWindowPatterns_IqrSingleFeature_DeterministicGoldenFixture()
     {
@@ -85,5 +102,84 @@ public sealed class Phase19SummarizeWindowPatternsContractTests
         var response = sut.SummarizeWindowPatterns(request);
         var error = Assert.IsType<ContractErrorEnvelope>(response).Error;
         Assert.Equal("UNSUPPORTED_RANGE_METHOD", error.Code);
+    }
+
+    [Fact]
+    public void SummarizeWindowPatterns_MultiplePrioritizedScalarFeatures_ReturnsDeterministicSummaries()
+    {
+        var sut = new V0Tools();
+        var request = BuildExpandedScalarRequest();
+
+        var first = sut.SummarizeWindowPatterns(request);
+        var second = sut.SummarizeWindowPatterns(request);
+
+        var payloadA = Assert.IsType<SummarizeWindowPatternsResponse>(first);
+        var payloadB = Assert.IsType<SummarizeWindowPatternsResponse>(second);
+
+        Assert.Equal(payloadA.DeterministicHash, payloadB.DeterministicHash);
+        Assert.Equal(8, payloadA.Summaries.Count);
+        Assert.All(payloadA.Summaries, summary => Assert.Equal("identity", summary.Aggregation, StringComparer.Ordinal));
+
+        var metricNames = payloadA.Summaries
+            .Select(summary => summary.MetricName)
+            .ToArray();
+
+        Assert.Equal(
+            [
+                "pares_no_concurso",
+                "repeticao_concurso_anterior",
+                "quantidade_vizinhos_por_concurso",
+                "sequencia_maxima_vizinhos_por_concurso",
+                "entropia_linha_por_concurso",
+                "entropia_coluna_por_concurso",
+                "hhi_linha_por_concurso",
+                "hhi_coluna_por_concurso"
+            ],
+            metricNames);
+    }
+
+    [Fact]
+    public void SummarizeWindowPatterns_VectorFeatureWithoutAggregation_ReturnsCanonicalUnsupportedAggregation()
+    {
+        var sut = new V0Tools();
+        var request = new SummarizeWindowPatternsRequest(
+            WindowSize: 5,
+            EndContestId: 1005,
+            Features:
+            [
+                new WindowPatternFeatureRequest("distribuicao_linha_por_concurso", null)
+            ],
+            CoverageThreshold: 0.8,
+            RangeMethod: "iqr");
+
+        var response = sut.SummarizeWindowPatterns(request);
+        var error = Assert.IsType<ContractErrorEnvelope>(response).Error;
+
+        Assert.Equal("UNSUPPORTED_AGGREGATION", error.Code);
+        Assert.Equal("distribuicao_linha_por_concurso", error.Details["metric_name"]);
+        Assert.Equal("features[].aggregation", error.Details["missing_field"]);
+        Assert.Equal("summarize_window_aggregates", error.Details["suggested_tool"]);
+    }
+
+    [Fact]
+    public void SummarizeWindowPatterns_VectorFeatureWithAggregationStillIncompatible_ReturnsGuidedCanonicalError()
+    {
+        var sut = new V0Tools();
+        var request = new SummarizeWindowPatternsRequest(
+            WindowSize: 5,
+            EndContestId: 1005,
+            Features:
+            [
+                new WindowPatternFeatureRequest("distribuicao_linha_por_concurso", "per_component")
+            ],
+            CoverageThreshold: 0.8,
+            RangeMethod: "iqr");
+
+        var response = sut.SummarizeWindowPatterns(request);
+        var error = Assert.IsType<ContractErrorEnvelope>(response).Error;
+
+        Assert.Equal("UNSUPPORTED_PATTERN_FEATURE", error.Code);
+        Assert.Equal("distribuicao_linha_por_concurso", error.Details["metric_name"]);
+        Assert.Equal("summarize_window_aggregates", error.Details["suggested_tool"]);
     }
 }

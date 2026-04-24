@@ -24,7 +24,14 @@ public sealed class V0CrossFieldValidator
 
     private static readonly HashSet<string> SupportedWindowPatternFeatures =
     [
-        "pares_no_concurso"
+        "pares_no_concurso",
+        "repeticao_concurso_anterior",
+        "quantidade_vizinhos_por_concurso",
+        "sequencia_maxima_vizinhos_por_concurso",
+        "entropia_linha_por_concurso",
+        "entropia_coluna_por_concurso",
+        "hhi_linha_por_concurso",
+        "hhi_coluna_por_concurso"
     ];
 
     private static readonly HashSet<string> SupportedRangeMethods =
@@ -548,14 +555,67 @@ public sealed class V0CrossFieldValidator
                     });
             }
 
+            if (!MetricAvailabilityCatalog.IsKnownMetric(feature.MetricName))
+            {
+                throw CreateUnknownMetricForRoute(
+                    feature.MetricName,
+                    "metric name is not listed in the metric catalog.");
+            }
+
+            var metricCapability = MetricAvailabilityCatalog.GetRegistryEntries()
+                .First(capability => string.Equals(capability.MetricName, feature.MetricName, StringComparison.Ordinal));
+
+            if (!string.Equals(metricCapability.Scope, "series", StringComparison.Ordinal))
+            {
+                throw new ApplicationValidationException(
+                    code: "UNSUPPORTED_PATTERN_FEATURE",
+                    message: "feature is incompatible with summarize_window_patterns; use summarize_window_aggregates for non-series summaries.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["metric_name"] = feature.MetricName,
+                        ["scope"] = metricCapability.Scope,
+                        ["shape"] = metricCapability.Shape,
+                        ["suggested_tool"] = "summarize_window_aggregates"
+                    });
+            }
+
+            if (!string.Equals(metricCapability.Shape, "series", StringComparison.Ordinal))
+            {
+                if (string.IsNullOrWhiteSpace(feature.Aggregation))
+                {
+                    throw new ApplicationValidationException(
+                        code: "UNSUPPORTED_AGGREGATION",
+                        message: "non-scalar features require explicit aggregation; use summarize_window_aggregates for canonical vector summaries.",
+                        details: new Dictionary<string, object?>
+                        {
+                            ["metric_name"] = feature.MetricName,
+                            ["shape"] = metricCapability.Shape,
+                            ["missing_field"] = "features[].aggregation",
+                            ["suggested_tool"] = "summarize_window_aggregates"
+                        });
+                }
+
+                throw new ApplicationValidationException(
+                    code: "UNSUPPORTED_PATTERN_FEATURE",
+                    message: "feature is incompatible with summarize_window_patterns; use summarize_window_aggregates for vector-derived summaries.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["metric_name"] = feature.MetricName,
+                        ["shape"] = metricCapability.Shape,
+                        ["aggregation"] = feature.Aggregation,
+                        ["suggested_tool"] = "summarize_window_aggregates"
+                    });
+            }
+
             if (!SupportedWindowPatternFeatures.Contains(feature.MetricName))
             {
                 throw new ApplicationValidationException(
-                    code: "UNKNOWN_METRIC",
-                    message: "requested metric is not available in this summarize_window_patterns recorte.",
+                    code: "UNSUPPORTED_PATTERN_FEATURE",
+                    message: "requested scalar feature is not available in this summarize_window_patterns recorte.",
                     details: new Dictionary<string, object?>
                     {
-                        ["metric_name"] = feature.MetricName
+                        ["metric_name"] = feature.MetricName,
+                        ["supported_features"] = SupportedWindowPatternFeatures.OrderBy(static name => name, StringComparer.Ordinal).ToArray()
                     });
             }
 
@@ -567,6 +627,7 @@ public sealed class V0CrossFieldValidator
                     message: "this recorte only supports identity aggregation for scalar features.",
                     details: new Dictionary<string, object?>
                     {
+                        ["metric_name"] = feature.MetricName,
                         ["aggregation"] = feature.Aggregation
                     });
             }
