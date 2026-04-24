@@ -3,6 +3,7 @@ using System.Text.Json;
 using LotofacilMcp.Application.Mapping;
 using LotofacilMcp.Application.UseCases;
 using LotofacilMcp.Application.Validation;
+using LotofacilMcp.Application.Windows;
 using LotofacilMcp.Domain.Analytics;
 using LotofacilMcp.Domain.Metrics;
 using LotofacilMcp.Domain.Normalization;
@@ -17,14 +18,16 @@ namespace LotofacilMcp.Server.Tools;
 public sealed record MetricRequest([property: JsonPropertyName("name")] string Name);
 
 public sealed record ComputeWindowMetricsRequest(
-    [property: JsonPropertyName("window_size")] int WindowSize,
-    [property: JsonPropertyName("end_contest_id")] int? EndContestId,
-    [property: JsonPropertyName("metrics")] IReadOnlyList<MetricRequest>? Metrics,
+    [property: JsonPropertyName("window_size")] int? WindowSize = null,
+    [property: JsonPropertyName("start_contest_id")] int? StartContestId = null,
+    [property: JsonPropertyName("end_contest_id")] int? EndContestId = null,
+    [property: JsonPropertyName("metrics")] IReadOnlyList<MetricRequest>? Metrics = null,
     [property: JsonPropertyName("allow_pending")] bool AllowPending = false);
 
 public sealed record GetDrawWindowRequest(
-    [property: JsonPropertyName("window_size")] int WindowSize,
-    [property: JsonPropertyName("end_contest_id")] int? EndContestId);
+    [property: JsonPropertyName("window_size")] int? WindowSize = null,
+    [property: JsonPropertyName("start_contest_id")] int? StartContestId = null,
+    [property: JsonPropertyName("end_contest_id")] int? EndContestId = null);
 
 public sealed record StabilityIndicatorRequestDto(
     [property: JsonPropertyName("name")] string Name,
@@ -423,9 +426,14 @@ public sealed class V0Tools
     {
         try
         {
+            var (windowSize, endContestId) = WindowRequestResolver.Resolve(
+                request.WindowSize,
+                request.StartContestId,
+                request.EndContestId);
+
             var result = _computeWindowMetricsUseCase.Execute(new ComputeWindowMetricsInput(
-                WindowSize: request.WindowSize,
-                EndContestId: request.EndContestId,
+                WindowSize: windowSize,
+                EndContestId: endContestId,
                 Metrics: request.Metrics?.Select(metric => new MetricRequestInput(metric.Name)).ToArray(),
                 AllowPending: request.AllowPending,
                 FixturePath: _fixturePath));
@@ -468,9 +476,14 @@ public sealed class V0Tools
     {
         try
         {
+            var (windowSize, endContestId) = WindowRequestResolver.Resolve(
+                request.WindowSize,
+                request.StartContestId,
+                request.EndContestId);
+
             var result = _getDrawWindowUseCase.Execute(new GetDrawWindowInput(
-                WindowSize: request.WindowSize,
-                EndContestId: request.EndContestId,
+                WindowSize: windowSize,
+                EndContestId: endContestId,
                 FixturePath: _fixturePath));
 
             var deterministicHash = _deterministicHashService.Compute(

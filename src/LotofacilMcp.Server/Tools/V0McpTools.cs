@@ -13,11 +13,14 @@ public sealed class V0McpTools
     [McpServerTool(Name = "get_draw_window"), Description("Retorna um recorte canônico de concursos da Lotofácil.")]
     public CallToolResult GetDrawWindow(
         V0Tools tools,
-        [Description("Quantidade de concursos consecutivos na janela.")] int window_size = 0,
+        [Description("Quantidade de concursos consecutivos na janela.")] int? window_size = null,
+        [Description("Concurso inicial inclusivo (alternativa a window_size+end, ADR 0008 D2).")]
+        int? start_contest_id = null,
         [Description("Concurso final inclusivo da janela.")] int? end_contest_id = null)
     {
         var payload = tools.GetDrawWindow(new GetDrawWindowRequest(
             WindowSize: window_size,
+            StartContestId: start_contest_id,
             EndContestId: end_contest_id));
 
         return ToToolResult(payload, payload is ContractErrorEnvelope);
@@ -26,13 +29,16 @@ public sealed class V0McpTools
     [McpServerTool(Name = "compute_window_metrics"), Description("Calcula métricas canônicas para uma janela de concursos.")]
     public CallToolResult ComputeWindowMetrics(
         V0Tools tools,
-        [Description("Quantidade de concursos consecutivos na janela.")] int window_size = 0,
+        [Description("Quantidade de concursos consecutivos na janela.")] int? window_size = null,
+        [Description("Concurso inicial inclusivo (alternativa a window_size+end, ADR 0008 D2).")]
+        int? start_contest_id = null,
         [Description("Concurso final inclusivo da janela.")] int? end_contest_id = null,
         [Description("Lista de métricas canônicas a calcular.")] IReadOnlyList<MetricRequest>? metrics = null,
         [Description("Permite opt-in para métricas pendentes de detalhamento.")] bool allow_pending = false)
     {
         var payload = tools.ComputeWindowMetrics(new ComputeWindowMetricsRequest(
             WindowSize: window_size,
+            StartContestId: start_contest_id,
             EndContestId: end_contest_id,
             Metrics: metrics,
             AllowPending: allow_pending));
