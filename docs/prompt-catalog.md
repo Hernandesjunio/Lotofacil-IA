@@ -11,6 +11,15 @@ Este documento lista prompts de referência para testes funcionais, E2E e valida
 - Respostas devem manter linguagem descritiva, não preditiva.
 - Se um enunciado for intencionalmente **ambíguo** (teste negativo de integração), o comportamento esperado é **esclarecimento** ou recusa conforme [mcp-tool-contract.md](mcp-tool-contract.md) — não chamar tool com parâmetros inventados.
 
+## Prompts de discovery e ajuda
+
+Estes prompts verificam que o consumidor consegue obter “porta de entrada” de uso sem ler todo `docs/`:
+
+1. "Me mostre a ajuda do MCP e liste os templates disponíveis."
+   - Tools esperadas: `help`
+2. "Quais templates prontos existem para eu copiar e colar no chat?"
+   - Tools esperadas: `help` (e/ou `resources/list` + `resources/read` do índice)
+
 ## Validação com o contrato MCP
 
 Para que os `docs/` “validem” em conjunto: cada família de prompt positivo deve ser mapeável às tools sem lacuna de parâmetro obrigatório; cenários em que o modelo não consiga inferir argumentos devem ser cobertos por **perguntas específicas** do agente (e, na implementação opcional, erros estruturados do servidor), conforme a seção *Integração com agentes* em [mcp-tool-contract.md](mcp-tool-contract.md).

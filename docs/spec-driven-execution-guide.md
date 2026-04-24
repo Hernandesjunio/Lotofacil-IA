@@ -39,6 +39,7 @@ Referências normativas:
 - [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md)
 - [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md)
 - [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md)
+- [ADR 0009](adrs/0009-help-e-catalogo-de-templates-resources-v1.md)
 
 ## Regra operacional principal
 
@@ -68,6 +69,30 @@ Passos atômicos:
 Critério mínimo de aceite:
 
 - nenhum ponto estrutural crítico da V0 pode estar pendente ou contraditório.
+
+### Fase 24 — Help + catálogo de templates (resources)
+
+Objetivo: expor uma superfície mínima de **ajuda** e **templates Markdown** para consumo com LLM, sem alterar o contrato de cálculo determinístico.
+
+Passos atômicos (recorte):
+
+- Adicionar o resource de onboarding curto `lotofacil-ia://help/getting-started@1.0.0` com o fluxo recomendado (help → índice → pipeline mínimo) e lembretes normativos (janela explícita, sem predição, rastreabilidade).
+- Adicionar resources `lotofacil-ia://prompts/index@1.0.0` e 10 templates versionados.
+- Adicionar a tool `help` retornando `index_markdown`, `index_resource_uri` e `templates[]` (metadados).
+- Padronizar nos templates a preferência de exibição `display_mode = simple | advanced | both` (default `both`) para suportar usuários leigos e experts.
+- Atualizar `docs/brief.md`, `docs/prompt-catalog.md` e `docs/test-plan.md` com a nova superfície.
+- Adicionar testes de contrato para:
+  - discovery de tool `help`;
+  - `resources/list` contendo `lotofacil-ia://help/getting-started@1.0.0`;
+  - `resources/list` contendo o índice e ao menos um template;
+  - `resources/read` de `lotofacil-ia://help/getting-started@1.0.0` retornando Markdown com MIME correto;
+  - `resources/read` do índice retornando Markdown com MIME correto.
+
+Referências:
+
+- [docs/mcp-tool-contract.md](mcp-tool-contract.md) (primitivas MCP opcionais)
+- [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) (Camadas A/B/C)
+- [ADR 0009](adrs/0009-help-e-catalogo-de-templates-resources-v1.md)
 
 ### Fase 1 — Preparar o esqueleto mínimo do repositório
 

@@ -131,6 +131,7 @@ Requisitos e suíte mínima de **cinco** cenários (**L1–L5**): [live-openai-i
 | `summarize_window_aggregates` | histograma escalar com `bucket_values` explícitos, top-k de padrões com desempate lexicográfico e matriz cheia `5xK` com eixos declarados | `aggregates` ausente/vazio, `aggregate_type` inválido, parâmetros obrigatórios ausentes por tipo, bucket spec ambígua, fonte incompatível (`UNSUPPORTED_SHAPE`), métrica desconhecida |
 | `generate_candidate_games` | estratégias fixas e `declared_composite_profile` | seed ausente, orçamento excedido, exclusões conflitantes |
 | `explain_candidate_games` | breakdown completo de score e exclusões | jogo fora do domínio ou payload inválido |
+| `help` | retorna `index_markdown`, `index_resource_uri` e `templates[]` | erro `HELP_UNAVAILABLE` se o índice não puder ser carregado |
 
 ## Cobertura de agregados canônicos (`summarize_window_aggregates`)
 

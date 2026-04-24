@@ -1264,3 +1264,46 @@ Critério de pronto:
 - paridade comprovada nos caminhos suportados, **ou** resources publicados com URIs e conteúdo rastreável às fontes do repositório.
 ```
 
+## Fase 24 — ADR 0009: Help + catálogo de templates (resources)
+
+### Template 24.1 — Expor help e resources de templates
+
+```md
+Implemente apenas a superfície de ajuda e templates do ADR 0009, sem alterar semântica de métricas nem introduzir defaults ocultos.
+
+Referências obrigatórias:
+- docs/mcp-tool-contract.md (Primitivas MCP opcionais: Prompts e Resources)
+- docs/adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md (Camadas A/B/C)
+- docs/adrs/0009-help-e-catalogo-de-templates-resources-v1.md
+- docs/test-plan.md (cobertura por tool e resources)
+
+Escopo:
+- Expor o resource de onboarding curto `lotofacil-ia://help/getting-started@1.0.0` (ponto de entrada agnóstico ao host), com fluxo recomendado `help → index → pipeline mínimo` e lembretes normativos (janela explícita, sem predição, rastreabilidade).
+- Expor resources Markdown sob `lotofacil-ia://prompts/`, incluindo `index@1.0.0` e 10 templates versionados.
+- Padronizar em todos os templates a preferência de exibição `display_mode = simple | advanced | both` (default `both` quando não declarado).
+- Implementar a tool `help` retornando:
+  - `tool_version`
+  - `getting_started_resource_uri` (opcional; recomendado quando o resource existir)
+  - `index_resource_uri`
+  - `index_markdown`
+  - `templates[]` com metadados (id, uri, title, description, suggested_windows)
+
+Arquivos esperados:
+- resources/help/getting-started@1.0.0.md
+- resources/prompts/index@1.0.0.md
+- resources/prompts/*.md (10 templates)
+- src/LotofacilMcp.Server/Resources/ (exposição MCP de resources)
+- src/LotofacilMcp.Server/Tools/ (tool `help`)
+- tests/LotofacilMcp.ContractTests/ (testes de tool discovery + resources list/read)
+
+Regras:
+- `help` não calcula métricas, não decide janela, não gera recomendações preditivas.
+- templates são conteúdo read-only; manter MIME `text/markdown`.
+- manter a distinção “prompt de chat” vs “Prompt MCP” (não confundir termos).
+
+Critério de pronto:
+- `help` aparece em `tools/list` e responde com payload estruturado válido.
+- `resources/list` inclui `lotofacil-ia://help/getting-started@1.0.0`, o índice e os templates; `resources/read` do getting-started e do índice retorna Markdown.
+- testes de contrato cobrem tool discovery e resources list/read.
+```
+

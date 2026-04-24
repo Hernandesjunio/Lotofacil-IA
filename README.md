@@ -78,6 +78,14 @@ Para clientes MCP desktop (ex.: Cursor), use o mesmo executável `LotofacilMcp.S
 
 Nesse modo o host MCP consegue descobrir e invocar as tools atualmente entregues no recorte V1 (`get_draw_window`, `compute_window_metrics` e `analyze_indicator_stability`) com a mesma semântica JSON usada nos POSTs HTTP `/tools/*`.
 
+### Getting started (agnóstico ao host)
+
+Para onboarding e discovery, a instância MCP expõe:
+
+- a tool `help` (índice curto de templates + markdown do índice)
+- o resource `lotofacil-ia://help/getting-started@1.0.0` (guia curto “por onde começo / quais opções”)
+- o índice de templates em `lotofacil-ia://prompts/index@1.0.0`
+
 ## Como executar no host MCP (HTTP)
 
 Para clientes MCP que conectam por URL, execute o servidor web normalmente e aponte para o endpoint MCP streamable:

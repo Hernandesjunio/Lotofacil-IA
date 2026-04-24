@@ -66,6 +66,16 @@ Formato esperado:
 
 Exemplos adicionais de prompts de teste ficam em [prompt-catalog.md](prompt-catalog.md).
 
+## Ajuda e templates (resources) para uso com LLM
+
+Para reduzir ambiguidade de janela e padronizar combinações de métricas por objetivo, a instância MCP expõe:
+
+- a tool `help`, que retorna um índice básico de templates;
+- um resource de onboarding curto `lotofacil-ia://help/getting-started@1.0.0` (ponto de entrada agnóstico ao host);
+- resources Markdown sob `lotofacil-ia://prompts/` (incluindo `index@1.0.0`) prontos para copiar/colar no chat.
+
+Esses templates **não** substituem tools nem mudam o contrato: são conteúdo de referência para facilitar o mapeamento NL → JSON com janelas explícitas.
+
 ## Restrições técnicas
 
 - **Stack (implementação MCP):** C# / **.NET 10**.
