@@ -533,6 +533,39 @@ Critério mínimo de aceite:
   - pelo menos 1 teste positivo determinístico com fixture;
   - exposição em HTTP + MCP no mesmo recorte (salvo exceção documentada).
 
+### Fase 21: Disponibilidade por rota, pipeline e GAPS (ADR 0006) em sequência spec-first
+
+Objetivo: materializar (ou ajustar) regras de **disponibilidade por build/rota**, fluidez de pipeline e respostas de erro com `details` quando aplicável, mantendo:
+
+- norma (catálogo/docs) separada da instância (build/allowlist);
+- determinismo forte;
+- ausência de defaults semânticos ocultos.
+
+Sequência recomendada:
+
+1. **21.1 — Fechamento coordenado de docs/contrato**
+   - Revisar [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) e refletir em [mcp-tool-contract.md](mcp-tool-contract.md), [metric-catalog.md](metric-catalog.md), [contract-test-plan.md](contract-test-plan.md) e [test-plan.md](test-plan.md) quando a entrega tocar em: `details.allowed_metrics`, `UNKNOWN_METRIC`, erros ricos, GAPS (pares–entropia) e fluidez inter-tool.
+2. **21.2 — Testes de contrato vermelhos (pelo menos 1 cenário por tema)**
+   - Escrever testes que falhem antes do código para: erros com `details`, comportamento de rota/build, e os cenários mínimos da matriz do contrato.
+3. **21.3 — Implementação mínima por recorte**
+   - Implementar/ajustar apenas o recorte coberto pelos testes, sem expandir catálogo ou introduzir heurísticas.
+4. **21.4 — Evidências de paridade**
+   - Validar paridade MCP ↔ HTTP nos caminhos suportados e registrar evidência quando aplicável.
+
+Referências obrigatórias:
+
+- [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md)
+- [mcp-tool-contract.md](mcp-tool-contract.md)
+- [contract-test-plan.md](contract-test-plan.md)
+- [test-plan.md](test-plan.md)
+- [fases-execucao-templates.md — Fase 21](fases-execucao-templates.md#fase-21---adr-0006-disponibilidade-por-rota-pipeline-gaps-estabilidade-de-associa-o-e-paresentropia)
+
+Critério mínimo de aceite:
+
+- o recorte tocado possui docs/contrato coerentes + testes de contrato correspondentes;
+- erros e `details` (quando parte do recorte) são estáveis e auditáveis;
+- nenhuma regra de disponibilidade “vaza” como default semântico no servidor.
+
 ### Fase 22: Implementar `summarize_window_aggregates` (ADR 0007) em sequência spec-first
 
 Objetivo: materializar agregados canônicos de janela (histogramas, top-k de padrões e matriz por posição×valor) com enum fechado, parâmetros explícitos por tipo, ordenação/desempates canônicos e determinismo auditável.

@@ -741,6 +741,8 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         Assert.Equal("lotofacil-ia://prompts/index@1.0.0", stdioIndexUri.GetString());
         Assert.True(stdioHelpJson.TryGetProperty("index_markdown", out var stdioIndexMarkdown));
         Assert.Contains("Índice de templates", stdioIndexMarkdown.GetString());
+        Assert.True(stdioHelpJson.TryGetProperty("quick_start_markdown", out var stdioQuickStartMarkdown));
+        Assert.Contains("Comece por aqui", stdioQuickStartMarkdown.GetString());
 
         Assert.True(httpHelpJson.TryGetProperty("getting_started_resource_uri", out var httpGettingStartedUri));
         Assert.Equal("lotofacil-ia://help/getting-started@1.0.0", httpGettingStartedUri.GetString());
@@ -748,6 +750,8 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         Assert.Equal("lotofacil-ia://prompts/index@1.0.0", httpIndexUri.GetString());
         Assert.True(httpHelpJson.TryGetProperty("index_markdown", out var httpIndexMarkdown));
         Assert.Contains("Índice de templates", httpIndexMarkdown.GetString());
+        Assert.True(httpHelpJson.TryGetProperty("quick_start_markdown", out var httpQuickStartMarkdown));
+        Assert.Contains("Comece por aqui", httpQuickStartMarkdown.GetString());
     }
 
     private async Task<JsonElement> ReadHttpJsonAsync(HttpResponseMessage response)
