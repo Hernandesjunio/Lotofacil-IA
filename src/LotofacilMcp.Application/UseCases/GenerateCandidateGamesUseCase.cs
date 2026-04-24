@@ -185,13 +185,17 @@ public sealed class GenerateCandidateGamesUseCase
             var execution = ResolveExecutionPlan(planItem, planIndex, input.Seed, structuralExclusions);
             var poolSize = ResolvePoolSize(execution.SearchMethod);
             var selected = new List<CandidateSelection>();
+            var selectedKeys = globalConstraints.UniqueGames is true
+                ? new HashSet<string>(StringComparer.Ordinal)
+                : null;
 
             for (var poolIndex = 0; poolIndex < poolSize; poolIndex++)
             {
                 var effectiveSeed = execution.SeedUsed ?? 0UL;
                 var numbers = BuildCandidateNumbers(rankedNumbers, effectiveSeed, sequenceSeed + poolIndex);
                 var key = string.Join(",", numbers);
-                if (globalConstraints.UniqueGames is true && usedGameKeys.Contains(key))
+                if (globalConstraints.UniqueGames is true &&
+                    (usedGameKeys.Contains(key) || (selectedKeys is not null && selectedKeys.Contains(key))))
                 {
                     continue;
                 }
@@ -208,6 +212,7 @@ public sealed class GenerateCandidateGamesUseCase
                     continue;
                 }
 
+                selectedKeys?.Add(key);
                 selected.Add(new CandidateSelection(numbers, profile, strategyScore));
             }
 

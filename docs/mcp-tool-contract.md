@@ -783,6 +783,53 @@ Gerar jogos candidatos a partir de estratégias nomeadas e filtros declarados.
 }
 ```
 
+Exemplo (ADR 0019) — **restrições flexíveis** por faixa (`range`), conjunto discreto (`allowed_values`), `mode`, `typical_range` e orçamento:
+
+```json
+{
+  "window_size": 100,
+  "end_contest_id": 3400,
+  "seed": 424242,
+  "generation_budget": {
+    "max_attempts": 20000
+  },
+  "plan": [
+    {
+      "strategy_name": "declared_composite_profile",
+      "count": 10,
+      "search_method": "sampled",
+      "tie_break_rule": "outlier_score_asc_then_hhi_linha_asc_then_lexicographic_numbers_asc",
+      "criteria": [
+        { "name": "pairs_count", "range": { "min": 7, "max": 10 }, "mode": "hard" },
+        { "name": "neighbors_count", "allowed_values": { "values": [8, 9, 10] }, "mode": "hard" },
+        {
+          "name": "repeat_count",
+          "typical_range": { "metric_name": "repeticao_concurso_anterior", "method": "iqr", "coverage": 0.8, "params": {} },
+          "mode": "hard"
+        },
+        { "name": "top10_overlap_count", "range": { "min": 5, "max": 9 }, "mode": "soft" }
+      ],
+      "weights": [
+        { "name": "freq_alignment", "weight": 0.4 },
+        { "name": "repeat_alignment", "weight": 0.2 },
+        { "name": "slot_alignment", "weight": 0.2 },
+        { "name": "row_entropy_norm", "weight": 0.1 },
+        { "name": "hhi_linha_inverse", "weight": 0.1 }
+      ],
+      "filters": [
+        { "name": "max_consecutive_run", "value": 8 },
+        { "name": "max_neighbor_count", "value": 11 },
+        { "name": "min_row_entropy_norm", "value": 0.82 }
+      ]
+    }
+  ],
+  "global_constraints": {
+    "unique_games": true,
+    "sorted_numbers": true
+  }
+}
+```
+
 #### Regras
 
 - `seed` é obrigatória sempre que houver qualquer estratégia `sampled` ou `greedy_topk`.
@@ -792,6 +839,8 @@ Gerar jogos candidatos a partir de estratégias nomeadas e filtros declarados.
 - `declared_composite_profile` só aceita componentes listados em [generation-strategies.md](generation-strategies.md).
 - `structural_exclusions` são opcionais, mas quando presentes tornam-se parte do determinismo do request.
 - O servidor continua não aceitando "pesos soltos" fora de um schema explícito.
+- **Ranges e multi-valores (ADR 0019):** quando o request declarar restrições por `range` e/ou `allowed_values`, isso define um **conjunto válido** de candidatos; o servidor deve retornar **qualquer** lote determinístico de tamanho `count` que satisfaça as restrições (ou falhar com `STRUCTURAL_EXCLUSION_CONFLICT` com `available_count`).
+- **Sem inferência:** o servidor não “descobre” faixas por conta própria. Se o cliente quiser faixa típica por método estatístico, deve declarar explicitamente via `typical_range` (ADR 0019) e o servidor deve ecoar `resolved_range`/`coverage_observed` em `applied_configuration.resolved_defaults`.
 
 #### Semântica e validação
 
@@ -801,6 +850,14 @@ Gerar jogos candidatos a partir de estratégias nomeadas e filtros declarados.
 - **`global_constraints`:** `unique_games` evita duplicatas no lote; `sorted_numbers` padroniza representação dos jogos.
 - **`structural_exclusions`:** filtros duros no espaço de jogos; quando presentes, fazem parte do input canônico do hash determinístico e devem aparecer no output (metadados ou explicação).
 - **`declared_composite_profile`:** subscores e pesos só podem usar nomes permitidos em [generation-strategies.md](generation-strategies.md); soma dos pesos do perfil deve seguir a mesma regra de tolerância que composições (`1.0 ± 1e-9`) salvo especificação divergente no doc de estratégias.
+- **Restrições flexíveis (ADR 0019):** critérios/filtros podem ser declarados como:
+  - valor absoluto (`value`, `min`, `max`);
+  - `range: {min,max,inclusive?}`;
+  - `allowed_values: {values:[...]}`;
+  - `typical_range: {metric_name, method, coverage, params...}` (faixa típica calculada na janela).
+  Mistura de modos no mesmo item deve retornar `INVALID_REQUEST`.
+- **`mode`:** quando suportado pela estratégia/validador, `mode="hard"` rejeita candidatos fora do conjunto; `mode="soft"` mantém o candidato e aplica penalidade determinística (ADR 0019). O default, se existir, deve aparecer em `applied_configuration.resolved_defaults`.
+- **Orçamento de geração (ADR 0019):** quando exposto no request (ex.: `generation_budget.max_attempts`), o servidor deve ecoar `attempts_used`, `accepted_count` e uma forma agregada determinística de rejeições por motivo em `applied_configuration.resolved_defaults`.
 
 ### 8. `explain_candidate_games`
 

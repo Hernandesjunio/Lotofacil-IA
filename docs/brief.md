@@ -63,6 +63,7 @@ Formato esperado:
 - "Quais correlações entre quantidade de vizinhos, repetição, entropia de linha e pares apresentaram maior coesão na janela recente?"
 - "Resuma qual perfil estrutural cobriu pelo menos 80% dos últimos 20 sorteios em slots, vizinhos e top 10."
 - "Gere jogos candidatos eliminando sequências longas demais, baixa entropia de linha e aderência de slot muito fraca."
+- "Gere 10 jogos candidatos que satisfaçam **faixas** (ranges) de pares, vizinhos e repetição, sem fixar valores exatos, e explique quais restrições foram aplicadas (faixa explícita vs faixa típica por cobertura)."
 
 Exemplos adicionais de prompts de teste ficam em [prompt-catalog.md](prompt-catalog.md).
 

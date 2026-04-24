@@ -129,7 +129,7 @@ Requisitos e suíte mínima de **cinco** cenários (**L1–L5**): [live-openai-i
 | `analyze_indicator_associations` | `spearman` e `pearson`; cenário pares×entropia (secção *Cenário canónico*) | séries incompatíveis, método inválido; com `stability_check` e build sem suporte → `UNSUPPORTED_STABILITY_CHECK` |
 | `summarize_window_patterns` | cobertura, moda, IQR, percentis | feature incompatível ou sem agregação |
 | `summarize_window_aggregates` | histograma escalar com `bucket_values` explícitos, top-k de padrões com desempate lexicográfico e matriz cheia `5xK` com eixos declarados | `aggregates` ausente/vazio, `aggregate_type` inválido, parâmetros obrigatórios ausentes por tipo, bucket spec ambígua, fonte incompatível (`UNSUPPORTED_SHAPE`), métrica desconhecida |
-| `generate_candidate_games` | estratégias fixas e `declared_composite_profile` | seed ausente, orçamento excedido, exclusões conflitantes |
+| `generate_candidate_games` | estratégias fixas e `declared_composite_profile` (incluindo restrições flexíveis quando implementadas) | seed ausente, orçamento excedido, exclusões conflitantes, `range/allowed_values/typical_range` inválidos (ADR 0019) |
 | `explain_candidate_games` | breakdown completo de score e exclusões | jogo fora do domínio ou payload inválido |
 | `help` | retorna `index_markdown`, `index_resource_uri` e `templates[]` | erro `HELP_UNAVAILABLE` se o índice não puder ser carregado |
 
@@ -223,6 +223,13 @@ O mesmo padrão pode ser replicado para outras pares (ex. `entropia_coluna_por_c
 | `slot_weighted` | score ótimo por DP, desempate correto | suporte de slot inviável sem relaxação |
 | `outlier_candidate` | score alto e filtro mínimo de entropia | exclusão por entropia muito baixa |
 | `declared_composite_profile` | score ponderado correto e pesos somando 1 | componente não permitido, peso ausente |
+
+**Extensão (ADR 0019):** quando o recorte de geração suportar `range`/`allowed_values`/`typical_range` e `mode=hard|soft`, acrescentar casos:
+- positivo: request com `allowed_values` (ex.: vizinhos ∈ {8,9,10}) gera `count` candidatos sem enumerar combinações;
+- positivo: request com `range` (ex.: pares ∈ [7,10]) gera candidatos válidos e ecoa defaults;
+- positivo: request com `typical_range` ecoa `resolved_range` e `coverage_observed`;
+- negativo: modos mistos no mesmo item (`value` + `range`) ⇒ `INVALID_REQUEST`;
+- propriedade: `mode=soft` não rejeita candidatos fora da faixa, mas altera score de forma determinística (ou falha com erro canônico se não suportado).
 
 ## Cobertura dos filtros estruturais
 

@@ -45,6 +45,13 @@ Toda estratégia V1 pode receber filtros adicionais por `structural_exclusions`,
 - `min_slot_alignment`: rejeita jogos com `analise_slot < limite`.
 - `max_outlier_score`: rejeita jogos estruturalmente distantes demais do centro da janela.
 
+**Extensão normativa (ADR 0019):** sempre que fizer sentido, filtros e critérios podem ser declarados como:
+- **faixa** (`range: {min,max,inclusive?}`),
+- **conjunto discreto** (`allowed_values: {values:[...]}`),
+- e, quando aplicável, **faixa típica** (`typical_range`) calculada deterministicamente na janela (método fechado e eco obrigatório no output).
+
+Importante: declarar um range **não** significa enumerar combinações no cliente; significa descrever um conjunto válido e pedir `count` candidatos desse conjunto.
+
 Esses filtros não afirmam impossibilidade matemática; apenas removem regiões consideradas pouco úteis para a geração orientada a padrão histórico.
 
 ## Estratégias V1
@@ -62,8 +69,13 @@ Esses filtros não afirmam impossibilidade matemática; apenas removem regiões 
 
 **Filtros:**
 - 15 dezenas únicas em `[1..25]`;
-- repetição prevista `r* ∈ [Q1, Q3]` da série `repeticao_concurso_anterior`;
+- repetição prevista `r* ∈ [Q1, Q3]` da série `repeticao_concurso_anterior` (faixa típica; ver ADR 0019 para declaração/eco quando o cliente quiser parametrizar);
 - ao menos 6 dezenas no `top10_mais_sorteados`.
+
+**Nota (para flexibilidade sem ambiguidade):** quando o consumidor quiser “top10 histórico por faixa”, a restrição deve incidir sobre uma feature escalar derivada, p.ex.:
+- `top10_overlap_count(game) = |game ∩ top10_mais_sorteados|` (inteiro 0..10),
+- ou `top10_overlap_ratio(game) = |game ∩ top10_mais_sorteados| / 10`.
+Essas features podem ser usadas como `range`/`allowed_values` (ADR 0019), em vez de tentar aplicar range sobre a lista `top10_mais_sorteados` (shape incompatível).
 
 **Score:**
 

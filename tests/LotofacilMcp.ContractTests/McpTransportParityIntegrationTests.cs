@@ -27,6 +27,8 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
             Arguments =
             [
                 "run",
+                "-c",
+                "Release",
                 "--no-build",
                 "--project",
                 GetServerProjectPath(),

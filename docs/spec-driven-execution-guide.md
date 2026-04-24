@@ -40,6 +40,8 @@ Referências normativas:
 - [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md)
 - [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md)
 - [ADR 0009](adrs/0009-help-e-catalogo-de-templates-resources-v1.md)
+- [ADR 0017](adrs/0017-geracao-declarativa-de-candidatos-filtros-e-estrategias-v1.md)
+- [ADR 0019](adrs/0019-criterios-por-faixa-e-cobertura-na-geracao-v1.md)
 
 ## Regra operacional principal
 
@@ -523,6 +525,11 @@ Objetivo: fechar o ciclo de geração/explicação com rastreabilidade e determi
   - começar com 1 estratégia nominal simples, orçamento e determinismo;
   - seed obrigatória quando houver `sampled`/`greedy_topk`;
   - output sempre traz linhagem (`strategy_name`, `strategy_version`, `search_method`, `tie_break_rule`, `seed_used` quando aplicável).
+  - quando evoluir o recorte para flexibilidade de critérios, seguir [ADR 0019](adrs/0019-criterios-por-faixa-e-cobertura-na-geracao-v1.md):
+    - aceitar restrições por **faixa** (`range`) e **multi-valor** (`allowed_values`) sem enumerar combinações no cliente;
+    - quando o cliente declarar `typical_range`, ecoar `resolved_range` e `coverage_observed` em `applied_configuration.resolved_defaults` (sem inferência silenciosa);
+    - quando suportado, permitir `mode = hard | soft` (default explícito em `resolved_defaults`) para evitar colapso do espaço ao combinar muitas restrições;
+    - expor um orçamento determinístico (ex.: `max_attempts`/pool multiplier) e ecoar contadores (`attempts_used`, `accepted_count`, rejeições agregadas) para suportar `count` alto.
 - `explain_candidate_games`:
   - ranking determinístico de estratégias e breakdown de métricas/exclusões com versões.
 

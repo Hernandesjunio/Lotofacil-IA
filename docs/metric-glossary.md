@@ -24,6 +24,10 @@ Documento pedagógico complementar ao catálogo técnico em [metric-catalog.md](
 - **Definição:** as dez dezenas com maior `frequencia_por_dezena` na janela, com regra de desempate explícita no catálogo. O recorte temporal é **sempre o que o pedido declara** (p.ex. equivalência `start`/`fim` ↔ `window_size`+`end_contest_id` em [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) D2).
 - **O que observa:** o “top quente” do período — subconjunto compacto das mais frequentes.
 - **Exemplo de uso:** “Liste o top 10 de dezenas nos últimos 100 concursos para comparar com o jogo que estou avaliando.”
+- **Uso em geração com range (ADR 0019):** quando o objetivo for restringir “quantas dezenas do jogo pertencem ao top 10”, não se aplica range à lista `top10_mais_sorteados` (shape de lista). Em vez disso, use uma feature escalar derivada no contexto de geração/explicação:
+  - `top10_overlap_count(game) = |game ∩ top10_mais_sorteados|` (0..10)
+  - `top10_overlap_ratio(game) = top10_overlap_count / 10`
+  Essas features podem ser usadas como `range` ou `allowed_values` para evitar “valor fixo”.
 - **Não confundir com *exports* de UI legado** cujo rótulo sugere “histórico” com janela *rolling* implícita: esse comportamento **não** é `top10_mais_sorteados` até existir outra métrica no [metric-catalog.md](metric-catalog.md). Para o caso “top 10 **no intervalo de concursos que escolhi**”, use esta métrica (ver [ADR 0008 D3](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md)).
 - **D4 (sem N mágico de ecrã antigo):** o tamanho da janela **não** vem de constantes de interface legada (“últimos 10 concursos” no gráfico); o consumidor passa a janela explícita no request MCP ([ADR 0008 D4](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md)).
 

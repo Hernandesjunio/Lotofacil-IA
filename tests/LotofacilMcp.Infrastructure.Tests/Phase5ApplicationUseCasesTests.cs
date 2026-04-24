@@ -368,7 +368,12 @@ public sealed class Phase5ApplicationUseCasesTests
             new HhiLinhaPorConcursoMetric(),
             new HhiColunaPorConcursoMetric(),
             new AtrasoPorDezenaMetric(),
-            new AssimetriaBlocosMetric());
+            new AssimetriaBlocosMetric(),
+            new MatrizNumeroSlotMetric(),
+            new FrequenciaBlocosMetric(),
+            new AusenciaBlocosMetric(),
+            new EstadoAtualDezenaMetric(),
+            new EstabilidadeRankingMetric());
     }
 
     private static AnalyzeIndicatorStabilityUseCase BuildAnalyzeIndicatorStabilityUseCase()

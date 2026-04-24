@@ -68,7 +68,7 @@ Documentação de referência: [mcp-tool-contract.md](mcp-tool-contract.md).
 | `analyze_indicator_associations` | Método permitido; séries compatíveis. |
 | `summarize_window_patterns` | Agregações e features compatíveis. |
 | `summarize_window_aggregates` | Validação de `aggregate_type`, bucket spec/matriz, compatibilidade de `shape` e ordenação canônica. |
-| `generate_candidate_games` | `seed`, estratégia, versão, exclusões reportadas. |
+| `generate_candidate_games` | `seed`, estratégia, versão, exclusões reportadas, e restrições flexíveis por `range`/`allowed_values`/`typical_range` (ADR 0019) quando o recorte as incluir. |
 | `explain_candidate_games` | Breakdown e métricas declaradas. |
 
 ### Matriz mínima — Fase B.1 (`summarize_window_aggregates`)
@@ -103,6 +103,22 @@ Bateria a acrescentar **quando a implementação** acompanhar o [ADR 0008](adrs/
 | Transparência de janela | Resposta de métrica ancorada em janela. **Esperado:** `MetricValue.window` (ou equivalente) com `start`/`end`/`size` coerentes com o pedido resolvido. | [mcp-tool-contract.md](mcp-tool-contract.md) invariante 2; entidade `Window` |
 
 **Observação de contrato:** a Fase B.2 **não** substitui a bateria A–E (GAPS) do plano/ADR 0006; reutiliza D1 de 0006 quando o caso for *allowlist*. A Fase B.1 (`summarize_window_aggregates`, ADR 0007) continua **ortogonal**: agregados canónicos ≠ descoberta nem mapeamento Top 10.
+
+### Matriz mínima — Extensão de geração com ranges (ADR 0019)
+
+Adicionar esta bateria quando o recorte de `generate_candidate_games` incluir `range`/`allowed_values`/`typical_range` e/ou orçamento explícito.
+
+| Caso | Esperado |
+|------|----------|
+| Critério com modos mistos (`value` + `range`, ou `range` + `allowed_values`) | Erro `INVALID_REQUEST` (sem inferência). |
+| `allowed_values.values` vazio | Erro `INVALID_REQUEST`. |
+| `range.min > range.max` | Erro `INVALID_REQUEST`. |
+| `mode` inválido (quando presente) | Erro `INVALID_REQUEST` (ou código fechado no contrato). |
+| `typical_range` com `method=percentile` sem `p_low/p_high` | Erro `INVALID_REQUEST`. |
+| `typical_range.metric_name` desconhecida | Erro `UNKNOWN_METRIC`. |
+| `typical_range` válido | Sucesso e eco de `resolved_range` + `coverage_observed` em `applied_configuration.resolved_defaults` (semântica auditável). |
+| `count` alto com orçamento pequeno | `STRUCTURAL_EXCLUSION_CONFLICT` com `available_count` e pistas estáveis em `details` (quando aplicável). |
+| Determinismo | Mesmo request + dataset ⇒ mesmo `deterministic_hash` e mesma lista de candidatos (ordem canônica). |
 
 ## Matriz — Fase C (métrica × tipo de teste)
 

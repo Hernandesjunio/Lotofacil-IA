@@ -136,6 +136,68 @@ public sealed class Phase20GenerateCandidateGamesContractTests
         }
     }
 
+    [Fact]
+    public void GenerateCandidateGames_UniqueGamesTrue_DoesNotReturnDuplicates()
+    {
+        var sut = new V0Tools();
+        var request = new GenerateCandidateGamesRequest(
+            WindowSize: 5,
+            EndContestId: 1005,
+            Seed: 424242UL,
+            Plan:
+            [
+                new GenerateCandidatePlanItemRequest(
+                    StrategyName: "common_repetition_frequency",
+                    Count: 10,
+                    SearchMethod: "sampled")
+            ],
+            GlobalConstraints: new GenerateGlobalConstraintsRequest(
+                UniqueGames: true,
+                SortedNumbers: true),
+            StructuralExclusions: new GenerateStructuralExclusionsRequest(
+                MaxConsecutiveRun: 15,
+                MaxNeighborCount: 15,
+                MinRowEntropyNorm: 0.0,
+                MaxHhiLinha: 1.0,
+                RepeatRange: new GenerateRepeatRangeRequest(0, 15),
+                MinSlotAlignment: 0.0,
+                MaxOutlierScore: 1.0));
+
+        var response = sut.GenerateCandidateGames(request);
+        var payload = Assert.IsType<GenerateCandidateGamesResponse>(response);
+        Assert.Equal(10, payload.CandidateGames.Count);
+
+        var keys = payload.CandidateGames.Select(game => string.Join(",", game.Numbers)).ToList();
+        Assert.Equal(keys.Count, keys.Distinct(StringComparer.Ordinal).Count());
+    }
+
+    [Fact]
+    public void GenerateCandidateGames_DifferentSeeds_ProduceDifferentDeterministicHash()
+    {
+        var sut = new V0Tools();
+
+        var requestA = new GenerateCandidateGamesRequest(
+            WindowSize: 5,
+            EndContestId: 1005,
+            Seed: 1UL,
+            Plan:
+            [
+                new GenerateCandidatePlanItemRequest(
+                    StrategyName: "common_repetition_frequency",
+                    Count: 3,
+                    SearchMethod: "sampled")
+            ]);
+
+        var requestB = requestA with { Seed = 2UL };
+
+        var responseA = sut.GenerateCandidateGames(requestA);
+        var responseB = sut.GenerateCandidateGames(requestB);
+        var payloadA = Assert.IsType<GenerateCandidateGamesResponse>(responseA);
+        var payloadB = Assert.IsType<GenerateCandidateGamesResponse>(responseB);
+
+        Assert.NotEqual(payloadA.DeterministicHash, payloadB.DeterministicHash);
+    }
+
     private static int CountNeighbors(IReadOnlyList<int> game)
     {
         var count = 0;

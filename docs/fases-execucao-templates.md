@@ -860,6 +860,7 @@ Referências obrigatórias:
 - docs/spec-driven-execution-guide.md (Fase 20)
 - docs/generation-strategies.md
 - docs/mcp-tool-contract.md
+- docs/adrs/0019-criterios-por-faixa-e-cobertura-na-geracao-v1.md (quando o recorte incluir ranges/multi-valores)
 
 Arquivos esperados:
 - src/LotofacilMcp.Application/
@@ -872,6 +873,11 @@ Regras:
 - exigir `seed` quando `search_method` for `sampled` ou `greedy_topk`;
 - output deve trazer `strategy_name`, `strategy_version`, `search_method`, `tie_break_rule` e `seed_used` quando aplicável;
 - manter paridade HTTP + MCP.
+
+Extensão (somente se no recorte desta entrega):
+- suportar restrições flexíveis por `range` e `allowed_values` (ADR 0019) como definição de conjunto válido (não enumeração de valores);
+- quando `typical_range` for usado, ecoar `resolved_range` e `coverage_observed` em `applied_configuration.resolved_defaults`;
+- se `mode=soft` for suportado, o default e a penalidade devem ser determinísticos e rastreáveis.
 
 Critério de pronto:
 - teste negativo de contrato (seed obrigatória) passa;
@@ -1500,10 +1506,11 @@ Critério de pronto:
 ### Template 25.7 — Geração declarativa + filtros + múltiplas estratégias
 
 ```md
-Implemente apenas a evolução do contrato de `generate_candidate_games` para suportar critérios/pesos/filtros declarativos e múltiplas estratégias públicas conforme [ADR 0017](adrs/0017-geracao-declarativa-de-candidatos-filtros-e-estrategias-v1.md), retornando `applied_configuration` para auditoria.
+Implemente apenas a evolução do contrato de `generate_candidate_games` para suportar critérios/pesos/filtros declarativos e múltiplas estratégias públicas conforme [ADR 0017](adrs/0017-geracao-declarativa-de-candidatos-filtros-e-estrategias-v1.md) e as restrições flexíveis (faixa / multi-valor / faixa típica) conforme [ADR 0019](adrs/0019-criterios-por-faixa-e-cobertura-na-geracao-v1.md), retornando `applied_configuration` para auditoria.
 
 Referências obrigatórias:
 - docs/adrs/0017-geracao-declarativa-de-candidatos-filtros-e-estrategias-v1.md
+- docs/adrs/0019-criterios-por-faixa-e-cobertura-na-geracao-v1.md
 - docs/adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md
 - docs/mcp-tool-contract.md
 - docs/generation-strategies.md
@@ -1515,6 +1522,9 @@ Arquivos esperados:
 
 Regras:
 - determinismo obrigatório; defaults aplicados devem aparecer em `applied_configuration`.
+- restrições por `range`/`allowed_values` devem ser tratadas como “região válida”: o servidor retorna qualquer lote determinístico de tamanho `count` que satisfaça as restrições; não enumerar combinações no cliente.
+- quando `typical_range` for declarado, ecoar `resolved_range` e `coverage_observed` em `resolved_defaults` (sem inferência silenciosa).
+- quando expor orçamento/budget, ecoar contadores de tentativa/aceite/rejeição em `resolved_defaults`.
 
 Critério de pronto:
 - é possível gerar candidatos com filtros configuráveis (não apenas explicar).
