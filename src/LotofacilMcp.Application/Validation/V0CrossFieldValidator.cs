@@ -696,6 +696,34 @@ public sealed class V0CrossFieldValidator
             }
         }
 
+        if (input.GenerationBudget is not null)
+        {
+            if (input.GenerationBudget.MaxAttempts.HasValue && input.GenerationBudget.MaxAttempts.Value <= 0)
+            {
+                throw new ApplicationValidationException(
+                    code: "INVALID_REQUEST",
+                    message: "generation_budget.max_attempts must be greater than zero.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["field"] = "generation_budget.max_attempts",
+                        ["max_attempts"] = input.GenerationBudget.MaxAttempts.Value
+                    });
+            }
+
+            if (input.GenerationBudget.PoolMultiplier.HasValue &&
+                (!double.IsFinite(input.GenerationBudget.PoolMultiplier.Value) || input.GenerationBudget.PoolMultiplier.Value <= 0d))
+            {
+                throw new ApplicationValidationException(
+                    code: "INVALID_REQUEST",
+                    message: "generation_budget.pool_multiplier must be a finite number greater than zero.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["field"] = "generation_budget.pool_multiplier",
+                        ["pool_multiplier"] = input.GenerationBudget.PoolMultiplier.Value
+                    });
+            }
+        }
+
         var totalCount = 0;
         foreach (var planItem in input.Plan)
         {

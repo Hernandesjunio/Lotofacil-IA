@@ -298,7 +298,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
                     [
                         new GenerateCandidateCriterionRequest(
                             Name: "neighbors_count",
-                            AllowedValues: new GenerateAllowedValuesSpecRequest([10, 8, 10, 9]))
+                            AllowedValues: new GenerateAllowedValuesSpecRequest([6, 4, 6, 5]))
                     ])
             ]);
 
@@ -317,7 +317,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
 
         Assert.True(resolvedDefaults.TryGetProperty("plan[0].criteria[0].allowed_values.values", out var allowed));
         var normalized = allowed.EnumerateArray().Select(static item => item.GetDouble()).ToArray();
-        Assert.Equal([8d, 9d, 10d], normalized);
+        Assert.Equal([4d, 5d, 6d], normalized);
     }
 
     [Fact]
@@ -337,7 +337,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
                     Criteria:
                     [
                         new GenerateCandidateCriterionRequest(
-                            Name: "min_top10_overlap",
+                            Name: "repeat_count",
                             TypicalRange: new GenerateTypicalRangeSpecRequest(
                                 MetricName: "repeticao_concurso_anterior",
                                 Method: "iqr",
@@ -468,7 +468,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
                     Criteria:
                     [
                         new GenerateCandidateCriterionRequest(
-                            Name: "min_top10_overlap",
+                            Name: "repeat_count",
                             TypicalRange: new GenerateTypicalRangeSpecRequest(
                                 MetricName: "repeticao_concurso_anterior",
                                 Method: "iqr",
@@ -565,6 +565,155 @@ public sealed class Phase20GenerateCandidateGamesContractTests
         var response = sut.GenerateCandidateGames(request);
         var error = Assert.IsType<ContractErrorEnvelope>(response).Error;
         Assert.Equal("INVALID_REQUEST", error.Code);
+    }
+
+    [Fact]
+    public void GenerateCandidateGames_RangeAndAllowedValues_AreAppliedAsHardConstraints()
+    {
+        var sut = new V0Tools();
+        var request = new GenerateCandidateGamesRequest(
+            WindowSize: 5,
+            EndContestId: 1005,
+            Seed: 424242UL,
+            Plan:
+            [
+                new GenerateCandidatePlanItemRequest(
+                    StrategyName: "declared_composite_profile",
+                    Count: 3,
+                    SearchMethod: "sampled",
+                    Criteria:
+                    [
+                        new GenerateCandidateCriterionRequest(
+                            Name: "neighbors_count",
+                            AllowedValues: new GenerateAllowedValuesSpecRequest([4d, 5d, 6d, 7d]))
+                    ],
+                    Filters:
+                    [
+                        new GenerateCandidateFilterRequest(
+                            Name: "max_consecutive_run",
+                            Range: new GenerateRangeSpecRequest(2d, 6d))
+                    ])
+            ],
+            StructuralExclusions: new GenerateStructuralExclusionsRequest(
+                MaxConsecutiveRun: 15,
+                MaxNeighborCount: 15,
+                MinRowEntropyNorm: 0.0,
+                MaxHhiLinha: 1.0,
+                RepeatRange: new GenerateRepeatRangeRequest(0, 15),
+                MinSlotAlignment: 0.0,
+                MaxOutlierScore: 1.0),
+            GenerationBudget: new GenerateGenerationBudgetRequest(
+                MaxAttempts: 1200,
+                PoolMultiplier: 4.0));
+
+        var response = sut.GenerateCandidateGames(request);
+        var payload = Assert.IsType<GenerateCandidateGamesResponse>(response);
+        Assert.Equal(3, payload.CandidateGames.Count);
+
+        foreach (var game in payload.CandidateGames)
+        {
+            var neighbors = CountNeighbors(game.Numbers);
+            var maxRun = MaxConsecutiveRun(game.Numbers);
+            Assert.Contains(neighbors, new[] { 4, 5, 6, 7 });
+            Assert.InRange(maxRun, 2, 6);
+        }
+    }
+
+    [Fact]
+    public void GenerateCandidateGames_HighCountWithExplicitBudget_EchoesDeterministicCounters()
+    {
+        var sut = new V0Tools();
+        var request = new GenerateCandidateGamesRequest(
+            WindowSize: 5,
+            EndContestId: 1005,
+            Seed: 777UL,
+            Plan:
+            [
+                new GenerateCandidatePlanItemRequest(
+                    StrategyName: "common_repetition_frequency",
+                    Count: 40,
+                    SearchMethod: "sampled",
+                    Criteria:
+                    [
+                        new GenerateCandidateCriterionRequest("min_frequency_alignment", Value: 0.0),
+                        new GenerateCandidateCriterionRequest("min_repeat_alignment", Value: 0.0),
+                        new GenerateCandidateCriterionRequest("min_top10_overlap", Value: 0.0)
+                    ])
+            ],
+            StructuralExclusions: new GenerateStructuralExclusionsRequest(
+                MaxConsecutiveRun: 15,
+                MaxNeighborCount: 15,
+                MinRowEntropyNorm: 0.0,
+                MaxHhiLinha: 1.0,
+                RepeatRange: new GenerateRepeatRangeRequest(0, 15),
+                MinSlotAlignment: 0.0,
+                MaxOutlierScore: 1.0),
+            GenerationBudget: new GenerateGenerationBudgetRequest(
+                MaxAttempts: 2500,
+                PoolMultiplier: 3.0));
+
+        var response = sut.GenerateCandidateGames(request);
+        var payload = Assert.IsType<GenerateCandidateGamesResponse>(response);
+        Assert.Equal(40, payload.CandidateGames.Count);
+
+        using var json = JsonSerializer.SerializeToDocument(payload);
+        var resolvedDefaults = json.RootElement
+            .GetProperty("candidate_games")[0]
+            .GetProperty("applied_configuration")
+            .GetProperty("resolved_defaults");
+
+        Assert.True(resolvedDefaults.TryGetProperty("plan[0].generation_budget.max_attempts", out var maxAttempts));
+        Assert.Equal(2500, maxAttempts.GetInt32());
+        Assert.True(resolvedDefaults.TryGetProperty("plan[0].generation_budget.pool_multiplier", out var poolMultiplier));
+        Assert.Equal(3.0, poolMultiplier.GetDouble(), 10);
+        Assert.True(resolvedDefaults.TryGetProperty("plan[0].attempts_used", out var attemptsUsed));
+        Assert.Equal(2500, attemptsUsed.GetInt32());
+        Assert.True(resolvedDefaults.TryGetProperty("plan[0].accepted_count", out var acceptedCount));
+        Assert.True(acceptedCount.GetInt32() >= 40);
+        Assert.True(resolvedDefaults.TryGetProperty("plan[0].rejected_count_by_reason", out var rejectedByReason));
+        Assert.Equal(JsonValueKind.Object, rejectedByReason.ValueKind);
+    }
+
+    [Fact]
+    public void GenerateCandidateGames_WhenInfeasible_ReturnsStructuralConflictWithDeterministicCollapseHint()
+    {
+        var sut = new V0Tools();
+        var request = new GenerateCandidateGamesRequest(
+            WindowSize: 5,
+            EndContestId: 1005,
+            Seed: 909UL,
+            Plan:
+            [
+                new GenerateCandidatePlanItemRequest(
+                    StrategyName: "common_repetition_frequency",
+                    Count: 1,
+                    SearchMethod: "sampled",
+                    Criteria:
+                    [
+                        new GenerateCandidateCriterionRequest(
+                            Name: "min_top10_overlap",
+                            AllowedValues: new GenerateAllowedValuesSpecRequest([11d]))
+                    ])
+            ],
+            GenerationBudget: new GenerateGenerationBudgetRequest(
+                MaxAttempts: 300,
+                PoolMultiplier: 2.0));
+
+        var response = sut.GenerateCandidateGames(request);
+        var error = Assert.IsType<ContractErrorEnvelope>(response).Error;
+        Assert.Equal("STRUCTURAL_EXCLUSION_CONFLICT", error.Code);
+
+        var details = JsonSerializer.SerializeToElement(error.Details);
+        Assert.True(details.TryGetProperty("available_count", out var availableCount));
+        Assert.Equal(0, availableCount.GetInt32());
+        Assert.True(details.TryGetProperty("attempts_used", out var attemptsUsed));
+        Assert.Equal(300, attemptsUsed.GetInt32());
+        Assert.True(details.TryGetProperty("accepted_count", out var acceptedCount));
+        Assert.Equal(0, acceptedCount.GetInt32());
+        Assert.True(details.TryGetProperty("rejected_count_by_reason", out var rejectedByReason));
+        Assert.True(rejectedByReason.TryGetProperty("criteria:min_top10_overlap", out _));
+        Assert.True(details.TryGetProperty("collapse_hint", out var collapseHint));
+        Assert.Equal("criteria:min_top10_overlap", collapseHint.GetString());
     }
 
     private static int CountNeighbors(IReadOnlyList<int> game)

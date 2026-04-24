@@ -71,6 +71,10 @@ public sealed record GenerateStructuralExclusionsInput(
     double? MinSlotAlignment,
     double? MaxOutlierScore);
 
+public sealed record GenerateGenerationBudgetInput(
+    int? MaxAttempts,
+    double? PoolMultiplier);
+
 public sealed record GenerateCandidatePlanItemInput(
     string StrategyName,
     int Count,
@@ -88,6 +92,7 @@ public sealed record GenerateCandidateGamesInput(
     IReadOnlyList<GenerateCandidatePlanItemInput> Plan,
     GenerateGlobalConstraintsInput? GlobalConstraints,
     GenerateStructuralExclusionsInput? StructuralExclusions,
+    GenerateGenerationBudgetInput? GenerationBudget,
     string FixturePath = "");
 
 public sealed record GenerateCandidateGamesDeterministicHashInput(
@@ -96,7 +101,8 @@ public sealed record GenerateCandidateGamesDeterministicHashInput(
     ulong? Seed,
     IReadOnlyList<GenerateCandidatePlanItemInput> Plan,
     GenerateGlobalConstraintsInput GlobalConstraints,
-    GenerateStructuralExclusionsInput StructuralExclusions);
+    GenerateStructuralExclusionsInput StructuralExclusions,
+    GenerateGenerationBudgetInput GenerationBudget);
 
 public sealed record AppliedConfigurationView(
     IReadOnlyList<GenerateCandidateCriteriaInput> Criteria,
@@ -140,6 +146,7 @@ public sealed class GenerateCandidateGamesUseCase
     private readonly V0CrossFieldValidator _validator;
     private readonly V0RequestMapper _mapper;
     private readonly TypicalRangeResolver _typicalRangeResolver = new();
+    private readonly GenerationBudgetResolver _generationBudgetResolver = new();
 
     public GenerateCandidateGamesUseCase(
         SyntheticFixtureProvider fixtureProvider,
@@ -177,13 +184,15 @@ public sealed class GenerateCandidateGamesUseCase
             var context = BuildGenerationContext(window, frequencyMetric.Value, top10Metric.Value, repetitionMetric.Value);
             var resolvedGlobalConstraints = ResolveGlobalConstraints(input.GlobalConstraints);
             var resolvedStructuralExclusions = ResolveStructuralExclusions(input.StructuralExclusions);
+            var resolvedGenerationBudget = ResolveGenerationBudget(input.GenerationBudget);
             var candidates = BuildCandidates(
                 input,
                 window,
                 rankedNumbers,
                 context,
                 resolvedGlobalConstraints,
-                resolvedStructuralExclusions);
+                resolvedStructuralExclusions,
+                resolvedGenerationBudget);
 
             return new GenerateCandidateGamesResult(
                 DatasetVersion: _datasetVersionService.CreateFromSnapshot(snapshot),
@@ -194,7 +203,8 @@ public sealed class GenerateCandidateGamesUseCase
                     input.Seed,
                     input.Plan.ToArray(),
                     resolvedGlobalConstraints,
-                    resolvedStructuralExclusions),
+                    resolvedStructuralExclusions,
+                    resolvedGenerationBudget),
                 Window: windowView,
                 CandidateGames: candidates);
         }
@@ -210,7 +220,8 @@ public sealed class GenerateCandidateGamesUseCase
         IReadOnlyList<int> rankedNumbers,
         GenerationContext context,
         GenerateGlobalConstraintsInput globalConstraints,
-        GenerateStructuralExclusionsInput structuralExclusions)
+        GenerateStructuralExclusionsInput structuralExclusions,
+        GenerateGenerationBudgetInput generationBudget)
     {
         var candidates = new List<CandidateGameView>();
         var usedGameKeys = new HashSet<string>(StringComparer.Ordinal);
@@ -221,31 +232,40 @@ public sealed class GenerateCandidateGamesUseCase
             var planItem = input.Plan[planIndex];
             var execution = ResolveExecutionPlan(planItem, planIndex, input.Seed, structuralExclusions, window);
             var poolSize = ResolvePoolSize(execution.SearchMethod);
+            var resolvedBudget = _generationBudgetResolver.Resolve(
+                new GenerationBudgetSpec(generationBudget.MaxAttempts, generationBudget.PoolMultiplier),
+                poolSize);
             var selected = new List<CandidateSelection>();
             var selectedKeys = globalConstraints.UniqueGames is true
                 ? new HashSet<string>(StringComparer.Ordinal)
                 : null;
+            var rejectedCountByReason = new SortedDictionary<string, int>(StringComparer.Ordinal);
+            var attemptsUsed = 0;
 
-            for (var poolIndex = 0; poolIndex < poolSize; poolIndex++)
+            for (var poolIndex = 0; poolIndex < resolvedBudget.MaxAttempts; poolIndex++)
             {
+                attemptsUsed++;
                 var effectiveSeed = execution.SeedUsed ?? 0UL;
                 var numbers = BuildCandidateNumbers(rankedNumbers, effectiveSeed, sequenceSeed + poolIndex);
                 var key = string.Join(",", numbers);
                 if (globalConstraints.UniqueGames is true &&
                     (usedGameKeys.Contains(key) || (selectedKeys is not null && selectedKeys.Contains(key))))
                 {
+                    IncrementCounter(rejectedCountByReason, "duplicate_game");
                     continue;
                 }
 
                 var profile = BuildProfile(numbers, context);
                 var strategyScore = ComputeScore(execution.StrategyName, profile, execution.Weights);
-                if (!MatchesCriteria(execution.StrategyName, profile, strategyScore, execution.Criteria))
+                if (!MatchesCriteria(execution.StrategyName, profile, strategyScore, execution.Criteria, out var criteriaRejectionReason))
                 {
+                    IncrementCounter(rejectedCountByReason, criteriaRejectionReason ?? "criteria_mismatch");
                     continue;
                 }
 
-                if (!PassesFilters(profile, execution.Filters))
+                if (!PassesFilters(profile, execution.Filters, out var filterRejectionReason))
                 {
+                    IncrementCounter(rejectedCountByReason, filterRejectionReason ?? "filter_mismatch");
                     continue;
                 }
 
@@ -253,11 +273,24 @@ public sealed class GenerateCandidateGamesUseCase
                 selected.Add(new CandidateSelection(numbers, profile, strategyScore));
             }
 
-            sequenceSeed += poolSize;
+            sequenceSeed += resolvedBudget.MaxAttempts;
             selected.Sort((left, right) => CompareSelections(left, right, execution.TieBreakRule));
+            execution.ResolvedDefaults[$"plan[{planIndex}].generation_budget.max_attempts"] = resolvedBudget.MaxAttempts;
+            execution.ResolvedDefaults[$"plan[{planIndex}].generation_budget.pool_multiplier"] = resolvedBudget.PoolMultiplier;
+            execution.ResolvedDefaults[$"plan[{planIndex}].attempts_used"] = attemptsUsed;
+            execution.ResolvedDefaults[$"plan[{planIndex}].accepted_count"] = selected.Count;
+            execution.ResolvedDefaults[$"plan[{planIndex}].rejected_count_by_reason"] = rejectedCountByReason
+                .ToDictionary(entry => entry.Key, entry => (object?)entry.Value, StringComparer.Ordinal);
 
             if (selected.Count < planItem.Count)
             {
+                var collapseHint = rejectedCountByReason.Count == 0
+                    ? "budget_exhausted_without_classified_rejections"
+                    : rejectedCountByReason
+                        .OrderByDescending(static pair => pair.Value)
+                        .ThenBy(static pair => pair.Key, StringComparer.Ordinal)
+                        .First()
+                        .Key;
                 throw new ApplicationValidationException(
                     code: "STRUCTURAL_EXCLUSION_CONFLICT",
                     message: "configured criteria/filters make the requested plan infeasible.",
@@ -265,7 +298,11 @@ public sealed class GenerateCandidateGamesUseCase
                     {
                         ["strategy_name"] = planItem.StrategyName,
                         ["requested_count"] = planItem.Count,
-                        ["available_count"] = selected.Count
+                        ["available_count"] = selected.Count,
+                        ["attempts_used"] = attemptsUsed,
+                        ["accepted_count"] = selected.Count,
+                        ["rejected_count_by_reason"] = rejectedCountByReason.ToDictionary(entry => entry.Key, entry => (object?)entry.Value, StringComparer.Ordinal),
+                        ["collapse_hint"] = collapseHint
                     });
             }
 
@@ -750,6 +787,13 @@ public sealed class GenerateCandidateGamesUseCase
             MaxOutlierScore: input?.MaxOutlierScore ?? 1d);
     }
 
+    private static GenerateGenerationBudgetInput ResolveGenerationBudget(GenerateGenerationBudgetInput? input)
+    {
+        return new GenerateGenerationBudgetInput(
+            MaxAttempts: input?.MaxAttempts,
+            PoolMultiplier: input?.PoolMultiplier ?? 1d);
+    }
+
     private static int ResolvePoolSize(string searchMethod)
     {
         return searchMethod switch
@@ -830,85 +874,138 @@ public sealed class GenerateCandidateGamesUseCase
         string strategyName,
         CandidateProfile profile,
         double compositeScore,
-        IReadOnlyList<GenerateCandidateCriteriaInput> criteria)
+        IReadOnlyList<GenerateCandidateCriteriaInput> criteria,
+        out string? rejectionReason)
     {
-        var lookup = criteria
-            .Where(static c => c.Value.HasValue)
-            .ToDictionary(c => c.Name, c => c.Value!.Value, StringComparer.Ordinal);
-        if (string.Equals(strategyName, CommonRepetitionFrequencyStrategy, StringComparison.Ordinal))
+        rejectionReason = null;
+        foreach (var criterion in criteria)
         {
-            var minFrequency = lookup.TryGetValue("min_frequency_alignment", out var valueFrequency) ? valueFrequency : 0d;
-            var minRepeat = lookup.TryGetValue("min_repeat_alignment", out var valueRepeat) ? valueRepeat : 0d;
-            var minTop10 = lookup.TryGetValue("min_top10_overlap", out var valueTop10) ? valueTop10 : 0d;
-            return profile.FrequencyAlignment >= minFrequency &&
-                   profile.RepeatAlignment >= minRepeat &&
-                   profile.Top10OverlapCount >= minTop10;
+            if (!TryResolveObservedValue(criterion.Name, profile, compositeScore, out var observedValue))
+            {
+                continue;
+            }
+
+            if (MatchesConstraint(criterion.Name, observedValue, criterion.Value, criterion.Range, null, criterion.AllowedValues))
+            {
+                continue;
+            }
+
+            rejectionReason = $"criteria:{criterion.Name}";
+            return false;
         }
 
-        var minCompositeScore = lookup.TryGetValue("min_composite_score", out var compositeValue) ? compositeValue : 0d;
-        return compositeScore >= minCompositeScore;
+        if (string.Equals(strategyName, CommonRepetitionFrequencyStrategy, StringComparison.Ordinal))
+        {
+            return profile.FrequencyAlignment >= 0d &&
+                   profile.RepeatAlignment >= 0d &&
+                   profile.Top10OverlapCount >= 0d;
+        }
+
+        return compositeScore >= 0d;
     }
 
     private static bool PassesFilters(
         CandidateProfile profile,
-        IReadOnlyList<GenerateCandidateFilterInput> filters)
+        IReadOnlyList<GenerateCandidateFilterInput> filters,
+        out string? rejectionReason)
     {
+        rejectionReason = null;
         foreach (var filter in filters)
         {
-            if (string.Equals(filter.Name, "max_consecutive_run", StringComparison.Ordinal) &&
-                filter.Value.HasValue &&
-                profile.MaxConsecutiveRun > filter.Value.Value)
+            if (!TryResolveObservedValue(filter.Name, profile, profile.OutlierScore, out var observedValue))
             {
-                return false;
+                continue;
             }
 
-            if (string.Equals(filter.Name, "max_neighbor_count", StringComparison.Ordinal) &&
-                filter.Value.HasValue &&
-                profile.NeighborCount > filter.Value.Value)
+            if (MatchesConstraint(filter.Name, observedValue, filter.Value, filter.Range, (filter.Min, filter.Max), filter.AllowedValues))
             {
-                return false;
+                continue;
             }
 
-            if (string.Equals(filter.Name, "min_row_entropy_norm", StringComparison.Ordinal) &&
-                filter.Value.HasValue &&
-                profile.RowEntropyNorm < filter.Value.Value)
-            {
-                return false;
-            }
-
-            if (string.Equals(filter.Name, "max_hhi_linha", StringComparison.Ordinal) &&
-                filter.Value.HasValue &&
-                profile.HhiLinha > filter.Value.Value)
-            {
-                return false;
-            }
-
-            if (string.Equals(filter.Name, "min_slot_alignment", StringComparison.Ordinal) &&
-                filter.Value.HasValue &&
-                profile.SlotAlignment < filter.Value.Value)
-            {
-                return false;
-            }
-
-            if (string.Equals(filter.Name, "max_outlier_score", StringComparison.Ordinal) &&
-                filter.Value.HasValue &&
-                profile.OutlierScore > filter.Value.Value)
-            {
-                return false;
-            }
-
-            if (string.Equals(filter.Name, "repeat_range", StringComparison.Ordinal))
-            {
-                var min = filter.Range?.Min ?? filter.Min ?? 0d;
-                var max = filter.Range?.Max ?? filter.Max ?? 15d;
-                if (profile.RepeatCount < min || profile.RepeatCount > max)
-                {
-                    return false;
-                }
-            }
+            rejectionReason = $"filter:{filter.Name}";
+            return false;
         }
 
         return true;
+    }
+
+    private static bool TryResolveObservedValue(
+        string constraintName,
+        CandidateProfile profile,
+        double compositeScore,
+        out double observedValue)
+    {
+        observedValue = constraintName switch
+        {
+            "min_frequency_alignment" or "frequency_alignment" or "freq_alignment" => profile.FrequencyAlignment,
+            "min_repeat_alignment" or "repeat_alignment" => profile.RepeatAlignment,
+            "min_top10_overlap" or "top10_overlap_count" => profile.Top10OverlapCount,
+            "min_composite_score" or "composite_score" => compositeScore,
+            "max_consecutive_run" => profile.MaxConsecutiveRun,
+            "max_neighbor_count" or "neighbor_count" or "neighbors_count" => profile.NeighborCount,
+            "min_row_entropy_norm" or "row_entropy_norm" => profile.RowEntropyNorm,
+            "max_hhi_linha" or "hhi_linha" => profile.HhiLinha,
+            "min_slot_alignment" or "slot_alignment" => profile.SlotAlignment,
+            "max_outlier_score" or "outlier_score" => profile.OutlierScore,
+            "repeat_range" or "repeat_count" => profile.RepeatCount,
+            _ => double.NaN
+        };
+
+        return !double.IsNaN(observedValue);
+    }
+
+    private static bool MatchesConstraint(
+        string name,
+        double observedValue,
+        double? scalarValue,
+        GenerateRangeSpecInput? range,
+        (double? Min, double? Max)? legacyMinMax,
+        GenerateAllowedValuesSpecInput? allowedValues)
+    {
+        if (allowedValues?.Values is { Count: > 0 })
+        {
+            foreach (var allowed in allowedValues.Values)
+            {
+                if (Math.Abs(observedValue - allowed) <= 1e-9d)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        if (range is not null)
+        {
+            var inclusive = range.Inclusive ?? true;
+            return inclusive
+                ? observedValue >= range.Min && observedValue <= range.Max
+                : observedValue > range.Min && observedValue < range.Max;
+        }
+
+        if (legacyMinMax.HasValue && (legacyMinMax.Value.Min.HasValue || legacyMinMax.Value.Max.HasValue))
+        {
+            var min = legacyMinMax.Value.Min ?? double.NegativeInfinity;
+            var max = legacyMinMax.Value.Max ?? double.PositiveInfinity;
+            return observedValue >= min && observedValue <= max;
+        }
+
+        if (!scalarValue.HasValue)
+        {
+            return true;
+        }
+
+        if (name.StartsWith("min_", StringComparison.Ordinal))
+        {
+            return observedValue >= scalarValue.Value;
+        }
+
+        if (name.StartsWith("max_", StringComparison.Ordinal))
+        {
+            return observedValue <= scalarValue.Value;
+        }
+
+        return Math.Abs(observedValue - scalarValue.Value) <= 1e-9d;
     }
 
     private static int CompareSelections(
@@ -1015,6 +1112,17 @@ public sealed class GenerateCandidateGamesUseCase
         return value;
     }
 
+    private static void IncrementCounter(IDictionary<string, int> counters, string reason)
+    {
+        if (counters.TryGetValue(reason, out var current))
+        {
+            counters[reason] = current + 1;
+            return;
+        }
+
+        counters[reason] = 1;
+    }
+
     private static ApplicationValidationException MapDomainError(DomainInvariantViolationException ex)
     {
         const string unknownMetricPrefix = "UNKNOWN_METRIC:";
@@ -1084,5 +1192,5 @@ public sealed class GenerateCandidateGamesUseCase
         IReadOnlyList<GenerateCandidateCriteriaInput> Criteria,
         IReadOnlyList<GenerateCandidateWeightInput> Weights,
         IReadOnlyList<GenerateCandidateFilterInput> Filters,
-        IReadOnlyDictionary<string, object?> ResolvedDefaults);
+        Dictionary<string, object?> ResolvedDefaults);
 }

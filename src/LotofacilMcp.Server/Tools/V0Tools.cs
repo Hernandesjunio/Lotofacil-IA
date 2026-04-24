@@ -400,6 +400,10 @@ public sealed record GenerateStructuralExclusionsRequest(
     [property: JsonPropertyName("min_slot_alignment")] double? MinSlotAlignment = null,
     [property: JsonPropertyName("max_outlier_score")] double? MaxOutlierScore = null);
 
+public sealed record GenerateGenerationBudgetRequest(
+    [property: JsonPropertyName("max_attempts")] int? MaxAttempts = null,
+    [property: JsonPropertyName("pool_multiplier")] double? PoolMultiplier = null);
+
 public sealed record GenerateCandidateGamesRequest(
     [property: JsonPropertyName("window_size")] int? WindowSize = null,
     [property: JsonPropertyName("start_contest_id")] int? StartContestId = null,
@@ -407,7 +411,8 @@ public sealed record GenerateCandidateGamesRequest(
     [property: JsonPropertyName("seed")] ulong? Seed = null,
     [property: JsonPropertyName("plan")] IReadOnlyList<GenerateCandidatePlanItemRequest>? Plan = null,
     [property: JsonPropertyName("global_constraints")] GenerateGlobalConstraintsRequest? GlobalConstraints = null,
-    [property: JsonPropertyName("structural_exclusions")] GenerateStructuralExclusionsRequest? StructuralExclusions = null);
+    [property: JsonPropertyName("structural_exclusions")] GenerateStructuralExclusionsRequest? StructuralExclusions = null,
+    [property: JsonPropertyName("generation_budget")] GenerateGenerationBudgetRequest? GenerationBudget = null);
 
 public sealed record AppliedConfigurationEnvelope(
     [property: JsonPropertyName("criteria")] IReadOnlyList<GenerateCandidateCriterionRequest> Criteria,
@@ -1358,6 +1363,11 @@ public sealed class V0Tools
                                 request.StructuralExclusions.RepeatRange.Max),
                         request.StructuralExclusions.MinSlotAlignment,
                         request.StructuralExclusions.MaxOutlierScore),
+                GenerationBudget: request.GenerationBudget is null
+                    ? null
+                    : new GenerateGenerationBudgetInput(
+                        request.GenerationBudget.MaxAttempts,
+                        request.GenerationBudget.PoolMultiplier),
                 FixturePath: _fixturePath));
 
             var deterministicHash = _deterministicHashService.Compute(
