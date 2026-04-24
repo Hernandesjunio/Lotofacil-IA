@@ -139,10 +139,21 @@ public sealed class AnalyzeIndicatorAssociationsUseCase
         if (ex.Message.Contains("unknown indicator requested", StringComparison.Ordinal) ||
             ex.Message.StartsWith("UNKNOWN_METRIC", StringComparison.Ordinal))
         {
+            var metricName = ExtractMetricNameFromUnknownDomainMessage(ex.Message);
+            var details = new Dictionary<string, object?>();
+            if (!string.IsNullOrWhiteSpace(metricName))
+            {
+                details["metric_name"] = metricName;
+                if (MetricAvailabilityCatalog.IsKnownMetric(metricName))
+                {
+                    details["allowed_metrics"] = MetricAvailabilityCatalog.GetAnalyzeIndicatorAssociationsAllowedIndicators().ToArray();
+                }
+            }
+
             return new ApplicationValidationException(
                 code: "UNKNOWN_METRIC",
                 message: "requested metric is not available in V0.",
-                details: new Dictionary<string, object?>());
+                details: details);
         }
 
         if (ex.Message.Contains("unsupported aggregation for indicator", StringComparison.Ordinal) ||
@@ -166,5 +177,23 @@ public sealed class AnalyzeIndicatorAssociationsUseCase
             code: "INCOMPATIBLE_INDICATOR_FOR_STABILITY",
             message: ex.Message,
             details: new Dictionary<string, object?>());
+    }
+
+    private static string? ExtractMetricNameFromUnknownDomainMessage(string message)
+    {
+        const string unknownMetricPrefix = "UNKNOWN_METRIC:";
+        if (message.StartsWith(unknownMetricPrefix, StringComparison.Ordinal))
+        {
+            return message[unknownMetricPrefix.Length..].Trim();
+        }
+
+        const string unknownIndicatorPrefix = "unknown indicator requested:";
+        if (message.StartsWith(unknownIndicatorPrefix, StringComparison.Ordinal))
+        {
+            var metricName = message[unknownIndicatorPrefix.Length..].Trim();
+            return metricName.TrimEnd('.');
+        }
+
+        return null;
     }
 }

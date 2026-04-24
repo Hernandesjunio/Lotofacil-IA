@@ -118,6 +118,18 @@ public sealed class SummarizeWindowAggregatesUseCase
                 });
         }
 
+        if (!MetricAvailabilityCatalog.IsExposedInSummarizeWindowAggregates(aggregateRequest.SourceMetricName))
+        {
+            throw new ApplicationValidationException(
+                code: "UNKNOWN_METRIC",
+                message: "requested metric is known in the catalog but unavailable in this summarize_window_aggregates build.",
+                details: new Dictionary<string, object?>
+                {
+                    ["metric_name"] = aggregateRequest.SourceMetricName,
+                    ["allowed_metrics"] = MetricAvailabilityCatalog.GetSummarizeWindowAggregatesAllowedSources().ToArray()
+                });
+        }
+
         var metric = _windowMetricDispatcher.Dispatch(aggregateRequest.SourceMetricName, window);
 
         return aggregateRequest.AggregateType switch
@@ -507,13 +519,20 @@ public sealed class SummarizeWindowAggregatesUseCase
         if (ex.Message.StartsWith("UNKNOWN_METRIC:", StringComparison.Ordinal))
         {
             var metricName = ex.Message["UNKNOWN_METRIC:".Length..].Trim();
+            var details = new Dictionary<string, object?>
+            {
+                ["metric_name"] = metricName
+            };
+
+            if (MetricAvailabilityCatalog.IsKnownMetric(metricName))
+            {
+                details["allowed_metrics"] = MetricAvailabilityCatalog.GetSummarizeWindowAggregatesAllowedSources().ToArray();
+            }
+
             return new ApplicationValidationException(
                 code: "UNKNOWN_METRIC",
                 message: "requested metric is not available in this summarize_window_aggregates build.",
-                details: new Dictionary<string, object?>
-                {
-                    ["metric_name"] = metricName
-                });
+                details: details);
         }
 
         if (ex.Message.Contains("requested end_contest_id", StringComparison.Ordinal))

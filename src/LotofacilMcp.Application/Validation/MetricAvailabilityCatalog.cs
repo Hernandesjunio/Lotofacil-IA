@@ -2,92 +2,167 @@ namespace LotofacilMcp.Application.Validation;
 
 public static class MetricAvailabilityCatalog
 {
-    private static readonly string[] KnownMetricNames =
+    private static readonly MetricCapability[] Registry =
     [
-        "frequencia_por_dezena",
-        "top10_mais_sorteados",
-        "top10_menos_sorteados",
-        "repeticao_concurso_anterior",
-        "intersecoes_multiplas",
-        "atraso_por_dezena",
-        "frequencia_blocos",
-        "ausencia_blocos",
-        "estado_atual_dezena",
-        "pares_impares",
-        "pares_no_concurso",
-        "quantidade_vizinhos",
-        "quantidade_vizinhos_por_concurso",
-        "sequencia_maxima_vizinhos",
-        "sequencia_maxima_vizinhos_por_concurso",
-        "distribuicao_linha",
-        "distribuicao_linha_por_concurso",
-        "distribuicao_coluna",
-        "distribuicao_coluna_por_concurso",
-        "entropia_linha",
-        "entropia_linha_por_concurso",
-        "entropia_coluna",
-        "entropia_coluna_por_concurso",
-        "hhi_concentracao",
-        "hhi_linha_por_concurso",
-        "hhi_coluna_por_concurso",
-        "matriz_numero_slot",
-        "analise_slot",
-        "surpresa_slot",
-        "intersecao_conjunto_referencia",
-        "media_janela",
-        "desvio_padrao_janela",
-        "coeficiente_variacao",
-        "madn_janela",
-        "mad_janela",
-        "tendencia_linear",
-        "estabilidade_ranking",
-        "divergencia_kl",
-        "zscore_repeticao",
-        "persistencia_atraso_extremo",
-        "assimetria_blocos",
-        "estatistica_runs",
-        "outlier_score"
+        // Implemented in this build
+        new("frequencia_por_dezena", "1.0.0", "window", "vector_by_dezena", true, true, true, true, true),
+        new("top10_mais_sorteados", "1.0.0", "window", "dezena_list[10]", true, true, true, false, false),
+        new("top10_menos_sorteados", "1.0.0", "window", "dezena_list[10]", true, true, true, false, false),
+        new("repeticao_concurso_anterior", "1.0.0", "series", "series", true, false, true, true, false),
+        new("atraso_por_dezena", "1.0.0", "window", "vector_by_dezena", true, true, true, false, true),
+        new("pares_no_concurso", "1.0.0", "series", "series", true, true, true, true, false),
+        new("quantidade_vizinhos_por_concurso", "1.0.0", "series", "series", true, true, true, true, false),
+        new("sequencia_maxima_vizinhos_por_concurso", "1.0.0", "series", "series", true, true, true, true, false),
+        new("distribuicao_linha_por_concurso", "1.0.0", "series", "series_of_count_vector[5]", true, true, true, true, false),
+        new("distribuicao_coluna_por_concurso", "1.0.0", "series", "series_of_count_vector[5]", true, true, true, true, false),
+        new("entropia_linha_por_concurso", "1.0.0", "series", "series", true, true, true, true, false),
+        new("entropia_coluna_por_concurso", "1.0.0", "series", "series", true, true, true, false, false),
+        new("hhi_linha_por_concurso", "1.0.0", "series", "series", true, true, true, false, false),
+        new("hhi_coluna_por_concurso", "1.0.0", "series", "series", true, true, true, false, false),
+        new("assimetria_blocos", "1.0.0", "window", "vector_by_dezena", true, true, true, false, true),
+
+        // Known by normative catalog but not implemented in this build
+        new("intersecoes_multiplas", "1.0.0", "window", "count_list_by_dezena", false, false, false, false, false),
+        new("frequencia_blocos", "1.0.0", "window", "count_vector[5]", false, false, false, false, false),
+        new("ausencia_blocos", "1.0.0", "window", "count_vector[5]", false, false, false, false, false),
+        new("estado_atual_dezena", "1.0.0", "window", "count_list_by_dezena", false, false, false, false, false),
+        new("pares_impares", "1.0.0", "window", "count_pair", false, false, false, false, false),
+        new("quantidade_vizinhos", "1.0.0", "window", "scalar", false, false, false, false, false),
+        new("sequencia_maxima_vizinhos", "1.0.0", "window", "scalar", false, false, false, false, false),
+        new("distribuicao_linha", "1.0.0", "window", "count_vector[5]", false, false, false, false, false),
+        new("distribuicao_coluna", "1.0.0", "window", "count_vector[5]", false, false, false, false, false),
+        new("entropia_linha", "1.0.0", "window", "scalar", false, false, false, false, false),
+        new("entropia_coluna", "1.0.0", "window", "scalar", false, false, false, false, false),
+        new("hhi_concentracao", "1.0.0", "window", "scalar", false, false, false, false, false),
+        new("matriz_numero_slot", "1.0.0", "window", "count_matrix[25x15]", false, false, false, false, false),
+        new("analise_slot", "1.0.0", "window", "count_list_by_dezena", false, false, false, false, false),
+        new("surpresa_slot", "1.0.0", "window", "scalar", false, false, false, false, false),
+        new("intersecao_conjunto_referencia", "1.0.0", "window", "scalar", false, false, false, false, false),
+        new("media_janela", "1.0.0", "window", "scalar", false, false, false, false, false),
+        new("desvio_padrao_janela", "1.0.0", "window", "scalar", false, false, false, false, false),
+        new("coeficiente_variacao", "1.0.0", "window", "scalar", false, false, false, false, false),
+        new("madn_janela", "1.0.0", "window", "scalar", false, false, false, false, false),
+        new("mad_janela", "1.0.0", "window", "scalar", false, false, false, false, false),
+        new("tendencia_linear", "1.0.0", "window", "scalar", false, false, false, false, false),
+        new("estabilidade_ranking", "1.0.0", "window", "count_list_by_dezena", false, false, false, false, false),
+        new("divergencia_kl", "1.0.0", "window", "scalar", false, false, false, false, false),
+        new("zscore_repeticao", "1.0.0", "window", "series", false, false, false, false, false),
+        new("persistencia_atraso_extremo", "1.0.0", "window", "scalar", false, false, false, false, false),
+        new("estatistica_runs", "1.0.0", "window", "dimensionless_pair", false, false, false, false, false),
+        new("outlier_score", "1.0.0", "window", "scalar", false, false, false, false, false)
     ];
 
-    private static readonly string[] ComputeWindowMetricsExposedNames =
-    [
-        "frequencia_por_dezena",
-        "top10_mais_sorteados",
-        "top10_menos_sorteados",
-        "pares_no_concurso",
-        "quantidade_vizinhos_por_concurso",
-        "sequencia_maxima_vizinhos_por_concurso",
-        "distribuicao_linha_por_concurso",
-        "distribuicao_coluna_por_concurso",
-        "entropia_linha_por_concurso",
-        "entropia_coluna_por_concurso",
-        "hhi_linha_por_concurso",
-        "hhi_coluna_por_concurso",
-        "atraso_por_dezena",
-        "assimetria_blocos"
-    ];
+    private static readonly IReadOnlyDictionary<string, MetricCapability> RegistryByName =
+        Registry.ToDictionary(static entry => entry.MetricName, StringComparer.Ordinal);
 
-    private static readonly HashSet<string> KnownMetricNameSet = new(KnownMetricNames, StringComparer.Ordinal);
-    private static readonly HashSet<string> ComputeWindowMetricsExposedSet =
-        new(ComputeWindowMetricsExposedNames, StringComparer.Ordinal);
+    private static readonly string[] KnownMetricNames = Registry
+        .Select(static entry => entry.MetricName)
+        .OrderBy(static name => name, StringComparer.Ordinal)
+        .ToArray();
+
+    private static readonly string[] ImplementedMetricNames = Registry
+        .Where(static entry => entry.Implemented)
+        .Select(static entry => entry.MetricName)
+        .OrderBy(static name => name, StringComparer.Ordinal)
+        .ToArray();
+
+    private static readonly string[] ComputeWindowMetricsAllowedMetrics = Registry
+        .Where(static entry => entry.ComputeWindowMetrics)
+        .Select(static entry => entry.MetricName)
+        .OrderBy(static name => name, StringComparer.Ordinal)
+        .ToArray();
+
+    private static readonly string[] SummarizeWindowAggregatesAllowedSourceMetrics = Registry
+        .Where(static entry => entry.SummarizeWindowAggregatesSource)
+        .Select(static entry => entry.MetricName)
+        .OrderBy(static name => name, StringComparer.Ordinal)
+        .ToArray();
+
+    private static readonly string[] AssociationsAllowedIndicators = Registry
+        .Where(static entry => entry.Associations)
+        .Select(static entry => entry.MetricName)
+        .OrderBy(static name => name, StringComparer.Ordinal)
+        .ToArray();
+
+    private static readonly string[] CompositionAllowedComponents = Registry
+        .Where(static entry => entry.ComposeIndicatorAnalysisComponent)
+        .Select(static entry => entry.MetricName)
+        .OrderBy(static name => name, StringComparer.Ordinal)
+        .ToArray();
 
     public static bool IsKnownMetric(string metricName)
     {
-        return KnownMetricNameSet.Contains(metricName);
+        return RegistryByName.ContainsKey(metricName);
+    }
+
+    public static bool IsImplementedMetric(string metricName)
+    {
+        return RegistryByName.TryGetValue(metricName, out var entry) && entry.Implemented;
     }
 
     public static bool IsExposedInComputeWindowMetrics(string metricName)
     {
-        return ComputeWindowMetricsExposedSet.Contains(metricName);
+        return RegistryByName.TryGetValue(metricName, out var entry) && entry.ComputeWindowMetrics;
+    }
+
+    public static bool IsExposedInSummarizeWindowAggregates(string metricName)
+    {
+        return RegistryByName.TryGetValue(metricName, out var entry) && entry.SummarizeWindowAggregatesSource;
+    }
+
+    public static bool IsExposedInAnalyzeIndicatorAssociations(string metricName)
+    {
+        return RegistryByName.TryGetValue(metricName, out var entry) && entry.Associations;
+    }
+
+    public static bool IsExposedInComposeIndicatorAnalysis(string metricName)
+    {
+        return RegistryByName.TryGetValue(metricName, out var entry) && entry.ComposeIndicatorAnalysisComponent;
     }
 
     public static IReadOnlyList<string> GetComputeWindowMetricsAllowedMetrics()
     {
-        return ComputeWindowMetricsExposedNames;
+        return ComputeWindowMetricsAllowedMetrics;
+    }
+
+    public static IReadOnlyList<string> GetSummarizeWindowAggregatesAllowedSources()
+    {
+        return SummarizeWindowAggregatesAllowedSourceMetrics;
+    }
+
+    public static IReadOnlyList<string> GetAnalyzeIndicatorAssociationsAllowedIndicators()
+    {
+        return AssociationsAllowedIndicators;
+    }
+
+    public static IReadOnlyList<string> GetComposeIndicatorAnalysisAllowedComponents()
+    {
+        return CompositionAllowedComponents;
     }
 
     public static IReadOnlyList<string> GetKnownMetricNames()
     {
         return KnownMetricNames;
     }
+
+    public static IReadOnlyList<string> GetImplementedMetricNames()
+    {
+        return ImplementedMetricNames;
+    }
+
+    public static IReadOnlyList<MetricCapability> GetRegistryEntries()
+    {
+        return Registry;
+    }
+
+    public sealed record MetricCapability(
+        string MetricName,
+        string Version,
+        string Scope,
+        string Shape,
+        bool Implemented,
+        bool ComputeWindowMetrics,
+        bool SummarizeWindowAggregatesSource,
+        bool Associations,
+        bool ComposeIndicatorAnalysisComponent);
 }

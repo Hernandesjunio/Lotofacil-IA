@@ -371,7 +371,6 @@ public sealed class V0Tools
     private readonly SummarizeWindowAggregatesUseCase _summarizeWindowAggregatesUseCase;
     private readonly GenerateCandidateGamesUseCase _generateCandidateGamesUseCase;
     private readonly ExplainCandidateGamesUseCase _explainCandidateGamesUseCase;
-    private readonly WindowMetricDispatcher _windowMetricDispatcher;
     private readonly DeterministicHashService _deterministicHashService;
     private readonly string _fixturePath;
     private const string HelpToolVersion = "1.0.0";
@@ -401,7 +400,6 @@ public sealed class V0Tools
             new HhiColunaPorConcursoMetric(),
             new AtrasoPorDezenaMetric(),
             new AssimetriaBlocosMetric());
-        _windowMetricDispatcher = windowMetricDispatcher;
         _computeWindowMetricsUseCase = new ComputeWindowMetricsUseCase(
             fixtureProvider,
             datasetVersionService,
@@ -540,8 +538,19 @@ public sealed class V0Tools
     public object DiscoverCapabilities(DiscoverCapabilitiesRequest request)
     {
         var _ = request;
-        var implementedMetricNames = _windowMetricDispatcher.GetRegisteredMetricNames();
+        var implementedMetricNames = MetricAvailabilityCatalog.GetImplementedMetricNames()
+            .OrderBy(static metric => metric, StringComparer.Ordinal)
+            .ToArray();
         var computeWindowAllowed = MetricAvailabilityCatalog.GetComputeWindowMetricsAllowedMetrics()
+            .OrderBy(static metric => metric, StringComparer.Ordinal)
+            .ToArray();
+        var summarizeAllowedSources = MetricAvailabilityCatalog.GetSummarizeWindowAggregatesAllowedSources()
+            .OrderBy(static metric => metric, StringComparer.Ordinal)
+            .ToArray();
+        var associationAllowedIndicators = MetricAvailabilityCatalog.GetAnalyzeIndicatorAssociationsAllowedIndicators()
+            .OrderBy(static metric => metric, StringComparer.Ordinal)
+            .ToArray();
+        var composeAllowedComponents = MetricAvailabilityCatalog.GetComposeIndicatorAnalysisAllowedComponents()
             .OrderBy(static metric => metric, StringComparer.Ordinal)
             .ToArray();
         var knownMetricNames = MetricAvailabilityCatalog.GetKnownMetricNames()
@@ -608,7 +617,8 @@ public sealed class V0Tools
                             "identity_unit_interval",
                             "one_minus_unit_interval",
                             "shift_scale_unit_interval"
-                        ]
+                        ],
+                        ["metric_name"] = composeAllowedComponents
                     },
                     Capabilities: "Builds deterministic weighted compositions over supported dezena indicators."),
                 new ToolCapabilityEnvelope(
@@ -618,6 +628,7 @@ public sealed class V0Tools
                     {
                         ["method"] = ["spearman"],
                         ["aggregation"] = ["identity", "mean", "max", "l2_norm", "per_component"],
+                        ["indicator_name"] = associationAllowedIndicators,
                         ["stability_check"] = Array.Empty<string>()
                     },
                     Capabilities: "Computes association magnitude for compatible scalarized series in the same window."),
@@ -642,7 +653,7 @@ public sealed class V0Tools
                             "topk_patterns_count_vector5_series",
                             "histogram_count_vector5_series_per_position_matrix"
                         ],
-                        ["source_metric_name"] = implementedMetricNames
+                        ["source_metric_name"] = summarizeAllowedSources
                     },
                     Capabilities: "Builds canonical aggregate payloads over implemented source metrics."),
                 new ToolCapabilityEnvelope(
@@ -671,18 +682,8 @@ public sealed class V0Tools
             Metrics: new MetricsCapabilitiesEnvelope(
                 ImplementedMetricNames: implementedMetricNames,
                 ComputeWindowMetricsAllowed: computeWindowAllowed,
-                SummarizeWindowAggregatesAllowedSources: implementedMetricNames,
-                AssociationAllowedIndicators:
-                [
-                    "repeticao_concurso_anterior",
-                    "pares_no_concurso",
-                    "quantidade_vizinhos_por_concurso",
-                    "sequencia_maxima_vizinhos_por_concurso",
-                    "frequencia_por_dezena",
-                    "distribuicao_linha_por_concurso",
-                    "distribuicao_coluna_por_concurso",
-                    "entropia_linha_por_concurso"
-                ]),
+                SummarizeWindowAggregatesAllowedSources: summarizeAllowedSources,
+                AssociationAllowedIndicators: associationAllowedIndicators),
             Generation: new GenerationCapabilitiesEnvelope(
                 Strategies:
                 [

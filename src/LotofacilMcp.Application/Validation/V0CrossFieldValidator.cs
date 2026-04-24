@@ -104,25 +104,17 @@ public sealed class V0CrossFieldValidator
 
             if (!MetricAvailabilityCatalog.IsKnownMetric(metric.Name))
             {
-                throw new ApplicationValidationException(
-                    code: "UNKNOWN_METRIC",
-                    message: "metric name is not listed in the metric catalog.",
-                    details: new Dictionary<string, object?>
-                    {
-                        ["metric_name"] = metric.Name
-                    });
+                throw CreateUnknownMetricForRoute(
+                    metric.Name,
+                    "metric name is not listed in the metric catalog.");
             }
 
             if (!MetricAvailabilityCatalog.IsExposedInComputeWindowMetrics(metric.Name))
             {
-                throw new ApplicationValidationException(
-                    code: "UNKNOWN_METRIC",
-                    message: "requested metric is known in the catalog but unavailable in this compute_window_metrics build.",
-                    details: new Dictionary<string, object?>
-                    {
-                        ["metric_name"] = metric.Name,
-                        ["allowed_metrics"] = MetricAvailabilityCatalog.GetComputeWindowMetricsAllowedMetrics().ToArray()
-                    });
+                throw CreateUnknownMetricForRoute(
+                    metric.Name,
+                    "requested metric is known in the catalog but unavailable in this compute_window_metrics build.",
+                    MetricAvailabilityCatalog.GetComputeWindowMetricsAllowedMetrics());
             }
         }
     }
@@ -273,6 +265,21 @@ public sealed class V0CrossFieldValidator
                     });
             }
 
+            if (!MetricAvailabilityCatalog.IsKnownMetric(c.MetricName))
+            {
+                throw CreateUnknownMetricForRoute(
+                    c.MetricName,
+                    "metric name is not listed in the metric catalog.");
+            }
+
+            if (!MetricAvailabilityCatalog.IsExposedInComposeIndicatorAnalysis(c.MetricName))
+            {
+                throw CreateUnknownMetricForRoute(
+                    c.MetricName,
+                    "requested metric is known in the catalog but unavailable as compose component in this build.",
+                    MetricAvailabilityCatalog.GetComposeIndicatorAnalysisAllowedComponents());
+            }
+
             if (string.IsNullOrWhiteSpace(c.Transform))
             {
                 throw new ApplicationValidationException(
@@ -379,6 +386,21 @@ public sealed class V0CrossFieldValidator
                 {
                     ["field"] = "items[].name"
                 });
+            }
+
+            if (!MetricAvailabilityCatalog.IsKnownMetric(item.Name))
+            {
+                throw CreateUnknownMetricForRoute(
+                    item.Name,
+                    "metric name is not listed in the metric catalog.");
+            }
+
+            if (!MetricAvailabilityCatalog.IsExposedInAnalyzeIndicatorAssociations(item.Name))
+            {
+                throw CreateUnknownMetricForRoute(
+                    item.Name,
+                    "requested metric is known in the catalog but unavailable in this analyze_indicator_associations build.",
+                    MetricAvailabilityCatalog.GetAnalyzeIndicatorAssociationsAllowedIndicators());
             }
         }
     }
@@ -717,6 +739,21 @@ public sealed class V0CrossFieldValidator
                     });
             }
 
+            if (!MetricAvailabilityCatalog.IsKnownMetric(aggregate.SourceMetricName))
+            {
+                throw CreateUnknownMetricForRoute(
+                    aggregate.SourceMetricName,
+                    "metric name is not listed in the metric catalog.");
+            }
+
+            if (!MetricAvailabilityCatalog.IsExposedInSummarizeWindowAggregates(aggregate.SourceMetricName))
+            {
+                throw CreateUnknownMetricForRoute(
+                    aggregate.SourceMetricName,
+                    "requested metric is known in the catalog but unavailable in this summarize_window_aggregates build.",
+                    MetricAvailabilityCatalog.GetSummarizeWindowAggregatesAllowedSources());
+            }
+
             if (string.IsNullOrWhiteSpace(aggregate.AggregateType))
             {
                 throw new ApplicationValidationException(
@@ -875,5 +912,26 @@ public sealed class V0CrossFieldValidator
                     ["value_max"] = valueMax
                 });
         }
+    }
+
+    private static ApplicationValidationException CreateUnknownMetricForRoute(
+        string metricName,
+        string message,
+        IReadOnlyList<string>? allowedMetrics = null)
+    {
+        var details = new Dictionary<string, object?>
+        {
+            ["metric_name"] = metricName
+        };
+
+        if (allowedMetrics is not null)
+        {
+            details["allowed_metrics"] = allowedMetrics.ToArray();
+        }
+
+        return new ApplicationValidationException(
+            code: "UNKNOWN_METRIC",
+            message: message,
+            details: details);
     }
 }

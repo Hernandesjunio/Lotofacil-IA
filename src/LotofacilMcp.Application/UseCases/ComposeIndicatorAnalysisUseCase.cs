@@ -132,13 +132,20 @@ public sealed class ComposeIndicatorAnalysisUseCase
         if (ex.Message.StartsWith("UNKNOWN_METRIC:", StringComparison.Ordinal))
         {
             var metricName = ex.Message["UNKNOWN_METRIC:".Length..].Trim();
+            var details = new Dictionary<string, object?>
+            {
+                ["metric_name"] = metricName
+            };
+
+            if (MetricAvailabilityCatalog.IsKnownMetric(metricName))
+            {
+                details["allowed_metrics"] = MetricAvailabilityCatalog.GetComposeIndicatorAnalysisAllowedComponents().ToArray();
+            }
+
             return new ApplicationValidationException(
                 code: "UNKNOWN_METRIC",
                 message: "requested metric is not available in V0.",
-                details: new Dictionary<string, object?>
-                {
-                    ["metric_name"] = metricName
-                });
+                details: details);
         }
 
         if (ex.Message.Contains("requested end_contest_id", StringComparison.Ordinal))
