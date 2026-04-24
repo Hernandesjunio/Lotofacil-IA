@@ -1,5 +1,6 @@
 using LotofacilMcp.Application.Mapping;
 using LotofacilMcp.Application.Validation;
+using LotofacilMcp.Domain.Generation;
 using LotofacilMcp.Domain.Metrics;
 using LotofacilMcp.Domain.Models;
 using LotofacilMcp.Domain.Windows;
@@ -13,6 +14,7 @@ public sealed record GenerateCandidateCriteriaInput(
     double? Value,
     GenerateRangeSpecInput? Range,
     GenerateAllowedValuesSpecInput? AllowedValues,
+    GenerateTypicalRangeSpecInput? TypicalRange,
     string? Mode);
 
 public sealed record GenerateRangeSpecInput(
@@ -22,6 +24,17 @@ public sealed record GenerateRangeSpecInput(
 
 public sealed record GenerateAllowedValuesSpecInput(
     IReadOnlyList<double>? Values);
+
+public sealed record GenerateTypicalRangeParamsInput(
+    double? PLow,
+    double? PHigh);
+
+public sealed record GenerateTypicalRangeSpecInput(
+    string MetricName,
+    string Method,
+    double Coverage,
+    GenerateTypicalRangeParamsInput? Params,
+    bool? Inclusive);
 
 public sealed record GenerateCandidateWeightInput(
     string Name,
@@ -34,6 +47,7 @@ public sealed record GenerateCandidateFilterInput(
     double? Max,
     GenerateRangeSpecInput? Range,
     GenerateAllowedValuesSpecInput? AllowedValues,
+    GenerateTypicalRangeSpecInput? TypicalRange,
     string? Mode,
     string? Version);
 
@@ -124,6 +138,7 @@ public sealed class GenerateCandidateGamesUseCase
     private readonly WindowMetricDispatcher _windowMetricDispatcher;
     private readonly V0CrossFieldValidator _validator;
     private readonly V0RequestMapper _mapper;
+    private readonly TypicalRangeResolver _typicalRangeResolver = new();
 
     public GenerateCandidateGamesUseCase(
         SyntheticFixtureProvider fixtureProvider,
@@ -161,7 +176,13 @@ public sealed class GenerateCandidateGamesUseCase
             var context = BuildGenerationContext(window, frequencyMetric.Value, top10Metric.Value, repetitionMetric.Value);
             var resolvedGlobalConstraints = ResolveGlobalConstraints(input.GlobalConstraints);
             var resolvedStructuralExclusions = ResolveStructuralExclusions(input.StructuralExclusions);
-            var candidates = BuildCandidates(input, rankedNumbers, context, resolvedGlobalConstraints, resolvedStructuralExclusions);
+            var candidates = BuildCandidates(
+                input,
+                window,
+                rankedNumbers,
+                context,
+                resolvedGlobalConstraints,
+                resolvedStructuralExclusions);
 
             return new GenerateCandidateGamesResult(
                 DatasetVersion: _datasetVersionService.CreateFromSnapshot(snapshot),
@@ -182,8 +203,9 @@ public sealed class GenerateCandidateGamesUseCase
         }
     }
 
-    private static CandidateGameView[] BuildCandidates(
+    private CandidateGameView[] BuildCandidates(
         GenerateCandidateGamesInput input,
+        DrawWindow window,
         IReadOnlyList<int> rankedNumbers,
         GenerationContext context,
         GenerateGlobalConstraintsInput globalConstraints,
@@ -196,7 +218,7 @@ public sealed class GenerateCandidateGamesUseCase
         for (var planIndex = 0; planIndex < input.Plan.Count; planIndex++)
         {
             var planItem = input.Plan[planIndex];
-            var execution = ResolveExecutionPlan(planItem, planIndex, input.Seed, structuralExclusions);
+            var execution = ResolveExecutionPlan(planItem, planIndex, input.Seed, structuralExclusions, window);
             var poolSize = ResolvePoolSize(execution.SearchMethod);
             var selected = new List<CandidateSelection>();
             var selectedKeys = globalConstraints.UniqueGames is true
@@ -344,19 +366,20 @@ public sealed class GenerateCandidateGamesUseCase
             RepetitionMedian: repetitionMedian);
     }
 
-    private static ExecutionPlan ResolveExecutionPlan(
+    private ExecutionPlan ResolveExecutionPlan(
         GenerateCandidatePlanItemInput item,
         int planIndex,
         ulong? inputSeed,
-        GenerateStructuralExclusionsInput structuralExclusions)
+        GenerateStructuralExclusionsInput structuralExclusions,
+        DrawWindow window)
     {
         var resolvedDefaults = new Dictionary<string, object?>(StringComparer.Ordinal);
         var strategyVersion = ResolveStrategyVersion(item, planIndex, resolvedDefaults);
         var searchMethod = ResolveSearchMethod(item, planIndex, resolvedDefaults);
         var tieBreakRule = ResolveTieBreakRule(item, planIndex, resolvedDefaults);
-        var criteria = ResolveCriteria(item, planIndex, resolvedDefaults);
+        var criteria = ResolveCriteria(item, planIndex, resolvedDefaults, window);
         var weights = ResolveWeights(item, planIndex, resolvedDefaults);
-        var filters = ResolveFilters(item, planIndex, structuralExclusions, resolvedDefaults);
+        var filters = ResolveFilters(item, planIndex, structuralExclusions, resolvedDefaults, window);
 
         return new ExecutionPlan(
             StrategyName: item.StrategyName,
@@ -421,10 +444,11 @@ public sealed class GenerateCandidateGamesUseCase
         return value;
     }
 
-    private static IReadOnlyList<GenerateCandidateCriteriaInput> ResolveCriteria(
+    private IReadOnlyList<GenerateCandidateCriteriaInput> ResolveCriteria(
         GenerateCandidatePlanItemInput item,
         int planIndex,
-        IDictionary<string, object?> defaults)
+        IDictionary<string, object?> defaults,
+        DrawWindow window)
     {
         if (item.Criteria is { Count: > 0 })
         {
@@ -440,14 +464,25 @@ public sealed class GenerateCandidateGamesUseCase
                     criterion.Range,
                     $"plan[{planIndex}].criteria[{criterionIndex}]",
                     defaults);
+                var typicalRange = NormalizeTypicalRange(
+                    criterion.TypicalRange,
+                    $"plan[{planIndex}].criteria[{criterionIndex}]",
+                    defaults,
+                    window);
                 var allowedValues = NormalizeAllowedValues(
                     criterion.AllowedValues,
                     $"plan[{planIndex}].criteria[{criterionIndex}]",
                     defaults);
+                var effectiveRange = range ?? (typicalRange is null
+                    ? null
+                    : new GenerateRangeSpecInput(
+                        Min: typicalRange.ResolvedRange.Min,
+                        Max: typicalRange.ResolvedRange.Max,
+                        Inclusive: typicalRange.ResolvedRange.Inclusive));
                 resolved.Add(criterion with
                 {
                     Mode = mode,
-                    Range = range,
+                    Range = effectiveRange,
                     AllowedValues = allowedValues
                 });
             }
@@ -458,13 +493,13 @@ public sealed class GenerateCandidateGamesUseCase
         GenerateCandidateCriteriaInput[] criteria = string.Equals(item.StrategyName, DeclaredCompositeProfileStrategy, StringComparison.Ordinal)
             ?
             [
-                new GenerateCandidateCriteriaInput("min_composite_score", 0.55d, null, null, "hard")
+                new GenerateCandidateCriteriaInput("min_composite_score", 0.55d, null, null, null, "hard")
             ]
             :
             [
-                new GenerateCandidateCriteriaInput("min_frequency_alignment", 0.55d, null, null, "hard"),
-                new GenerateCandidateCriteriaInput("min_repeat_alignment", 0.5d, null, null, "hard"),
-                new GenerateCandidateCriteriaInput("min_top10_overlap", 6d, null, null, "hard")
+                new GenerateCandidateCriteriaInput("min_frequency_alignment", 0.55d, null, null, null, "hard"),
+                new GenerateCandidateCriteriaInput("min_repeat_alignment", 0.5d, null, null, null, "hard"),
+                new GenerateCandidateCriteriaInput("min_top10_overlap", 6d, null, null, null, "hard")
             ];
         defaults[$"plan[{planIndex}].criteria"] = criteria.Select(static c => new { name = c.Name, value = c.Value, mode = c.Mode }).ToArray();
         return criteria;
@@ -498,20 +533,21 @@ public sealed class GenerateCandidateGamesUseCase
         return weights;
     }
 
-    private static IReadOnlyList<GenerateCandidateFilterInput> ResolveFilters(
+    private IReadOnlyList<GenerateCandidateFilterInput> ResolveFilters(
         GenerateCandidatePlanItemInput item,
         int planIndex,
         GenerateStructuralExclusionsInput structuralExclusions,
-        IDictionary<string, object?> defaults)
+        IDictionary<string, object?> defaults,
+        DrawWindow window)
     {
         var fromStructural = new Dictionary<string, GenerateCandidateFilterInput>(StringComparer.Ordinal)
         {
-            ["max_consecutive_run"] = new GenerateCandidateFilterInput("max_consecutive_run", structuralExclusions.MaxConsecutiveRun, null, null, null, null, "hard", "1.0.0"),
-            ["max_neighbor_count"] = new GenerateCandidateFilterInput("max_neighbor_count", structuralExclusions.MaxNeighborCount, null, null, null, null, "hard", "1.0.0"),
-            ["min_row_entropy_norm"] = new GenerateCandidateFilterInput("min_row_entropy_norm", structuralExclusions.MinRowEntropyNorm, null, null, null, null, "hard", "1.0.0"),
-            ["max_hhi_linha"] = new GenerateCandidateFilterInput("max_hhi_linha", structuralExclusions.MaxHhiLinha, null, null, null, null, "hard", "1.0.0"),
-            ["min_slot_alignment"] = new GenerateCandidateFilterInput("min_slot_alignment", structuralExclusions.MinSlotAlignment, null, null, null, null, "hard", "1.0.0"),
-            ["max_outlier_score"] = new GenerateCandidateFilterInput("max_outlier_score", structuralExclusions.MaxOutlierScore, null, null, null, null, "hard", "1.0.0")
+            ["max_consecutive_run"] = new GenerateCandidateFilterInput("max_consecutive_run", structuralExclusions.MaxConsecutiveRun, null, null, null, null, null, "hard", "1.0.0"),
+            ["max_neighbor_count"] = new GenerateCandidateFilterInput("max_neighbor_count", structuralExclusions.MaxNeighborCount, null, null, null, null, null, "hard", "1.0.0"),
+            ["min_row_entropy_norm"] = new GenerateCandidateFilterInput("min_row_entropy_norm", structuralExclusions.MinRowEntropyNorm, null, null, null, null, null, "hard", "1.0.0"),
+            ["max_hhi_linha"] = new GenerateCandidateFilterInput("max_hhi_linha", structuralExclusions.MaxHhiLinha, null, null, null, null, null, "hard", "1.0.0"),
+            ["min_slot_alignment"] = new GenerateCandidateFilterInput("min_slot_alignment", structuralExclusions.MinSlotAlignment, null, null, null, null, null, "hard", "1.0.0"),
+            ["max_outlier_score"] = new GenerateCandidateFilterInput("max_outlier_score", structuralExclusions.MaxOutlierScore, null, null, null, null, null, "hard", "1.0.0")
         };
 
         if (structuralExclusions.RepeatRange is not null)
@@ -521,6 +557,7 @@ public sealed class GenerateCandidateGamesUseCase
                 null,
                 structuralExclusions.RepeatRange.Min,
                 structuralExclusions.RepeatRange.Max,
+                null,
                 null,
                 null,
                 "hard",
@@ -540,14 +577,25 @@ public sealed class GenerateCandidateGamesUseCase
                     filter.Range,
                     $"plan[{planIndex}].filters[{filterIndex}]",
                     defaults);
+                var typicalRange = NormalizeTypicalRange(
+                    filter.TypicalRange,
+                    $"plan[{planIndex}].filters[{filterIndex}]",
+                    defaults,
+                    window);
                 var allowedValues = NormalizeAllowedValues(
                     filter.AllowedValues,
                     $"plan[{planIndex}].filters[{filterIndex}]",
                     defaults);
+                var effectiveRange = range ?? (typicalRange is null
+                    ? null
+                    : new GenerateRangeSpecInput(
+                        Min: typicalRange.ResolvedRange.Min,
+                        Max: typicalRange.ResolvedRange.Max,
+                        Inclusive: typicalRange.ResolvedRange.Inclusive));
                 fromStructural[filter.Name] = filter with
                 {
                     Mode = mode,
-                    Range = range,
+                    Range = effectiveRange,
                     AllowedValues = allowedValues,
                     Version = string.IsNullOrWhiteSpace(filter.Version) ? "1.0.0" : filter.Version
                 };
@@ -566,6 +614,18 @@ public sealed class GenerateCandidateGamesUseCase
                 max = f.Max,
                 range = f.Range is null ? null : new { min = f.Range.Min, max = f.Range.Max, inclusive = f.Range.Inclusive },
                 allowed_values = f.AllowedValues?.Values?.ToArray(),
+                typical_range = f.TypicalRange is null
+                    ? null
+                    : new
+                    {
+                        metric_name = f.TypicalRange.MetricName,
+                        method = f.TypicalRange.Method,
+                        coverage = f.TypicalRange.Coverage,
+                        @params = f.TypicalRange.Params is null
+                            ? null
+                            : new { p_low = f.TypicalRange.Params.PLow, p_high = f.TypicalRange.Params.PHigh },
+                        inclusive = f.TypicalRange.Inclusive
+                    },
                 mode = f.Mode,
                 version = f.Version
             })
@@ -625,6 +685,45 @@ public sealed class GenerateCandidateGamesUseCase
         {
             Values = normalized
         };
+    }
+
+    private TypicalRangeResolution? NormalizeTypicalRange(
+        GenerateTypicalRangeSpecInput? typicalRange,
+        string pathPrefix,
+        IDictionary<string, object?> defaults,
+        DrawWindow window)
+    {
+        if (typicalRange is null)
+        {
+            return null;
+        }
+
+        var metric = _windowMetricDispatcher.Dispatch(typicalRange.MetricName, window);
+        var resolution = _typicalRangeResolver.Resolve(
+            new TypicalRangeSpec(
+                MetricName: typicalRange.MetricName,
+                Method: typicalRange.Method,
+                Coverage: typicalRange.Coverage,
+                Params: typicalRange.Params is null
+                    ? null
+                    : new TypicalRangePercentileParams(typicalRange.Params.PLow, typicalRange.Params.PHigh),
+                Inclusive: typicalRange.Inclusive),
+            metric.Value);
+
+        defaults[$"{pathPrefix}.typical_range.resolved_range"] = new
+        {
+            min = resolution.ResolvedRange.Min,
+            max = resolution.ResolvedRange.Max,
+            inclusive = resolution.ResolvedRange.Inclusive
+        };
+        defaults[$"{pathPrefix}.typical_range.coverage_observed"] = resolution.CoverageObserved;
+        defaults[$"{pathPrefix}.typical_range.method_version"] = resolution.MethodVersion;
+        if (!typicalRange.Inclusive.HasValue)
+        {
+            defaults[$"{pathPrefix}.typical_range.inclusive"] = true;
+        }
+
+        return resolution;
     }
 
     private static GenerateGlobalConstraintsInput ResolveGlobalConstraints(GenerateGlobalConstraintsInput? input)

@@ -320,6 +320,115 @@ public sealed class Phase20GenerateCandidateGamesContractTests
         Assert.Equal([8d, 9d, 10d], normalized);
     }
 
+    [Fact]
+    public void GenerateCandidateGames_TypicalRangeIqr_ResolvesAndEchoesCoverageObservedMethodVersion()
+    {
+        var sut = new V0Tools();
+        var request = new GenerateCandidateGamesRequest(
+            WindowSize: 5,
+            EndContestId: 1005,
+            Seed: 424242UL,
+            Plan:
+            [
+                new GenerateCandidatePlanItemRequest(
+                    StrategyName: "common_repetition_frequency",
+                    Count: 1,
+                    SearchMethod: "sampled",
+                    Criteria:
+                    [
+                        new GenerateCandidateCriterionRequest(
+                            Name: "min_top10_overlap",
+                            TypicalRange: new GenerateTypicalRangeSpecRequest(
+                                MetricName: "repeticao_concurso_anterior",
+                                Method: "iqr",
+                                Coverage: 0.8))
+                    ])
+            ]);
+
+        var response = sut.GenerateCandidateGames(request);
+        var payload = Assert.IsType<GenerateCandidateGamesResponse>(response);
+        Assert.Single(payload.CandidateGames);
+
+        using var json = JsonSerializer.SerializeToDocument(payload);
+        var resolvedDefaults = json.RootElement
+            .GetProperty("candidate_games")[0]
+            .GetProperty("applied_configuration")
+            .GetProperty("resolved_defaults");
+
+        Assert.True(resolvedDefaults.TryGetProperty("plan[0].criteria[0].typical_range.resolved_range", out var resolvedRange));
+        Assert.True(resolvedRange.TryGetProperty("min", out _));
+        Assert.True(resolvedRange.TryGetProperty("max", out _));
+        Assert.True(resolvedRange.TryGetProperty("inclusive", out var inclusive));
+        Assert.True(inclusive.GetBoolean());
+
+        Assert.True(resolvedDefaults.TryGetProperty("plan[0].criteria[0].typical_range.coverage_observed", out var coverageObserved));
+        Assert.InRange(coverageObserved.GetDouble(), 0d, 1d);
+
+        Assert.True(resolvedDefaults.TryGetProperty("plan[0].criteria[0].typical_range.method_version", out var methodVersion));
+        Assert.Equal("1.0.0", methodVersion.GetString());
+    }
+
+    [Fact]
+    public void GenerateCandidateGames_TypicalRangeCoverageOutsideRange_ReturnsInvalidRequest()
+    {
+        var sut = new V0Tools();
+        var request = new GenerateCandidateGamesRequest(
+            WindowSize: 5,
+            EndContestId: 1005,
+            Seed: 424242UL,
+            Plan:
+            [
+                new GenerateCandidatePlanItemRequest(
+                    StrategyName: "common_repetition_frequency",
+                    Count: 1,
+                    SearchMethod: "sampled",
+                    Criteria:
+                    [
+                        new GenerateCandidateCriterionRequest(
+                            Name: "min_top10_overlap",
+                            TypicalRange: new GenerateTypicalRangeSpecRequest(
+                                MetricName: "repeticao_concurso_anterior",
+                                Method: "iqr",
+                                Coverage: 1.2))
+                    ])
+            ]);
+
+        var response = sut.GenerateCandidateGames(request);
+        var error = Assert.IsType<ContractErrorEnvelope>(response).Error;
+        Assert.Equal("INVALID_REQUEST", error.Code);
+    }
+
+    [Fact]
+    public void GenerateCandidateGames_TypicalRangePercentileWithInvalidParams_ReturnsInvalidRequest()
+    {
+        var sut = new V0Tools();
+        var request = new GenerateCandidateGamesRequest(
+            WindowSize: 5,
+            EndContestId: 1005,
+            Seed: 424242UL,
+            Plan:
+            [
+                new GenerateCandidatePlanItemRequest(
+                    StrategyName: "common_repetition_frequency",
+                    Count: 1,
+                    SearchMethod: "sampled",
+                    Criteria:
+                    [
+                        new GenerateCandidateCriterionRequest(
+                            Name: "min_top10_overlap",
+                            TypicalRange: new GenerateTypicalRangeSpecRequest(
+                                MetricName: "repeticao_concurso_anterior",
+                                Method: "percentile",
+                                Coverage: 0.8,
+                                Params: new GenerateTypicalRangeParamsRequest(0.9, 0.1)))
+                    ])
+            ]);
+
+        var response = sut.GenerateCandidateGames(request);
+        var error = Assert.IsType<ContractErrorEnvelope>(response).Error;
+        Assert.Equal("INVALID_REQUEST", error.Code);
+    }
+
     private static int CountNeighbors(IReadOnlyList<int> game)
     {
         var count = 0;

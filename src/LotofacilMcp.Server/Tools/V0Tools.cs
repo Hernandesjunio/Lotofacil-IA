@@ -346,11 +346,23 @@ public sealed record GenerateRangeSpecRequest(
 public sealed record GenerateAllowedValuesSpecRequest(
     [property: JsonPropertyName("values")] IReadOnlyList<double>? Values = null);
 
+public sealed record GenerateTypicalRangeParamsRequest(
+    [property: JsonPropertyName("p_low")] double? PLow = null,
+    [property: JsonPropertyName("p_high")] double? PHigh = null);
+
+public sealed record GenerateTypicalRangeSpecRequest(
+    [property: JsonPropertyName("metric_name")] string MetricName,
+    [property: JsonPropertyName("method")] string Method,
+    [property: JsonPropertyName("coverage")] double Coverage,
+    [property: JsonPropertyName("params")] GenerateTypicalRangeParamsRequest? Params = null,
+    [property: JsonPropertyName("inclusive")] bool? Inclusive = null);
+
 public sealed record GenerateCandidateCriterionRequest(
     [property: JsonPropertyName("name")] string Name,
     [property: JsonPropertyName("value")] double? Value = null,
     [property: JsonPropertyName("range")] GenerateRangeSpecRequest? Range = null,
     [property: JsonPropertyName("allowed_values")] GenerateAllowedValuesSpecRequest? AllowedValues = null,
+    [property: JsonPropertyName("typical_range")] GenerateTypicalRangeSpecRequest? TypicalRange = null,
     [property: JsonPropertyName("mode")] string? Mode = null);
 
 public sealed record GenerateCandidateWeightRequest(
@@ -364,6 +376,7 @@ public sealed record GenerateCandidateFilterRequest(
     [property: JsonPropertyName("max")] double? Max = null,
     [property: JsonPropertyName("range")] GenerateRangeSpecRequest? Range = null,
     [property: JsonPropertyName("allowed_values")] GenerateAllowedValuesSpecRequest? AllowedValues = null,
+    [property: JsonPropertyName("typical_range")] GenerateTypicalRangeSpecRequest? TypicalRange = null,
     [property: JsonPropertyName("mode")] string? Mode = null,
     [property: JsonPropertyName("version")] string? Version = null);
 
@@ -773,9 +786,9 @@ public sealed class V0Tools
                     {
                         ["strategy_name"] = ["common_repetition_frequency", "declared_composite_profile"],
                         ["search_method"] = ["exhaustive", "sampled", "greedy_topk"],
-                        ["plan.criteria"] = ["name", "value|range|allowed_values", "mode"],
+                        ["plan.criteria"] = ["name", "value|range|allowed_values|typical_range", "mode"],
                         ["plan.weights"] = ["name", "weight"],
-                        ["plan.filters"] = ["name", "value|min|max|range|allowed_values", "mode", "version"]
+                        ["plan.filters"] = ["name", "value|min|max|range|allowed_values|typical_range", "mode", "version"]
                     },
                     Capabilities: "Generates deterministic candidate games from supported strategy plans."),
                 new ToolCapabilityEnvelope(
@@ -1271,6 +1284,18 @@ public sealed class V0Tools
                                 criterion.AllowedValues is null
                                     ? null
                                     : new GenerateAllowedValuesSpecInput(criterion.AllowedValues.Values),
+                                criterion.TypicalRange is null
+                                    ? null
+                                    : new GenerateTypicalRangeSpecInput(
+                                        criterion.TypicalRange.MetricName,
+                                        criterion.TypicalRange.Method,
+                                        criterion.TypicalRange.Coverage,
+                                        criterion.TypicalRange.Params is null
+                                            ? null
+                                            : new GenerateTypicalRangeParamsInput(
+                                                criterion.TypicalRange.Params.PLow,
+                                                criterion.TypicalRange.Params.PHigh),
+                                        criterion.TypicalRange.Inclusive),
                                 criterion.Mode))
                             .ToArray(),
                         planItem.Weights?
@@ -1293,6 +1318,18 @@ public sealed class V0Tools
                                 filter.AllowedValues is null
                                     ? null
                                     : new GenerateAllowedValuesSpecInput(filter.AllowedValues.Values),
+                                filter.TypicalRange is null
+                                    ? null
+                                    : new GenerateTypicalRangeSpecInput(
+                                        filter.TypicalRange.MetricName,
+                                        filter.TypicalRange.Method,
+                                        filter.TypicalRange.Coverage,
+                                        filter.TypicalRange.Params is null
+                                            ? null
+                                            : new GenerateTypicalRangeParamsInput(
+                                                filter.TypicalRange.Params.PLow,
+                                                filter.TypicalRange.Params.PHigh),
+                                        filter.TypicalRange.Inclusive),
                                 filter.Mode,
                                 filter.Version))
                             .ToArray()))
@@ -1355,6 +1392,18 @@ public sealed class V0Tools
                                     criterion.AllowedValues is null
                                         ? null
                                         : new GenerateAllowedValuesSpecRequest(criterion.AllowedValues.Values),
+                                    criterion.TypicalRange is null
+                                        ? null
+                                        : new GenerateTypicalRangeSpecRequest(
+                                            criterion.TypicalRange.MetricName,
+                                            criterion.TypicalRange.Method,
+                                            criterion.TypicalRange.Coverage,
+                                            criterion.TypicalRange.Params is null
+                                                ? null
+                                                : new GenerateTypicalRangeParamsRequest(
+                                                    criterion.TypicalRange.Params.PLow,
+                                                    criterion.TypicalRange.Params.PHigh),
+                                            criterion.TypicalRange.Inclusive),
                                     criterion.Mode))
                                 .ToArray(),
                             Weights: game.AppliedConfiguration.Weights
@@ -1377,6 +1426,18 @@ public sealed class V0Tools
                                     filter.AllowedValues is null
                                         ? null
                                         : new GenerateAllowedValuesSpecRequest(filter.AllowedValues.Values),
+                                    filter.TypicalRange is null
+                                        ? null
+                                        : new GenerateTypicalRangeSpecRequest(
+                                            filter.TypicalRange.MetricName,
+                                            filter.TypicalRange.Method,
+                                            filter.TypicalRange.Coverage,
+                                            filter.TypicalRange.Params is null
+                                                ? null
+                                                : new GenerateTypicalRangeParamsRequest(
+                                                    filter.TypicalRange.Params.PLow,
+                                                    filter.TypicalRange.Params.PHigh),
+                                            filter.TypicalRange.Inclusive),
                                     filter.Mode,
                                     filter.Version))
                                 .ToArray(),

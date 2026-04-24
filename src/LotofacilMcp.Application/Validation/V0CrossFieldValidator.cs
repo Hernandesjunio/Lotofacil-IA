@@ -76,6 +76,12 @@ public sealed class V0CrossFieldValidator
         "soft"
     ];
 
+    private static readonly HashSet<string> SupportedTypicalRangeMethods =
+    [
+        "iqr",
+        "percentile"
+    ];
+
     public void ValidateGetDrawWindow(GetDrawWindowInput input)
     {
         if (input.WindowSize <= 0)
@@ -775,6 +781,7 @@ public sealed class V0CrossFieldValidator
                         hasLegacyMode: criterion.Value.HasValue,
                         hasRangeMode: criterion.Range is not null,
                         hasAllowedValuesMode: criterion.AllowedValues is not null,
+                        hasTypicalRangeMode: criterion.TypicalRange is not null,
                         fieldPrefix: "plan[].criteria[]");
 
                     ValidateConstraintModeValue(criterion.Mode, "plan[].criteria[].mode");
@@ -796,6 +803,11 @@ public sealed class V0CrossFieldValidator
                             criterion.Name,
                             criterion.AllowedValues.Values,
                             "plan[].criteria[].allowed_values.values");
+                    }
+
+                    if (criterion.TypicalRange is not null)
+                    {
+                        ValidateTypicalRange(criterion.TypicalRange, "plan[].criteria[].typical_range");
                     }
                 }
             }
@@ -863,6 +875,7 @@ public sealed class V0CrossFieldValidator
                             hasLegacyMode: filter.Value.HasValue || filter.Min.HasValue || filter.Max.HasValue,
                             hasRangeMode: filter.Range is not null,
                             hasAllowedValuesMode: filter.AllowedValues is not null,
+                            hasTypicalRangeMode: filter.TypicalRange is not null,
                             fieldPrefix: "plan[].filters[].repeat_range");
                     }
                     else
@@ -871,6 +884,7 @@ public sealed class V0CrossFieldValidator
                             hasLegacyMode: filter.Value.HasValue || filter.Min.HasValue || filter.Max.HasValue,
                             hasRangeMode: filter.Range is not null,
                             hasAllowedValuesMode: filter.AllowedValues is not null,
+                            hasTypicalRangeMode: filter.TypicalRange is not null,
                             fieldPrefix: "plan[].filters[]");
                     }
 
@@ -895,6 +909,11 @@ public sealed class V0CrossFieldValidator
                             "plan[].filters[].allowed_values.values");
                     }
 
+                    if (filter.TypicalRange is not null)
+                    {
+                        ValidateTypicalRange(filter.TypicalRange, "plan[].filters[].typical_range");
+                    }
+
                     if (string.Equals(filter.Name, "repeat_range", StringComparison.Ordinal))
                     {
                         if (filter.Range is not null)
@@ -913,7 +932,7 @@ public sealed class V0CrossFieldValidator
                                 });
                         }
                     }
-                    else if (filter.Range is null && filter.AllowedValues is null && !filter.Value.HasValue)
+                    else if (filter.Range is null && filter.AllowedValues is null && filter.TypicalRange is null && !filter.Value.HasValue)
                     {
                         throw new ApplicationValidationException(
                             code: "INVALID_REQUEST",
@@ -944,9 +963,13 @@ public sealed class V0CrossFieldValidator
         bool hasLegacyMode,
         bool hasRangeMode,
         bool hasAllowedValuesMode,
+        bool hasTypicalRangeMode,
         string fieldPrefix)
     {
-        var selectedModes = (hasLegacyMode ? 1 : 0) + (hasRangeMode ? 1 : 0) + (hasAllowedValuesMode ? 1 : 0);
+        var selectedModes = (hasLegacyMode ? 1 : 0) +
+                            (hasRangeMode ? 1 : 0) +
+                            (hasAllowedValuesMode ? 1 : 0) +
+                            (hasTypicalRangeMode ? 1 : 0);
         if (selectedModes == 1)
         {
             return;
@@ -954,10 +977,80 @@ public sealed class V0CrossFieldValidator
 
         throw new ApplicationValidationException(
             code: "INVALID_REQUEST",
-            message: "mixed or missing constraint mode is not allowed; use exactly one of legacy value/min/max, range, or allowed_values.",
+            message: "mixed or missing constraint mode is not allowed; use exactly one of legacy value/min/max, range, allowed_values, or typical_range.",
             details: new Dictionary<string, object?>
             {
                 ["field"] = fieldPrefix
+            });
+    }
+
+    private static void ValidateTypicalRange(GenerateTypicalRangeSpecInput typicalRange, string fieldPrefix)
+    {
+        if (string.IsNullOrWhiteSpace(typicalRange.MetricName))
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_REQUEST",
+                message: "typical_range.metric_name is required.",
+                details: new Dictionary<string, object?>
+                {
+                    ["field"] = $"{fieldPrefix}.metric_name"
+                });
+        }
+
+        if (string.IsNullOrWhiteSpace(typicalRange.Method) ||
+            !SupportedTypicalRangeMethods.Contains(typicalRange.Method))
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_REQUEST",
+                message: "typical_range.method must be one of: iqr, percentile.",
+                details: new Dictionary<string, object?>
+                {
+                    ["field"] = $"{fieldPrefix}.method",
+                    ["method"] = typicalRange.Method
+                });
+        }
+
+        if (typicalRange.Coverage is < 0d or > 1d)
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_REQUEST",
+                message: "typical_range.coverage must be in the inclusive range [0,1].",
+                details: new Dictionary<string, object?>
+                {
+                    ["field"] = $"{fieldPrefix}.coverage",
+                    ["coverage"] = typicalRange.Coverage
+                });
+        }
+
+        if (!string.Equals(typicalRange.Method, "percentile", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var pLow = typicalRange.Params?.PLow;
+        var pHigh = typicalRange.Params?.PHigh;
+        var valid =
+            pLow.HasValue &&
+            pHigh.HasValue &&
+            double.IsFinite(pLow.Value) &&
+            double.IsFinite(pHigh.Value) &&
+            pLow.Value >= 0d &&
+            pHigh.Value <= 1d &&
+            pLow.Value < pHigh.Value;
+
+        if (valid)
+        {
+            return;
+        }
+
+        throw new ApplicationValidationException(
+            code: "INVALID_REQUEST",
+            message: "typical_range.method=percentile requires valid params with 0 <= p_low < p_high <= 1.",
+            details: new Dictionary<string, object?>
+            {
+                ["field"] = $"{fieldPrefix}.params",
+                ["p_low"] = pLow,
+                ["p_high"] = pHigh
             });
     }
 
