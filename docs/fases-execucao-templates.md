@@ -1314,3 +1314,41 @@ Critério de pronto:
 - leitura humana: uma pessoa sem contexto consegue seguir o getting-started e executar “primeiro uso” sem ler ADRs nem catálogo completo.
 ```
 
+### Template 24.2 — Refinar onboarding leigo-first (UX) e “ajuda” (progressive disclosure)
+
+```md
+Implemente apenas o refinamento editorial/UX do onboarding e da “ajuda” do ADR 0009, para reduzir confusão no primeiro contato (sem mudar semântica de métricas).
+
+Referências obrigatórias:
+- docs/adrs/0009-help-e-catalogo-de-templates-resources-v1.md (regras leigo-first e progressive disclosure)
+- docs/mcp-tool-contract.md (Prompts e Resources; invariantes de não-calcular e não-esconder defaults)
+- resources/help/getting-started@1.0.0.md
+- resources/prompts/index@1.0.0.md
+
+Escopo:
+- Revisar `resources/help/getting-started@1.0.0.md` para:
+  - começar com linguagem simples (“O que é / o que não é”);
+  - trazer **3 passos** com CTA;
+  - oferecer um **menu curto** (2–4 caminhos) com “comece aqui”;
+  - incluir “Se der erro” com instruções humanas;
+  - mover jargão/detalhes técnicos para uma secção final opcional “Para DEV/integração”.
+- Revisar `resources/prompts/index@1.0.0.md` para começar com um menu curto antes do catálogo de 10 templates.
+- (Opcional, não-breaking) Se existir a tool `help`, incluir um bloco curto adequado para “liste ajuda” (ex.: `quick_start_markdown`), mantendo o catálogo completo em `templates[]`.
+
+Arquivos esperados:
+- resources/help/getting-started@1.0.0.md
+- resources/prompts/index@1.0.0.md
+- (opcional) src/LotofacilMcp.Server/Tools/ (ajuste na tool `help`)
+- (opcional) tests/LotofacilMcp.ContractTests/ (ajuste de contrato para o novo campo opcional do `help`)
+
+Regras:
+- não introduzir promessa, predição ou linguagem de “aumenta chance”;
+- não mover/duplicar regras de cálculo: apenas UX e conteúdo read-only;
+- evitar referências internas (ADRs, fases, nomes de decisões) no texto principal para iniciantes.
+
+Critério de pronto:
+- uma pessoa leiga consegue seguir o getting-started e escolher um caminho sem conhecer tools/ADRs;
+- o índice começa com “escolha 1 opção” antes do catálogo;
+- (se implementado) `help` responde “ajuda” com um bloco curto antes do catálogo completo.
+```
+

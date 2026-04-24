@@ -5,6 +5,22 @@ Este resource lista templates Markdown prontos para **copiar/colar no chat** ao 
 - **Importante**: isto é conteúdo de referência (resource). O cálculo determinístico é feito via **tools** (`compute_window_metrics`, `summarize_window_*`, etc.).
 - **Janela sempre explícita**: o servidor não aplica “últimos N” escondido. Você decide `window_size` + `end_contest_id` (ou `start`/`end` equivalente).
 
+## Comece por aqui (escolha 1 opção)
+
+Se você não sabe por onde começar, escolha uma:
+
+1) **Painel geral (recomendado para primeiro uso)**  
+   Abra: `lotofacil-ia://prompts/dashboard-essentials@1.0.0`
+
+2) **Frequência e atraso (por dezena)**  
+   Abra: `lotofacil-ia://prompts/frequency-vs-delay@1.0.0`
+
+3) **Repetição entre concursos**  
+   Abra: `lotofacil-ia://prompts/repetition-overlap@1.0.0`
+
+4) **Forma (linhas/colunas)**  
+   Abra: `lotofacil-ia://prompts/shape-lines-columns@1.0.0`
+
 ## Opção 1 — Escrever seu próprio prompt (mini-template)
 
 Copie/cole e ajuste:

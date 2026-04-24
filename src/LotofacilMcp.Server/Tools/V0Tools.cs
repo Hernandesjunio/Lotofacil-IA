@@ -249,6 +249,8 @@ public sealed record HelpResponse(
     [property: JsonPropertyName("tool_version")] string ToolVersion,
     [property: JsonPropertyName("getting_started_resource_uri"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         string? GettingStartedResourceUri,
+    [property: JsonPropertyName("quick_start_markdown"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        string? QuickStartMarkdown,
     [property: JsonPropertyName("index_resource_uri")] string IndexResourceUri,
     [property: JsonPropertyName("index_markdown")] string IndexMarkdown,
     [property: JsonPropertyName("templates")] IReadOnlyList<PromptTemplateSummaryEnvelope> Templates);
@@ -468,9 +470,17 @@ public sealed class V0Tools
                 gettingStartedUri = null;
             }
 
+            var quickStartMarkdown =
+                "## Comece por aqui\n\n" +
+                "1) Chame `help`\n" +
+                "2) Escolha um caminho (comece pelo **Painel geral**)\n" +
+                "3) Escolha o período (se não souber o último concurso, peça para ancorar no mais recente)\n\n" +
+                "Dica: você pode abrir o onboarding em `lotofacil-ia://help/getting-started@1.0.0`.\n";
+
             return new HelpResponse(
                 ToolVersion: HelpToolVersion,
                 GettingStartedResourceUri: gettingStartedUri,
+                QuickStartMarkdown: quickStartMarkdown,
                 IndexResourceUri: LotofacilMcp.Server.Prompting.PromptCatalog.IndexUri,
                 IndexMarkdown: indexMarkdown,
                 Templates: templates);

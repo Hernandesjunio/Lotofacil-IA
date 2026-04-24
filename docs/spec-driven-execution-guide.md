@@ -70,35 +70,6 @@ Critério mínimo de aceite:
 
 - nenhum ponto estrutural crítico da V0 pode estar pendente ou contraditório.
 
-### Fase 24 — Help + catálogo de templates (resources)
-
-Objetivo: expor uma superfície mínima de **ajuda** e **templates Markdown** para consumo com LLM, sem alterar o contrato de cálculo determinístico.
-
-Passos atômicos (recorte):
-
-- Adicionar o resource de onboarding curto `lotofacil-ia://help/getting-started@1.0.0` com **linguagem simples (leigo-first)**, seguindo:
-  - guia de 3 passos com CTA (“Peça ajuda” → “Escolha um caminho” → “Escolha o período”);
-  - menu curto (2–4 caminhos) com rótulos humanos (“Painel geral”, “Frequência e atraso”, etc.);
-  - secção “Se der erro” em termos humanos;
-  - secção separada “Para DEV/integração” (opcional), para detalhes técnicos e invariantes.
-- Adicionar resources `lotofacil-ia://prompts/index@1.0.0` e 10 templates versionados.
-- Adicionar a tool `help` retornando `index_markdown`, `index_resource_uri`, `templates[]` (metadados) e, quando existir, `getting_started_resource_uri`.
-- (Recomendado, não-breaking) Incluir no `help` um “topo de UX” opcional (ex.: `quick_start_markdown` ou entrypoints curtos) para evitar que “liste ajuda” vire um catálogo confuso.
-- Padronizar nos templates a preferência de exibição `display_mode = simple | advanced | both` (default `both`) para suportar usuários leigos e experts.
-- Atualizar `docs/brief.md`, `docs/prompt-catalog.md` e `docs/test-plan.md` com a nova superfície.
-- Adicionar testes de contrato para:
-  - discovery de tool `help`;
-  - `resources/list` contendo `lotofacil-ia://help/getting-started@1.0.0`;
-  - `resources/list` contendo o índice e ao menos um template;
-  - `resources/read` de `lotofacil-ia://help/getting-started@1.0.0` retornando Markdown com MIME correto;
-  - `resources/read` do índice retornando Markdown com MIME correto.
-
-Referências:
-
-- [docs/mcp-tool-contract.md](mcp-tool-contract.md) (primitivas MCP opcionais)
-- [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) (Camadas A/B/C)
-- [ADR 0009](adrs/0009-help-e-catalogo-de-templates-resources-v1.md)
-
 ### Fase 1 — Preparar o esqueleto mínimo do repositório
 
 Objetivo: criar apenas o necessário para compilar, testar e organizar a V0 sem antecipar estrutura que ainda não gera valor.
@@ -629,6 +600,55 @@ Critério mínimo de aceite:
 
 - testes da Fase B.2 passam quando a build implementa o recorte; nenhum documento normativo contradiz D1–D6 do ADR 0008;
 - janela e `top10_mais_sorteados` são rastreáveis ao recorte que o **chamador** declara; paridade de transporte documentada para os casos de evidência.
+
+### Fase 24 — Help + catálogo de templates (resources) (ADR 0009)
+
+Objetivo: expor uma superfície mínima de **ajuda** e **templates Markdown** para orientar o primeiro uso (onboarding) e reduzir atrito de descoberta, sem alterar o contrato de cálculo determinístico.
+
+Passos atômicos (recorte):
+
+- Adicionar o resource de onboarding curto `lotofacil-ia://help/getting-started@1.0.0` com **linguagem simples (leigo-first)**, seguindo:
+  - guia de 3 passos com CTA (“Peça ajuda” → “Escolha um caminho” → “Escolha o período”);
+  - menu curto (2–4 caminhos) com rótulos humanos (“Painel geral”, “Frequência e atraso”, etc.);
+  - secção “Se der erro” em termos humanos;
+  - secção separada “Para DEV/integração” (opcional), para detalhes técnicos e invariantes.
+- Adicionar resources `lotofacil-ia://prompts/index@1.0.0` e 10 templates versionados.
+- Adicionar a tool `help` retornando `index_markdown`, `index_resource_uri`, `templates[]` (metadados) e, quando existir, `getting_started_resource_uri`.
+- (Recomendado, não-breaking) Incluir no `help` um “topo de UX” opcional (ex.: `quick_start_markdown` ou entrypoints curtos) para evitar que “liste ajuda” vire um catálogo confuso.
+- Padronizar nos templates a preferência de exibição `display_mode = simple | advanced | both` (default `both`) para suportar usuários leigos e experts.
+- Atualizar `docs/brief.md`, `docs/prompt-catalog.md` e `docs/test-plan.md` com a nova superfície.
+- Adicionar testes de contrato para:
+  - discovery de tool `help`;
+  - `resources/list` contendo `lotofacil-ia://help/getting-started@1.0.0`;
+  - `resources/list` contendo o índice e ao menos um template;
+  - `resources/read` de `lotofacil-ia://help/getting-started@1.0.0` retornando Markdown com MIME correto;
+  - `resources/read` do índice retornando Markdown com MIME correto.
+
+Referências:
+
+- [docs/mcp-tool-contract.md](mcp-tool-contract.md) (primitivas MCP opcionais)
+- [ADR 0009](adrs/0009-help-e-catalogo-de-templates-resources-v1.md)
+
+#### 24.2 — Refinar onboarding leigo-first (UX) e reduzir confusão de “ajuda”
+
+Objetivo: garantir que “getting started” e “ajuda” funcionam para **iniciante** (sem jargão, sem catálogo confuso), usando progressão por camadas (progressive disclosure).
+
+Passos atômicos (recorte):
+
+- Revisar `resources/help/getting-started@1.0.0.md` para:
+  - começar com “O que é / o que não é” em linguagem simples;
+  - trazer **3 passos** acionáveis com CTA;
+  - oferecer um **menu curto** (2–4 caminhos) com “comece aqui”;
+  - ter “Se der erro” com orientação humana;
+  - mover detalhes técnicos para uma secção final opcional “Para DEV/integração”.
+- Revisar `resources/prompts/index@1.0.0.md` para começar com “Escolha 1 destas opções” antes do catálogo de 10 templates.
+- (Opcional, não-breaking) Ajustar o tool `help` para retornar um bloco curto (ex.: `quick_start_markdown`) adequado para o pedido “liste ajuda”, mantendo o catálogo completo em `templates[]`.
+- Atualizar `docs/adrs/0009-help-e-catalogo-de-templates-resources-v1.md` se a revisão editorial alterar regras de linguagem/estrutura.
+
+Critério mínimo de aceite:
+
+- uma pessoa sem contexto consegue executar o “primeiro uso” lendo apenas `getting-started` (sem abrir ADRs nem aprender nomes de tools);
+- o pedido “ajuda / liste ajuda” pode ser respondido por um bloco curto antes de listar o catálogo completo.
 
 Nota operacional: template para pedidos atômicos
 
