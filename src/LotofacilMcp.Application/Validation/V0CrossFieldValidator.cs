@@ -384,6 +384,70 @@ public sealed class V0CrossFieldValidator
                 });
         }
 
+        if (input.StabilityCheck is not null)
+        {
+            if (!string.Equals(input.StabilityCheck.Method, "rolling_window", StringComparison.Ordinal))
+            {
+                throw new ApplicationValidationException(
+                    code: "INVALID_REQUEST",
+                    message: "stability_check.method must be rolling_window.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["field"] = "stability_check.method",
+                        ["method"] = input.StabilityCheck.Method
+                    });
+            }
+
+            if (input.StabilityCheck.SubwindowSize <= 1)
+            {
+                throw new ApplicationValidationException(
+                    code: "INVALID_REQUEST",
+                    message: "stability_check.subwindow_size must be greater than 1.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["field"] = "stability_check.subwindow_size",
+                        ["subwindow_size"] = input.StabilityCheck.SubwindowSize
+                    });
+            }
+
+            if (input.StabilityCheck.SubwindowSize > input.WindowSize)
+            {
+                throw new ApplicationValidationException(
+                    code: "INVALID_REQUEST",
+                    message: "stability_check.subwindow_size must be less than or equal to window_size.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["field"] = "stability_check.subwindow_size",
+                        ["subwindow_size"] = input.StabilityCheck.SubwindowSize,
+                        ["window_size"] = input.WindowSize
+                    });
+            }
+
+            if (input.StabilityCheck.Stride < 1)
+            {
+                throw new ApplicationValidationException(
+                    code: "INVALID_REQUEST",
+                    message: "stability_check.stride must be greater than or equal to 1.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["field"] = "stability_check.stride",
+                        ["stride"] = input.StabilityCheck.Stride
+                    });
+            }
+
+            if (input.StabilityCheck.MinSubwindows < 2)
+            {
+                throw new ApplicationValidationException(
+                    code: "INVALID_REQUEST",
+                    message: "stability_check.min_subwindows must be greater than or equal to 2.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["field"] = "stability_check.min_subwindows",
+                        ["min_subwindows"] = input.StabilityCheck.MinSubwindows
+                    });
+            }
+        }
+
         foreach (var item in input.Items)
         {
             if (item is null || string.IsNullOrWhiteSpace(item.Name))

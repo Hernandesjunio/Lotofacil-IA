@@ -558,7 +558,7 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         Assert.True(JsonElement.DeepEquals(httpAssocPayload, ReadMcpStructuredJson(stdioAssocErr)));
         Assert.True(JsonElement.DeepEquals(httpAssocPayload, ReadMcpStructuredJson(httpMcpAssocErr)));
 
-        var unsupportedStabilityCheckRequest = new Dictionary<string, object?>
+        var invalidStabilityCheckRequest = new Dictionary<string, object?>
         {
             ["window_size"] = 5,
             ["end_contest_id"] = 1005,
@@ -572,25 +572,27 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
             ["stability_check"] = new Dictionary<string, object?>
             {
                 ["method"] = "rolling_window",
-                ["subwindow_size"] = 3
+                ["subwindow_size"] = 0,
+                ["stride"] = 0,
+                ["min_subwindows"] = 1
             }
         };
 
-        var httpUnsupportedStabilityCheck = await _httpClient.PostAsJsonAsync("/tools/analyze_indicator_associations", unsupportedStabilityCheckRequest);
-        Assert.Equal(HttpStatusCode.BadRequest, httpUnsupportedStabilityCheck.StatusCode);
+        var httpInvalidStabilityCheck = await _httpClient.PostAsJsonAsync("/tools/analyze_indicator_associations", invalidStabilityCheckRequest);
+        Assert.Equal(HttpStatusCode.BadRequest, httpInvalidStabilityCheck.StatusCode);
 
-        var stdioUnsupportedStabilityCheck = await _stdioMcpClient.CallToolAsync("analyze_indicator_associations", unsupportedStabilityCheckRequest);
-        var httpMcpUnsupportedStabilityCheck = await _httpMcpClient.CallToolAsync("analyze_indicator_associations", unsupportedStabilityCheckRequest);
+        var stdioInvalidStabilityCheck = await _stdioMcpClient.CallToolAsync("analyze_indicator_associations", invalidStabilityCheckRequest);
+        var httpMcpInvalidStabilityCheck = await _httpMcpClient.CallToolAsync("analyze_indicator_associations", invalidStabilityCheckRequest);
 
-        Assert.True(stdioUnsupportedStabilityCheck.IsError);
-        Assert.True(httpMcpUnsupportedStabilityCheck.IsError);
+        Assert.True(stdioInvalidStabilityCheck.IsError);
+        Assert.True(httpMcpInvalidStabilityCheck.IsError);
 
-        var httpUnsupportedStabilityCheckPayload = await ReadHttpJsonAsync(httpUnsupportedStabilityCheck);
-        Assert.True(JsonElement.DeepEquals(httpUnsupportedStabilityCheckPayload, ReadMcpStructuredJson(stdioUnsupportedStabilityCheck)));
-        Assert.True(JsonElement.DeepEquals(httpUnsupportedStabilityCheckPayload, ReadMcpStructuredJson(httpMcpUnsupportedStabilityCheck)));
+        var httpInvalidStabilityCheckPayload = await ReadHttpJsonAsync(httpInvalidStabilityCheck);
+        Assert.True(JsonElement.DeepEquals(httpInvalidStabilityCheckPayload, ReadMcpStructuredJson(stdioInvalidStabilityCheck)));
+        Assert.True(JsonElement.DeepEquals(httpInvalidStabilityCheckPayload, ReadMcpStructuredJson(httpMcpInvalidStabilityCheck)));
         Assert.Equal(
-            "UNSUPPORTED_STABILITY_CHECK",
-            httpUnsupportedStabilityCheckPayload.GetProperty("error").GetProperty("code").GetString());
+            "INVALID_REQUEST",
+            httpInvalidStabilityCheckPayload.GetProperty("error").GetProperty("code").GetString());
 
         var invalidSummarizeRequest = new Dictionary<string, object?>
         {

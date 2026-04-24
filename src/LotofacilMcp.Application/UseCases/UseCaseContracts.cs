@@ -16,6 +16,12 @@ public sealed record StabilityIndicatorRequestInput(
     string Name,
     string? Aggregation);
 
+public sealed record AssociationStabilityCheckInput(
+    string Method,
+    int SubwindowSize,
+    int Stride,
+    int MinSubwindows);
+
 public sealed record FrequencyMetricValueView(
     string MetricName,
     string Scope,

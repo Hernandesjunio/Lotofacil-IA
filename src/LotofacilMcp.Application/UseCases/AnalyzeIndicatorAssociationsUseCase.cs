@@ -22,20 +22,52 @@ public sealed record AssociationMagnitudeView(
     string Method,
     IReadOnlyList<AssociationMagnitudeEntryView> TopPairs);
 
+public sealed record AssociationStabilityEntryView(
+    string IndicatorA,
+    string AggregationA,
+    int? ComponentIndexA,
+    string IndicatorB,
+    string AggregationB,
+    int? ComponentIndexB,
+    double Mean,
+    double Median,
+    double P10,
+    double P90,
+    double Min,
+    double Max,
+    double StdDev,
+    double SignConsistencyRatio);
+
+public sealed record AssociationStabilityView(
+    string Method,
+    int SubwindowSize,
+    int Stride,
+    int MinSubwindows,
+    int SubwindowsCount,
+    IReadOnlyList<AssociationStabilityEntryView> TopPairs);
+
 public sealed record AnalyzeIndicatorAssociationsInput(
     int WindowSize,
     int? EndContestId,
     IReadOnlyList<StabilityIndicatorRequestInput> Items,
     string Method,
     int TopK,
+    AssociationStabilityCheckInput? StabilityCheck,
     string FixturePath = "");
+
+public sealed record AssociationStabilityCheckHashInput(
+    string Method,
+    int SubwindowSize,
+    int Stride,
+    int MinSubwindows);
 
 public sealed record AnalyzeIndicatorAssociationsDeterministicHashInput(
     int WindowSize,
     int? EndContestId,
     string Method,
     int TopK,
-    IReadOnlyList<StabilityIndicatorRequestInput> Items);
+    IReadOnlyList<StabilityIndicatorRequestInput> Items,
+    AssociationStabilityCheckHashInput? StabilityCheck);
 
 public sealed record AnalyzeIndicatorAssociationsResult(
     string DatasetVersion,
@@ -44,7 +76,7 @@ public sealed record AnalyzeIndicatorAssociationsResult(
     WindowDescriptor Window,
     string Method,
     AssociationMagnitudeView AssociationMagnitude,
-    IReadOnlyDictionary<string, object?>? AssociationStability);
+    AssociationStabilityView? AssociationStability);
 
 public sealed class AnalyzeIndicatorAssociationsUseCase
 {
@@ -88,10 +120,16 @@ public sealed class AnalyzeIndicatorAssociationsUseCase
                 .Select(request => new StabilityIndicatorRequest(request.Name, request.Aggregation))
                 .ToArray();
 
-            var magnitude = _associationAnalyzer.ComputeSpearmanMagnitude(
+            var analysis = _associationAnalyzer.AnalyzeSpearman(
                 window,
                 items,
-                input.TopK);
+                input.TopK,
+                input.StabilityCheck is null
+                    ? null
+                    : new AssociationStabilityCheck(
+                        input.StabilityCheck.SubwindowSize,
+                        input.StabilityCheck.Stride,
+                        input.StabilityCheck.MinSubwindows));
 
             var windowView = _mapper.MapWindow(window);
             return new AnalyzeIndicatorAssociationsResult(
@@ -102,12 +140,19 @@ public sealed class AnalyzeIndicatorAssociationsUseCase
                     input.EndContestId,
                     "spearman",
                     input.TopK,
-                    input.Items!.ToArray()),
+                    input.Items!.ToArray(),
+                    input.StabilityCheck is null
+                        ? null
+                        : new AssociationStabilityCheckHashInput(
+                            input.StabilityCheck.Method,
+                            input.StabilityCheck.SubwindowSize,
+                            input.StabilityCheck.Stride,
+                            input.StabilityCheck.MinSubwindows)),
                 Window: windowView,
                 Method: "spearman",
                 AssociationMagnitude: new AssociationMagnitudeView(
-                    magnitude.Method,
-                    magnitude.TopPairs
+                    analysis.Magnitude.Method,
+                    analysis.Magnitude.TopPairs
                         .Select(entry => new AssociationMagnitudeEntryView(
                             entry.IndicatorA,
                             entry.AggregationA,
@@ -118,7 +163,31 @@ public sealed class AnalyzeIndicatorAssociationsUseCase
                             entry.AssociationStrength,
                             entry.Explanation))
                         .ToArray()),
-                AssociationStability: null);
+                AssociationStability: analysis.Stability is null
+                    ? null
+                    : new AssociationStabilityView(
+                        analysis.Stability.Method,
+                        analysis.Stability.SubwindowSize,
+                        analysis.Stability.Stride,
+                        analysis.Stability.MinSubwindows,
+                        analysis.Stability.SubwindowsCount,
+                        analysis.Stability.TopPairs
+                            .Select(entry => new AssociationStabilityEntryView(
+                                entry.IndicatorA,
+                                entry.AggregationA,
+                                entry.ComponentIndexA,
+                                entry.IndicatorB,
+                                entry.AggregationB,
+                                entry.ComponentIndexB,
+                                entry.Mean,
+                                entry.Median,
+                                entry.P10,
+                                entry.P90,
+                                entry.Min,
+                                entry.Max,
+                                entry.StdDev,
+                                entry.SignConsistencyRatio))
+                            .ToArray()));
         }
         catch (DomainInvariantViolationException ex)
         {
@@ -171,6 +240,17 @@ public sealed class AnalyzeIndicatorAssociationsUseCase
                 code: "INVALID_REQUEST",
                 message: "at least two compatible scalar series are required to compute association.",
                 details: new Dictionary<string, object?>());
+        }
+
+        if (ex.Message.Contains("stability_check", StringComparison.Ordinal))
+        {
+            return new ApplicationValidationException(
+                code: "INVALID_REQUEST",
+                message: ex.Message,
+                details: new Dictionary<string, object?>
+                {
+                    ["field"] = "stability_check"
+                });
         }
 
         return new ApplicationValidationException(

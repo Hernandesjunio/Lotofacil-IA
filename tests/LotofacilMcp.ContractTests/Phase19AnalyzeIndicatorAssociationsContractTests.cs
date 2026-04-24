@@ -78,7 +78,7 @@ public sealed class Phase19AnalyzeIndicatorAssociationsContractTests
     }
 
     [Fact]
-    public void AnalyzeIndicatorAssociations_WithStabilityCheckInUnsupportedBuild_ReturnsUnsupportedStabilityCheck()
+    public void AnalyzeIndicatorAssociations_WithStabilityCheck_ReturnsDeterministicAssociationStability()
     {
         var sut = new V0Tools();
         var request = new AnalyzeIndicatorAssociationsRequest(
@@ -91,14 +91,56 @@ public sealed class Phase19AnalyzeIndicatorAssociationsContractTests
             ],
             Method: "spearman",
             TopK: 3,
-            StabilityCheck: new
-            {
-                method = "rolling_window",
-                subwindow_size = 3
-            });
+            StabilityCheck: new AssociationStabilityCheckRequest(
+                Method: "rolling_window",
+                SubwindowSize: 3,
+                Stride: 1,
+                MinSubwindows: 2));
+
+        var first = sut.AnalyzeIndicatorAssociations(request);
+        var second = sut.AnalyzeIndicatorAssociations(request);
+        var payloadA = Assert.IsType<AnalyzeIndicatorAssociationsResponse>(first);
+        var payloadB = Assert.IsType<AnalyzeIndicatorAssociationsResponse>(second);
+
+        Assert.Equal(payloadA.DeterministicHash, payloadB.DeterministicHash);
+        var stability = Assert.IsType<AssociationStabilityEnvelope>(payloadA.AssociationStability);
+        Assert.Equal("spearman", stability.Method);
+        Assert.Equal(3, stability.SubwindowSize);
+        Assert.Equal(1, stability.Stride);
+        Assert.Equal(2, stability.MinSubwindows);
+        Assert.Equal(3, stability.SubwindowsCount);
+        Assert.Single(stability.TopPairs);
+        Assert.All(stability.TopPairs, entry =>
+        {
+            Assert.InRange(entry.SignConsistencyRatio, 0d, 1d);
+            Assert.True(entry.Max >= entry.Min);
+            Assert.True(entry.P90 >= entry.P10);
+        });
+    }
+
+    [Fact]
+    public void AnalyzeIndicatorAssociations_WithInvalidStabilityCheckParameters_ReturnsInvalidRequest()
+    {
+        var sut = new V0Tools();
+        var request = new AnalyzeIndicatorAssociationsRequest(
+            WindowSize: 5,
+            EndContestId: 1005,
+            Items:
+            [
+                new AssociationItemRequest("repeticao_concurso_anterior", null),
+                new AssociationItemRequest("pares_no_concurso", null)
+            ],
+            Method: "spearman",
+            TopK: 3,
+            StabilityCheck: new AssociationStabilityCheckRequest(
+                Method: "rolling_window",
+                SubwindowSize: 0,
+                Stride: 0,
+                MinSubwindows: 1));
 
         var response = sut.AnalyzeIndicatorAssociations(request);
         var error = Assert.IsType<ContractErrorEnvelope>(response).Error;
-        Assert.Equal("UNSUPPORTED_STABILITY_CHECK", error.Code);
+        Assert.Equal("INVALID_REQUEST", error.Code);
+        Assert.Equal("stability_check.subwindow_size", error.Details["field"]);
     }
 }

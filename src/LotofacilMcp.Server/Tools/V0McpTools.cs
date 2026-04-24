@@ -108,7 +108,7 @@ public sealed class V0McpTools
         return ToToolResult(payload, payload is ContractErrorEnvelope);
     }
 
-    [McpServerTool(Name = "analyze_indicator_associations"), Description("Mede associacoes Spearman entre series escalares alinhadas na janela (recorte minimo).")]
+    [McpServerTool(Name = "analyze_indicator_associations"), Description("Mede associacoes Spearman entre series escalares alinhadas e, opcionalmente, estabilidade em subjanelas deterministicas.")]
     public CallToolResult AnalyzeIndicatorAssociations(
         V0Tools tools,
         [Description("Tamanho da janela.")] int? window_size = null,
@@ -118,7 +118,7 @@ public sealed class V0McpTools
         [Description("Itens (metrica e agregacao opcional para series vetoriais).")] IReadOnlyList<AssociationItemRequest>? items = null,
         [Description("Metodo (recorte: spearman).")] string? method = null,
         [Description("Top pares por magnitude.")] int top_k = 5,
-        [Description("Estabilidade em subjanelas (ainda nao suportado neste recorte).")] object? stability_check = null)
+        [Description("Estabilidade em subjanelas; requer method=rolling_window, subwindow_size, stride e min_subwindows explicitos.")] AssociationStabilityCheckRequest? stability_check = null)
     {
         var payload = tools.AnalyzeIndicatorAssociations(new AnalyzeIndicatorAssociationsRequest(
             WindowSize: window_size,

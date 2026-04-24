@@ -142,7 +142,13 @@ public sealed record AnalyzeIndicatorAssociationsRequest(
     [property: JsonPropertyName("items")] IReadOnlyList<AssociationItemRequest>? Items = null,
     [property: JsonPropertyName("method")] string Method = "",
     [property: JsonPropertyName("top_k")] int TopK = 5,
-    [property: JsonPropertyName("stability_check")] object? StabilityCheck = null);
+    [property: JsonPropertyName("stability_check")] AssociationStabilityCheckRequest? StabilityCheck = null);
+
+public sealed record AssociationStabilityCheckRequest(
+    [property: JsonPropertyName("method")] string Method = "",
+    [property: JsonPropertyName("subwindow_size")] int SubwindowSize = 0,
+    [property: JsonPropertyName("stride")] int Stride = 0,
+    [property: JsonPropertyName("min_subwindows")] int MinSubwindows = 0);
 
 public sealed record AssociationMagnitudeEntryEnvelope(
     [property: JsonPropertyName("indicator_a")] string IndicatorA,
@@ -158,6 +164,30 @@ public sealed record AssociationMagnitudeEnvelope(
     [property: JsonPropertyName("method")] string Method,
     [property: JsonPropertyName("top_pairs")] IReadOnlyList<AssociationMagnitudeEntryEnvelope> TopPairs);
 
+public sealed record AssociationStabilityEntryEnvelope(
+    [property: JsonPropertyName("indicator_a")] string IndicatorA,
+    [property: JsonPropertyName("aggregation_a")] string AggregationA,
+    [property: JsonPropertyName("component_index_a")] int? ComponentIndexA,
+    [property: JsonPropertyName("indicator_b")] string IndicatorB,
+    [property: JsonPropertyName("aggregation_b")] string AggregationB,
+    [property: JsonPropertyName("component_index_b")] int? ComponentIndexB,
+    [property: JsonPropertyName("mean")] double Mean,
+    [property: JsonPropertyName("median")] double Median,
+    [property: JsonPropertyName("p10")] double P10,
+    [property: JsonPropertyName("p90")] double P90,
+    [property: JsonPropertyName("min")] double Min,
+    [property: JsonPropertyName("max")] double Max,
+    [property: JsonPropertyName("stddev")] double StdDev,
+    [property: JsonPropertyName("sign_consistency_ratio")] double SignConsistencyRatio);
+
+public sealed record AssociationStabilityEnvelope(
+    [property: JsonPropertyName("method")] string Method,
+    [property: JsonPropertyName("subwindow_size")] int SubwindowSize,
+    [property: JsonPropertyName("stride")] int Stride,
+    [property: JsonPropertyName("min_subwindows")] int MinSubwindows,
+    [property: JsonPropertyName("subwindows_count")] int SubwindowsCount,
+    [property: JsonPropertyName("top_pairs")] IReadOnlyList<AssociationStabilityEntryEnvelope> TopPairs);
+
 public sealed record AnalyzeIndicatorAssociationsResponse(
     [property: JsonPropertyName("dataset_version")] string DatasetVersion,
     [property: JsonPropertyName("tool_version")] string ToolVersion,
@@ -165,7 +195,7 @@ public sealed record AnalyzeIndicatorAssociationsResponse(
     [property: JsonPropertyName("window")] WindowEnvelope Window,
     [property: JsonPropertyName("method")] string Method,
     [property: JsonPropertyName("association_magnitude")] AssociationMagnitudeEnvelope AssociationMagnitude,
-    [property: JsonPropertyName("association_stability")] object? AssociationStability);
+    [property: JsonPropertyName("association_stability"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] AssociationStabilityEnvelope? AssociationStability);
 
 public sealed record WindowPatternFeatureRequest(
     [property: JsonPropertyName("metric_name")] string MetricName,
@@ -641,9 +671,10 @@ public sealed class V0Tools
                         ["method"] = ["spearman"],
                         ["aggregation"] = ["identity", "mean", "max", "l2_norm", "per_component"],
                         ["indicator_name"] = associationAllowedIndicators,
-                        ["stability_check"] = Array.Empty<string>()
+                        ["stability_check.method"] = ["rolling_window"],
+                        ["stability_check.required_fields"] = ["subwindow_size", "stride", "min_subwindows"]
                     },
-                    Capabilities: "Computes association magnitude for compatible scalarized series in the same window."),
+                    Capabilities: "Computes association magnitude and optional deterministic subwindow stability for compatible scalarized series."),
                 new ToolCapabilityEnvelope(
                     Name: "summarize_window_patterns",
                     ToolVersion: SummarizeWindowPatternsUseCase.ToolVersion,
@@ -923,17 +954,6 @@ public sealed class V0Tools
 
     public object AnalyzeIndicatorAssociations(AnalyzeIndicatorAssociationsRequest request)
     {
-        if (request.StabilityCheck is not null)
-        {
-            return ToContractError(
-                "UNSUPPORTED_STABILITY_CHECK",
-                "stability_check subwindow computation is not supported in this build.",
-                new Dictionary<string, object?>
-                {
-                    ["field"] = "stability_check"
-                });
-        }
-
         try
         {
             var (windowSize, endContestId) = WindowRequestResolver.Resolve(
@@ -949,6 +969,13 @@ public sealed class V0Tools
                     .ToArray(),
                 Method: request.Method,
                 TopK: request.TopK,
+                StabilityCheck: request.StabilityCheck is null
+                    ? null
+                    : new AssociationStabilityCheckInput(
+                        request.StabilityCheck.Method,
+                        request.StabilityCheck.SubwindowSize,
+                        request.StabilityCheck.Stride,
+                        request.StabilityCheck.MinSubwindows),
                 FixturePath: _fixturePath));
 
             var deterministicHash = _deterministicHashService.Compute(
@@ -978,7 +1005,31 @@ public sealed class V0Tools
                             entry.AssociationStrength,
                             entry.Explanation))
                         .ToArray()),
-                AssociationStability: result.AssociationStability);
+                AssociationStability: result.AssociationStability is null
+                    ? null
+                    : new AssociationStabilityEnvelope(
+                        result.AssociationStability.Method,
+                        result.AssociationStability.SubwindowSize,
+                        result.AssociationStability.Stride,
+                        result.AssociationStability.MinSubwindows,
+                        result.AssociationStability.SubwindowsCount,
+                        result.AssociationStability.TopPairs
+                            .Select(entry => new AssociationStabilityEntryEnvelope(
+                                entry.IndicatorA,
+                                entry.AggregationA,
+                                entry.ComponentIndexA,
+                                entry.IndicatorB,
+                                entry.AggregationB,
+                                entry.ComponentIndexB,
+                                entry.Mean,
+                                entry.Median,
+                                entry.P10,
+                                entry.P90,
+                                entry.Min,
+                                entry.Max,
+                                entry.StdDev,
+                                entry.SignConsistencyRatio))
+                            .ToArray()));
         }
         catch (ApplicationValidationException ex)
         {
