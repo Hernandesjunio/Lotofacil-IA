@@ -147,6 +147,7 @@ public sealed class GenerateCandidateGamesUseCase
     private readonly V0RequestMapper _mapper;
     private readonly TypicalRangeResolver _typicalRangeResolver = new();
     private readonly GenerationBudgetResolver _generationBudgetResolver = new();
+    private readonly SoftConstraintPenaltyResolver _softPenaltyResolver = new();
 
     public GenerateCandidateGamesUseCase(
         SyntheticFixtureProvider fixtureProvider,
@@ -240,6 +241,8 @@ public sealed class GenerateCandidateGamesUseCase
                 ? new HashSet<string>(StringComparer.Ordinal)
                 : null;
             var rejectedCountByReason = new SortedDictionary<string, int>(StringComparer.Ordinal);
+            var softPenaltyAppliedByConstraint = new SortedDictionary<string, int>(StringComparer.Ordinal);
+            var softPenaltySumByConstraint = new SortedDictionary<string, double>(StringComparer.Ordinal);
             var attemptsUsed = 0;
 
             for (var poolIndex = 0; poolIndex < resolvedBudget.MaxAttempts; poolIndex++)
@@ -263,14 +266,26 @@ public sealed class GenerateCandidateGamesUseCase
                     continue;
                 }
 
-                if (!PassesFilters(profile, execution.Filters, out var filterRejectionReason))
+                if (!PassesFilters(
+                        profile,
+                        execution.Filters,
+                        out var filterRejectionReason,
+                        out var totalSoftPenalty,
+                        out var softPenalties))
                 {
                     IncrementCounter(rejectedCountByReason, filterRejectionReason ?? "filter_mismatch");
                     continue;
                 }
 
+                foreach (var penalty in softPenalties)
+                {
+                    IncrementCounter(softPenaltyAppliedByConstraint, penalty.ConstraintName);
+                    IncrementCounter(softPenaltySumByConstraint, penalty.ConstraintName, penalty.Penalty);
+                }
+
+                var finalScore = Clamp01(strategyScore - totalSoftPenalty);
                 selectedKeys?.Add(key);
-                selected.Add(new CandidateSelection(numbers, profile, strategyScore));
+                selected.Add(new CandidateSelection(numbers, profile, finalScore, strategyScore, totalSoftPenalty));
             }
 
             sequenceSeed += resolvedBudget.MaxAttempts;
@@ -280,6 +295,11 @@ public sealed class GenerateCandidateGamesUseCase
             execution.ResolvedDefaults[$"plan[{planIndex}].attempts_used"] = attemptsUsed;
             execution.ResolvedDefaults[$"plan[{planIndex}].accepted_count"] = selected.Count;
             execution.ResolvedDefaults[$"plan[{planIndex}].rejected_count_by_reason"] = rejectedCountByReason
+                .ToDictionary(entry => entry.Key, entry => (object?)entry.Value, StringComparer.Ordinal);
+            execution.ResolvedDefaults[$"plan[{planIndex}].soft_penalty.version"] = SoftConstraintPenaltyResolver.PenaltyVersion;
+            execution.ResolvedDefaults[$"plan[{planIndex}].soft_penalty.applied_count_by_constraint"] = softPenaltyAppliedByConstraint
+                .ToDictionary(entry => entry.Key, entry => (object?)entry.Value, StringComparer.Ordinal);
+            execution.ResolvedDefaults[$"plan[{planIndex}].soft_penalty.sum_by_constraint"] = softPenaltySumByConstraint
                 .ToDictionary(entry => entry.Key, entry => (object?)entry.Value, StringComparer.Ordinal);
 
             if (selected.Count < planItem.Count)
@@ -611,6 +631,12 @@ public sealed class GenerateCandidateGamesUseCase
                     filter.Mode,
                     $"plan[{planIndex}].filters[{filterIndex}]",
                     defaults);
+                if (string.Equals(mode, "soft", StringComparison.Ordinal))
+                {
+                    defaults[$"plan[{planIndex}].filters[{filterIndex}].soft_penalty.version"] = SoftConstraintPenaltyResolver.PenaltyVersion;
+                    defaults[$"plan[{planIndex}].filters[{filterIndex}].soft_penalty.scale"] = _softPenaltyResolver.ResolveScale(filter.Name);
+                    defaults[$"plan[{planIndex}].filters[{filterIndex}].soft_penalty.formula"] = "linear_normalized_violation";
+                }
                 var range = NormalizeRange(
                     filter.Range,
                     $"plan[{planIndex}].filters[{filterIndex}]",
@@ -885,7 +911,8 @@ public sealed class GenerateCandidateGamesUseCase
                 continue;
             }
 
-            if (MatchesConstraint(criterion.Name, observedValue, criterion.Value, criterion.Range, null, criterion.AllowedValues))
+            var evaluation = EvaluateConstraint(criterion.Name, observedValue, criterion.Value, criterion.Range, null, criterion.AllowedValues);
+            if (evaluation.Matches)
             {
                 continue;
             }
@@ -904,12 +931,16 @@ public sealed class GenerateCandidateGamesUseCase
         return compositeScore >= 0d;
     }
 
-    private static bool PassesFilters(
+    private bool PassesFilters(
         CandidateProfile profile,
         IReadOnlyList<GenerateCandidateFilterInput> filters,
-        out string? rejectionReason)
+        out string? rejectionReason,
+        out double totalSoftPenalty,
+        out List<SoftConstraintPenalty> softPenalties)
     {
         rejectionReason = null;
+        totalSoftPenalty = 0d;
+        softPenalties = new List<SoftConstraintPenalty>();
         foreach (var filter in filters)
         {
             if (!TryResolveObservedValue(filter.Name, profile, profile.OutlierScore, out var observedValue))
@@ -917,8 +948,17 @@ public sealed class GenerateCandidateGamesUseCase
                 continue;
             }
 
-            if (MatchesConstraint(filter.Name, observedValue, filter.Value, filter.Range, (filter.Min, filter.Max), filter.AllowedValues))
+            var evaluation = EvaluateConstraint(filter.Name, observedValue, filter.Value, filter.Range, (filter.Min, filter.Max), filter.AllowedValues);
+            if (evaluation.Matches)
             {
+                continue;
+            }
+
+            if (string.Equals(filter.Mode, "soft", StringComparison.Ordinal))
+            {
+                var penalty = _softPenaltyResolver.Resolve(filter.Name, evaluation.ViolationDistance);
+                softPenalties.Add(penalty);
+                totalSoftPenalty += penalty.Penalty;
                 continue;
             }
 
@@ -954,7 +994,7 @@ public sealed class GenerateCandidateGamesUseCase
         return !double.IsNaN(observedValue);
     }
 
-    private static bool MatchesConstraint(
+    private static ConstraintEvaluation EvaluateConstraint(
         string name,
         double observedValue,
         double? scalarValue,
@@ -964,48 +1004,74 @@ public sealed class GenerateCandidateGamesUseCase
     {
         if (allowedValues?.Values is { Count: > 0 })
         {
+            var minDistance = double.PositiveInfinity;
             foreach (var allowed in allowedValues.Values)
             {
-                if (Math.Abs(observedValue - allowed) <= 1e-9d)
+                var distance = Math.Abs(observedValue - allowed);
+                if (distance <= 1e-9d)
                 {
-                    return true;
+                    return new ConstraintEvaluation(true, 0d);
                 }
+
+                minDistance = Math.Min(minDistance, distance);
             }
 
-            return false;
+            return new ConstraintEvaluation(false, minDistance);
         }
 
         if (range is not null)
         {
             var inclusive = range.Inclusive ?? true;
-            return inclusive
+            var withinRange = inclusive
                 ? observedValue >= range.Min && observedValue <= range.Max
                 : observedValue > range.Min && observedValue < range.Max;
+            if (withinRange)
+            {
+                return new ConstraintEvaluation(true, 0d);
+            }
+
+            var lowerDistance = observedValue < range.Min ? range.Min - observedValue : 0d;
+            var upperDistance = observedValue > range.Max ? observedValue - range.Max : 0d;
+            return new ConstraintEvaluation(false, Math.Max(lowerDistance, upperDistance));
         }
 
         if (legacyMinMax.HasValue && (legacyMinMax.Value.Min.HasValue || legacyMinMax.Value.Max.HasValue))
         {
             var min = legacyMinMax.Value.Min ?? double.NegativeInfinity;
             var max = legacyMinMax.Value.Max ?? double.PositiveInfinity;
-            return observedValue >= min && observedValue <= max;
+            if (observedValue >= min && observedValue <= max)
+            {
+                return new ConstraintEvaluation(true, 0d);
+            }
+
+            var lowerDistance = observedValue < min ? min - observedValue : 0d;
+            var upperDistance = observedValue > max ? observedValue - max : 0d;
+            return new ConstraintEvaluation(false, Math.Max(lowerDistance, upperDistance));
         }
 
         if (!scalarValue.HasValue)
         {
-            return true;
+            return new ConstraintEvaluation(true, 0d);
         }
 
         if (name.StartsWith("min_", StringComparison.Ordinal))
         {
-            return observedValue >= scalarValue.Value;
+            return observedValue >= scalarValue.Value
+                ? new ConstraintEvaluation(true, 0d)
+                : new ConstraintEvaluation(false, scalarValue.Value - observedValue);
         }
 
         if (name.StartsWith("max_", StringComparison.Ordinal))
         {
-            return observedValue <= scalarValue.Value;
+            return observedValue <= scalarValue.Value
+                ? new ConstraintEvaluation(true, 0d)
+                : new ConstraintEvaluation(false, observedValue - scalarValue.Value);
         }
 
-        return Math.Abs(observedValue - scalarValue.Value) <= 1e-9d;
+        var exactDistance = Math.Abs(observedValue - scalarValue.Value);
+        return exactDistance <= 1e-9d
+            ? new ConstraintEvaluation(true, 0d)
+            : new ConstraintEvaluation(false, exactDistance);
     }
 
     private static int CompareSelections(
@@ -1123,6 +1189,17 @@ public sealed class GenerateCandidateGamesUseCase
         counters[reason] = 1;
     }
 
+    private static void IncrementCounter(IDictionary<string, double> counters, string reason, double increment)
+    {
+        if (counters.TryGetValue(reason, out var current))
+        {
+            counters[reason] = current + increment;
+            return;
+        }
+
+        counters[reason] = increment;
+    }
+
     private static ApplicationValidationException MapDomainError(DomainInvariantViolationException ex)
     {
         const string unknownMetricPrefix = "UNKNOWN_METRIC:";
@@ -1181,7 +1258,13 @@ public sealed class GenerateCandidateGamesUseCase
     private sealed record CandidateSelection(
         IReadOnlyList<int> Numbers,
         CandidateProfile Profile,
-        double Score);
+        double Score,
+        double BaseScore,
+        double SoftPenaltyTotal);
+
+    private sealed record ConstraintEvaluation(
+        bool Matches,
+        double ViolationDistance);
 
     private sealed record ExecutionPlan(
         string StrategyName,

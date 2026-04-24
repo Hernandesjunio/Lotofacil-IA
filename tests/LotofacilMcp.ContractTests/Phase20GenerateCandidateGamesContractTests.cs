@@ -716,6 +716,100 @@ public sealed class Phase20GenerateCandidateGamesContractTests
         Assert.Equal("criteria:min_top10_overlap", collapseHint.GetString());
     }
 
+    [Fact]
+    public void GenerateCandidateGames_SoftModeForNeighborAndRun_IsDeterministicAndEchoesPenalties()
+    {
+        var sut = new V0Tools();
+        var request = new GenerateCandidateGamesRequest(
+            WindowSize: 5,
+            EndContestId: 1005,
+            Seed: 424242UL,
+            Plan:
+            [
+                new GenerateCandidatePlanItemRequest(
+                    StrategyName: "declared_composite_profile",
+                    Count: 5,
+                    SearchMethod: "sampled",
+                    Filters:
+                    [
+                        new GenerateCandidateFilterRequest(
+                            Name: "max_neighbor_count",
+                            Value: 0d,
+                            Mode: "soft"),
+                        new GenerateCandidateFilterRequest(
+                            Name: "max_consecutive_run",
+                            Value: 1d,
+                            Mode: "soft")
+                    ])
+            ],
+            StructuralExclusions: new GenerateStructuralExclusionsRequest(
+                MaxConsecutiveRun: 15,
+                MaxNeighborCount: 15,
+                MinRowEntropyNorm: 0d,
+                MaxHhiLinha: 1d,
+                RepeatRange: new GenerateRepeatRangeRequest(0, 15),
+                MinSlotAlignment: 0d,
+                MaxOutlierScore: 1d),
+            GenerationBudget: new GenerateGenerationBudgetRequest(
+                MaxAttempts: 800,
+                PoolMultiplier: 2d));
+
+        var responseA = sut.GenerateCandidateGames(request);
+        var responseB = sut.GenerateCandidateGames(request);
+        var payloadA = Assert.IsType<GenerateCandidateGamesResponse>(responseA);
+        var payloadB = Assert.IsType<GenerateCandidateGamesResponse>(responseB);
+
+        Assert.Equal(payloadA.DeterministicHash, payloadB.DeterministicHash);
+        Assert.Equal(
+            payloadA.CandidateGames.Select(game => string.Join(",", game.Numbers)).ToArray(),
+            payloadB.CandidateGames.Select(game => string.Join(",", game.Numbers)).ToArray());
+
+        using var json = JsonSerializer.SerializeToDocument(payloadA);
+        var resolvedDefaults = json.RootElement
+            .GetProperty("candidate_games")[0]
+            .GetProperty("applied_configuration")
+            .GetProperty("resolved_defaults");
+
+        Assert.True(resolvedDefaults.TryGetProperty("plan[0].filters[0].soft_penalty.version", out var v0));
+        Assert.Equal("1.0.0", v0.GetString());
+        Assert.True(resolvedDefaults.TryGetProperty("plan[0].filters[1].soft_penalty.version", out var v1));
+        Assert.Equal("1.0.0", v1.GetString());
+        Assert.True(resolvedDefaults.TryGetProperty("plan[0].soft_penalty.version", out var globalVersion));
+        Assert.Equal("1.0.0", globalVersion.GetString());
+        Assert.True(resolvedDefaults.TryGetProperty("plan[0].soft_penalty.applied_count_by_constraint", out var appliedByConstraint));
+        Assert.Equal(JsonValueKind.Object, appliedByConstraint.ValueKind);
+        Assert.True(resolvedDefaults.TryGetProperty("plan[0].soft_penalty.sum_by_constraint", out var sumByConstraint));
+        Assert.Equal(JsonValueKind.Object, sumByConstraint.ValueKind);
+    }
+
+    [Fact]
+    public void GenerateCandidateGames_SoftModeForUnsupportedFilter_ReturnsInvalidRequest()
+    {
+        var sut = new V0Tools();
+        var request = new GenerateCandidateGamesRequest(
+            WindowSize: 5,
+            EndContestId: 1005,
+            Seed: 424242UL,
+            Plan:
+            [
+                new GenerateCandidatePlanItemRequest(
+                    StrategyName: "declared_composite_profile",
+                    Count: 1,
+                    SearchMethod: "sampled",
+                    Filters:
+                    [
+                        new GenerateCandidateFilterRequest(
+                            Name: "min_row_entropy_norm",
+                            Value: 0.8d,
+                            Mode: "soft")
+                    ])
+            ]);
+
+        var response = sut.GenerateCandidateGames(request);
+        var error = Assert.IsType<ContractErrorEnvelope>(response).Error;
+        Assert.Equal("INVALID_REQUEST", error.Code);
+    }
+
     private static int CountNeighbors(IReadOnlyList<int> game)
     {
         var count = 0;

@@ -72,7 +72,14 @@ public sealed class V0CrossFieldValidator
 
     private static readonly HashSet<string> SupportedConstraintModes =
     [
-        "hard"
+        "hard",
+        "soft"
+    ];
+
+    private static readonly HashSet<string> SupportedSoftFilters =
+    [
+        "max_consecutive_run",
+        "max_neighbor_count"
     ];
 
     private static readonly HashSet<string> SupportedTypicalRangeMethods =
@@ -812,6 +819,7 @@ public sealed class V0CrossFieldValidator
                         fieldPrefix: "plan[].criteria[]");
 
                     ValidateConstraintModeValue(criterion.Mode, "plan[].criteria[].mode");
+                    ValidateSoftModeSupportForCriteria(criterion.Name, criterion.Mode, "plan[].criteria[].mode");
 
                     if (criterion.Range is not null && criterion.Range.Min > criterion.Range.Max)
                     {
@@ -916,6 +924,7 @@ public sealed class V0CrossFieldValidator
                     }
 
                     ValidateConstraintModeValue(filter.Mode, "plan[].filters[].mode");
+                    ValidateSoftModeSupportForFilter(filter.Name, filter.Mode, "plan[].filters[].mode");
 
                     if (filter.Range is not null && filter.Range.Min > filter.Range.Max)
                     {
@@ -1107,11 +1116,52 @@ public sealed class V0CrossFieldValidator
 
         throw new ApplicationValidationException(
             code: "INVALID_REQUEST",
-            message: "mode must be hard.",
+            message: "mode must be one of: hard, soft.",
             details: new Dictionary<string, object?>
             {
                 ["field"] = field,
                 ["mode"] = mode
+            });
+    }
+
+    private static void ValidateSoftModeSupportForCriteria(string criterionName, string? mode, string field)
+    {
+        if (!string.Equals(mode, "soft", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        throw new ApplicationValidationException(
+            code: "INVALID_REQUEST",
+            message: "mode=soft is not supported for criteria in this recorte.",
+            details: new Dictionary<string, object?>
+            {
+                ["field"] = field,
+                ["mode"] = mode,
+                ["criterion_name"] = criterionName
+            });
+    }
+
+    private static void ValidateSoftModeSupportForFilter(string filterName, string? mode, string field)
+    {
+        if (!string.Equals(mode, "soft", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        if (SupportedSoftFilters.Contains(filterName))
+        {
+            return;
+        }
+
+        throw new ApplicationValidationException(
+            code: "INVALID_REQUEST",
+            message: "mode=soft is not supported for this filter in this recorte.",
+            details: new Dictionary<string, object?>
+            {
+                ["field"] = field,
+                ["mode"] = mode,
+                ["filter_name"] = filterName
             });
     }
 
