@@ -23,11 +23,13 @@ Complementa [test-plan.md](test-plan.md) com **ordem de implementação**, **lay
 
 **Extensão planejada (ADR 0008):**
 
-6. **Fase B.2 — Janela por extremos, mapeamento `top10` e coerência com legado de export** (ver [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) e a [Fase 23 do guia](spec-driven-execution-guide.md)):
-   - equivalência numérica entre o recorte expresso com `start_contest_id` e `end_contest_id` (inclusivos) e a forma `window_size` + `end_contest_id` na mesma fixture, para pelo menos uma métrica de referência (p.ex. `frequencia_por_dezena` ou `top10_mais_sorteados`) quando o protocolo aceitar ambas;
-   - request com combinação **ambígua** ou conflituosa de parâmetros de janela → erro documentado (p.ex. `INVALID_REQUEST`) com mensagem canónica;
-   - golden de `top10_mais_sorteados@1.0.0` (Tabela 2 de [metric-catalog.md](metric-catalog.md)), com desempate e ordem alinhados ao catálogo — usar a fixture `tie_heavy.json` (secção *Layout de fixtures* abaixo) ou equivalente quando o foco forem empates;
-   - quando o fluxo tocar em **descoberta** (allowlist *vs.* norma), asserções alinhadas a [ADR 0006 D1](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) e D1 do ADR 0008 (p.ex. `details.allowed_metrics` em `UNKNOWN_METRIC` onde o contrato o exigir).
+6. **Fase B.2 — Janela por extremos, mapeamento `top10` e coerência com legado de export** (ver [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) e a [Fase 23 do guia](spec-driven-execution-guide.md)). **Não** usar [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md) como fonte de descoberta (D1) ou de mapeamento Top 10 — 0007 cobre `summarize_window_aggregates` (Fase B.1).
+   - **Janela D2:** equivalência numérica entre o recorte com `start_contest_id` e `end_contest_id` (inclusivos) e a forma `window_size` + `end_contest_id` na **mesma fixture** densa, para pelo menos `frequencia_por_dezena@1.0.0` e `top10_mais_sorteados@1.0.0` **quando** o protocolo aceitar ambas as formas; caso contrário, documentar a forma única suportada e ainda testar D2 via `Window` materializado (extremos e tamanho no *output*).
+   - **Ambiguidade / conflito:** request com `window_size` e `start`/`end` **incompatíveis** entre si, ou `start_contest_id > end_contest_id`, ou outra combinação não reduzível a um único recorte → `INVALID_REQUEST` (ou código fechado no [mcp-tool-contract.md](mcp-tool-contract.md)) **sem** aplicação de janela por *tie-break* oculto.
+   - **D4 (sem N mágico de UI legada):** teste negativo explícito — o servidor **não** deriva `window_size` a partir de constantes de ecrã antigo (“últimos 10/20”); o cliente deve fornecer `window_size`+`end_contest_id` (ou par D2). Ausência de campos de janela continua a caminhar com `INVALID_REQUEST` / esclarecimento no host, não com default semântico no servidor.
+   - **D3 / `top10_mais_sorteados`:** golden versionado (Tabela 2 de [metric-catalog.md](metric-catalog.md)), desempate dezena asc; fixture `tie_heavy.json` (ou equivalente) para stress de empates.
+   - **Export `QtdFrequencia` → métrica canónica:** para uma janela e fixture fixas, o vector 1..25 alinha-se a `frequencia_por_dezena@1.0.0` (ver *Rótulo de export* no catálogo), não a `atraso_por_dezena` — asserção reprodutível (subconjunto estável do JSON ou golden dedicado).
+   - **D1 descoberta (sem nome de tool fechado):** `compute_window_metrics` com `metrics` contendo nome **presente** no [metric-catalog.md](metric-catalog.md) mas **fora** da allowlist da build → `UNKNOWN_METRIC` com `details.metric_name` e, se existir, `details.allowed_metrics` (conjunto fechado), alinhado a [ADR 0006 D1](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md). Não exigir implementação de tool com identificador específico de “listar superfície” — só a semântica de prova de allowlist.
 
 ## Layout de fixtures (convênio)
 
@@ -87,16 +89,20 @@ Documentação de referência: [mcp-tool-contract.md](mcp-tool-contract.md).
 
 ### Matriz mínima — Fase B.2 (janela por extremos, `top10` e legado de export, ADR 0008)
 
-Bateria a acrescentar **quando a implementação** acompanhar o [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) e o [mcp-tool-contract.md](mcp-tool-contract.md) (entidade `Window`).
+Bateria a acrescentar **quando a implementação** acompanhar o [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) e o [mcp-tool-contract.md](mcp-tool-contract.md) (entidade `Window`, *Prompts e Resources*). A matriz **não** conflitua com [ADR 0006 D1](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) (allowlist); descoberta *instância* vs. *norma* reforçada no contrato, secção *Primitivas MCP opcionais* e ADR 0008 D1.
 
-| Caso | Esperado |
-|------|----------|
-| Dois requests com a **mesma** janela canónica, um com `start`+`end` (inclusivos) e outro com `window_size`+`end_contest_id` resolvido por D2, mesma fixture | Mesmos valores de métrica (p.ex. `frequencia_por_dezena` ou `top10_mais_sorteados`) dentro do redutor de comparação do teste. |
-| Parâmetros de janela em conflito ou combinação não interpretável de forma única | Erro `INVALID_REQUEST` (ou código fechado no contrato) **sem** escolher recorte silencioso. |
-| `top10_mais_sorteados@1.0.0` com empates fortes | Lista `dezena_list[10]` e desempates conforme Tabela 2 do [metric-catalog.md](metric-catalog.md); golden versionado. |
-| `HistoricoTop10MaisSorteados` (legado) *vs.* pergunta canónica | Semântica de substituição = `top10_mais_sorteados` **só** na janela declarada; não testar *rolling* implícito sob o mesmo `metric_name` (D3). |
+| Caso | O que validar (mínimo reprodutível) | Referência cruzada |
+|------|-----------------------------------|--------------------|
+| D2 — Par equivalente | Dois recortes equivalentes: (a) `start_contest_id`+`end_contest_id` inclusivos; (b) `window_size`+`end_contest_id` com `window_size = end - start + 1` — *ou* apenas uma forma suportada, com extremos coerentes no `Window` de saída. **Esperado:** mesmos `frequencia_por_dezena@1.0.0` e `top10_mais_sorteados@1.0.0` (ou nota de escopo se a segunda ainda não estiver na rota). | [mcp-tool-contract.md](mcp-tool-contract.md) *Window*; [ADR 0008 D2](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) |
+| Ambiguidade de janela | `window_size` incompatível com `start`/`end` *juntos*; `start_contest_id > end_contest_id`; combinação que não reduz a um intervalo contíguo único. **Esperado:** `INVALID_REQUEST` (ou código fechado no contrato); **nunca** recorte silencioso. | *Window* e parâmetros comuns; ADR 0008 D2 |
+| D4 — Sem “últimos N” do legado | Pedido sem janela completa ou intenção de replicar *default* de ecrã antigo (“últimos 10/20”). **Esperado:** `INVALID_REQUEST` / esclarecimento no host; **não** `window_size` derivado de N fixo de UI. | [ADR 0008 D4](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) |
+| `top10_mais_sorteados@1.0.0` + empates | Fixture `tie_heavy.json` (ou equivalente) com muitos empates em frequência. **Esperado:** `dezena_list[10]`, desempate dezena asc; golden versionado. | [metric-catalog.md](metric-catalog.md) Tabela 2 |
+| D3 — `HistoricoTop10MaisSorteados` *vs.* canónico | Intenção de substituição de export legado. **Esperado:** só `top10_mais_sorteados` na janela **declarada**; não tratar *rolling* implícito como esta métrica. | [ADR 0008 D3](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) |
+| `QtdFrequencia` (export) | Vector 1..25 = contagens na janela. **Esperado:** alinha a `frequencia_por_dezena@1.0.0` na mesma janela/fixture; distinto de `atraso_por_dezena`. | *Rótulo* `QtdFrequencia` no [metric-catalog.md](metric-catalog.md); ADR 0008 Anexo A |
+| D1 — Allowlist (sem nome de tool) | `compute_window_metrics` com nome **no catálogo** e **fora** da allowlist da build. **Esperado:** `UNKNOWN_METRIC` + `details.metric_name` e, se existir, `details.allowed_metrics` fechado; **não** exigir tool concreta de “listar superfície”. | [ADR 0006 D1](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md); [ADR 0008 D1](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) |
+| Transparência de janela | Resposta de métrica ancorada em janela. **Esperado:** `MetricValue.window` (ou equivalente) com `start`/`end`/`size` coerentes com o pedido resolvido. | [mcp-tool-contract.md](mcp-tool-contract.md) invariante 2; entidade `Window` |
 
-**Observação de contrato:** a Fase B.2 **não** substitui a bateria A–E do ADR 0006; cruza com D1 do ADR 0008 quando a asserção for *allowlist* ou `details` em erros.
+**Observação de contrato:** a Fase B.2 **não** substitui a bateria A–E (GAPS) do plano/ADR 0006; reutiliza D1 de 0006 quando o caso for *allowlist*. A Fase B.1 (`summarize_window_aggregates`, ADR 0007) continua **ortogonal**: agregados canónicos ≠ descoberta nem mapeamento Top 10.
 
 ## Matriz — Fase C (métrica × tipo de teste)
 

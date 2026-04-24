@@ -1,0 +1,45 @@
+name: V1 evidence (MCP + HTTP scope)
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "docs/**"
+      - "LotofacilMcp.sln"
+      - "Directory.Build.props"
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "docs/**"
+      - "LotofacilMcp.sln"
+      - "Directory.Build.props"
+  workflow_dispatch:
+
+jobs:
+  v1-evidence:
+    name: Domain + Contract + MCP parity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore solution
+        run: dotnet restore "LotofacilMcp.sln"
+
+      - name: Domain evidence suite
+        run: dotnet test "tests/LotofacilMcp.Domain.Tests/LotofacilMcp.Domain.Tests.csproj" --configuration Release --no-restore
+
+      - name: Infrastructure/use-case evidence suite
+        run: dotnet test "tests/LotofacilMcp.Infrastructure.Tests/LotofacilMcp.Infrastructure.Tests.csproj" --configuration Release --no-restore
+
+      - name: Contract and MCP parity suite
+        run: dotnet test "tests/LotofacilMcp.ContractTests/LotofacilMcp.ContractTests.csproj" --configuration Release --no-restore

@@ -29,7 +29,7 @@ O contrato está organizado em camadas. Para validar uma implementação ou um P
 
 7. **Lacunas de parâmetro em linguagem natural** — quando um pedido do usuário não puder ser mapeado sem ambiguidade para o JSON da tool, o fluxo deve obter dados faltantes por **perguntas específicas** (seção *Integração com agentes: lacunas de parâmetros e esclarecimento*, abaixo), nunca por inferência oculta no servidor.
 8. **Inter-tool, disponibilidade e pipeline** — recorte de métricas por rota, padrão de cadeia de tools (fluidez), `stability_check` em associações e códigos de erro associados estão normatizados em [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md). O catálogo de métricas e a tabela *Disponibilidade normativa* em [metric-catalog.md](metric-catalog.md) desambiguam “nome canónico” vs. “aceite nesta tool nesta build”.
-9. **Descoberta para consumidores e janela por extremos** — o modelo híbrido *superfície de instância* (tool ou erros com allowlist) vs *norma* (resources / `docs/`), a equivalência entre janela expressa por `start_contest_id`/`end_contest_id` e `window_size`+`end_contest_id`, e o mapeamento do rótulo de export `HistoricoTop10MaisSorteados` para a métrica canónica `top10_mais_sorteados`, estão em [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md).
+9. **Descoberta para consumidores e janela por extremos** — o modelo híbrido *superfície de instância* (tool ou erros com allowlist) vs *norma* (resources / `docs/`), a equivalência entre janela expressa por `start_contest_id`/`end_contest_id` e `window_size`+`end_contest_id`, o mapeamento do rótulo de export `HistoricoTop10MaisSorteados` para a métrica canónica `top10_mais_sorteados`, e a proibição de *defaults* “últimos N” herdados de UI legada, estão em [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) (D1–D4).
 
 ## Disponibilidade de métricas, pipeline mínimo e performance do fluxo
 
@@ -82,10 +82,10 @@ Esta seção **não** substitui as tools: o cálculo determinístico continua em
 
 | Primitiva | O que é no MCP (resumo) | Uso neste projeto (quando faz sentido) |
 |-----------|-------------------------|----------------------------------------|
-| **Prompts** (`prompts/list`, `prompts/get`) | Templates com argumentos nomeados; mensagens estruturadas para o LLM ([especificação](https://modelcontextprotocol.io/specification/2025-06-18/server/prompts)). | Fluxos recorrentes (ex.: “estabilidade na janela N”, “composição com pesos declarados”) onde os **argumentos do template espelham campos do schema** da tool, reduzindo omissão de parâmetros sem violar a proibição de pesos implícitos. |
-| **Resources** (`resources/read`, templates) | Dados identificados por URI, fornecendo contexto à aplicação/modelo ([especificação](https://modelcontextprotocol.io/specification/2025-06-18/server/resources)). | Trechos versionados do glossário, definições de métricas ou metadados de `dataset_version` — conteúdo **read-only** e referenciável em análises sem duplicar lógica nas tools. |
+| **Prompts** (`prompts/list`, `prompts/get`) | Templates com argumentos nomeados; mensagens estruturadas para o LLM ([especificação](https://modelcontextprotocol.io/specification/2025-06-18/server/prompts)). | **Camada C (ADR 0008 D1):** ergonomia de orquestração — fluxos recorrentes onde os **argumentos do template espelham campos do schema** da tool, reduzindo omissão sem violar a proibição de pesos implícitos. |
+| **Resources** (`resources/read`, templates) | Dados identificados por URI, fornecendo contexto à aplicação/modelo ([especificação](https://modelcontextprotocol.io/specification/2025-06-18/server/resources)). | **Camada B (ADR 0008 D1):** *norma* estável — trechos do [metric-glossary.md](metric-glossary.md), [metric-catalog.md](metric-catalog.md) e referências a ADRs, **read-only**, sem lógica de cálculo. |
 
-**Descoberta “o que posso pedir a esta instância”:** o catálogo em `docs/` descreve a *norma semântica*; a *allowlist* concreta desta build (métricas expostas, enums de agregados) deve ser obtida por respostas de **tool** ou `details` em erros, sem conflitar com a norma. O modelo híbrido (tools + resources) está fechado em [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) D1.
+**Descoberta “o que posso pedir a esta instância” (camada A, ADR 0008 D1):** a *allowlist* concreta desta build (`allowed_metrics` alinhado a [ADR 0006 D1](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md), enums como `aggregate_type` em `summarize_window_aggregates`, *tool_version*) deve ser obtida por **respostas de tool** ou **`details` em erros** (p.ex. `UNKNOWN_METRIC` com pistas fechadas), de forma **falsificável** por teste de contrato. O catálogo em `docs/` permanece a *norma semântica* (camada B); **não** se exige neste contrato um nome fechado de tool de listagem — só a semântica acima. O modelo híbrido A/B/C está fechado em [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) D1.
 
 **Disambiguação:** “Prompt” no protocolo MCP ≠ “prompt do usuário” no chat cotidiano. O primeiro é recurso **servidor** com descoberta e parâmetros; o segundo é entrada livre, sujeita às regras de esclarecimento desta seção.
 
@@ -142,7 +142,11 @@ Recorte contínuo de concursos usado como referência temporal para métricas e 
 
 **Validação:** `len(draws) == size` (salvo `INSUFFICIENT_HISTORY`); extremos coerentes com o pedido (`end_contest_id` ancorado quando omitido no request).
 
+**Proibição de N mágico (legado UI):** tamanhos do tipo “últimos 10/20 concursos” que existiam como *default* implícito em ecrãs antigos **não** são aplicados pelo servidor no MCP. O recorte é sempre o que o **chamador declara** via `window_size` + `end_contest_id` (ou par equivalente por D2) — [ADR 0008 D4](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md).
+
 **Resolução de janela no *request* (equivalência):** quando o cliente declara `start_contest_id` e `end_contest_id` **inclusivos** e a janela for contígua no dataset canónico, a resolução é equivalente a `end_contest_id` (extremo mais recente) e `window_size = end_contest_id - start_contest_id + 1`, conforme [ADR 0008 D2](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md). A implementação pode aceitar só `window_size` + `end_contest_id` no protocolo, desde que esta equivalência fique documentada e testada.
+
+**Conflito ou redundância no request:** se o JSON incluir `window_size` *e* `start_contest_id` / `end_contest_id` de formas **mutuamente incompatíveis** (não reduzíveis a uma única janela), ou combinação **não interpretável de forma única**, a tool **deve** recusar com `INVALID_REQUEST` (ou código documentado no mesmo espírito), **sem** escolher silenciosamente um recorte. Ordem e exemplos mínimos para testes: [contract-test-plan.md](contract-test-plan.md) Fase B.2.
 
 #### `MetricRequest`
 
@@ -360,7 +364,11 @@ Várias tools recebem um recorte temporal sobre o histórico canônico. Campos r
 |--------|------------------|--------------|
 | `window_size` | Quantidade de concursos consecutivos a considerar, ancorada no fim da janela. | Inteiro `>= 1`; zero ou negativo → `INVALID_WINDOW_SIZE`. |
 | `end_contest_id` | Último concurso inclusivo da janela. | Se omitido, o servidor usa o mais recente disponível; id inexistente → `INVALID_CONTEST_ID`. |
+| `start_contest_id` | (Opcional) Primeiro concurso inclusivo, **se** a tool/transporte estender o schema conforme [ADR 0008 D2](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md). | Com `end_contest_id`, define o mesmo recorte que `window_size = end - start + 1` e o mesmo `end_contest_id`; `start > end` ou intervalo inválido → `INVALID_REQUEST` (ou `INVALID_CONTEST_ID` conforme política fechada na implementação). |
+| Incompatibilidade entre `window_size` e par `start`/`end` | Redundância que não fecha numa única janela. | `INVALID_REQUEST` com `details` coerentes — sem *snap* silencioso. |
 | `include_metadata` | Quando presente (ex.: `get_draw_window`), inclui campos auxiliares de `Draw` além dos números. | Resposta contém `source` / `ingested_at` etc. somente quando `true`, salvo política explícita documentada. |
+
+**Legado “últimos N” na UI (ADR 0008 D4):** o servidor **não** mapeia automaticamente *N* de gráficos antigos para `window_size`; o cliente declara a janela.
 
 Outras tools usam o mesmo ancoramento temporal implicitamente: a janela é sempre “os últimos `window_size` sorteios até `end_contest_id`”, salvo erro de histórico insuficiente.
 
