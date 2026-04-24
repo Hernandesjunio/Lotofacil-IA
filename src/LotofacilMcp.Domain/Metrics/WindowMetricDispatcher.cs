@@ -74,4 +74,11 @@ public sealed class WindowMetricDispatcher
 
         throw new DomainInvariantViolationException($"UNKNOWN_METRIC: {metricName}");
     }
+
+    public IReadOnlyList<string> GetRegisteredMetricNames()
+    {
+        return _dispatchByMetricName.Keys
+            .OrderBy(static name => name, StringComparer.Ordinal)
+            .ToArray();
+    }
 }

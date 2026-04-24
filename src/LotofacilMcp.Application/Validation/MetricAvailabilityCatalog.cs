@@ -85,4 +85,9 @@ public static class MetricAvailabilityCatalog
     {
         return ComputeWindowMetricsExposedNames;
     }
+
+    public static IReadOnlyList<string> GetKnownMetricNames()
+    {
+        return KnownMetricNames;
+    }
 }

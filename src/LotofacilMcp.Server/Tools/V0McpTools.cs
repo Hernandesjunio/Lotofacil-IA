@@ -10,6 +10,13 @@ public sealed class V0McpTools
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
+    [McpServerTool(Name = "discover_capabilities"), Description("Publica metadados determinísticos da superfície de capacidades desta build.")]
+    public CallToolResult DiscoverCapabilities(V0Tools tools)
+    {
+        var payload = tools.DiscoverCapabilities(new DiscoverCapabilitiesRequest());
+        return ToToolResult(payload, payload is ContractErrorEnvelope);
+    }
+
     [McpServerTool(Name = "help"), Description("Retorna ajuda básica e o índice de templates (resources) disponíveis.")]
     public CallToolResult Help(V0Tools tools)
     {

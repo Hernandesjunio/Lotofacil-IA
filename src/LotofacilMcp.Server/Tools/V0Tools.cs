@@ -29,6 +29,8 @@ public sealed record GetDrawWindowRequest(
     [property: JsonPropertyName("start_contest_id")] int? StartContestId = null,
     [property: JsonPropertyName("end_contest_id")] int? EndContestId = null);
 
+public sealed record DiscoverCapabilitiesRequest();
+
 public sealed record StabilityIndicatorRequestDto(
     [property: JsonPropertyName("name")] string Name,
     [property: JsonPropertyName("aggregation")] string? Aggregation);
@@ -255,6 +257,41 @@ public sealed record HelpResponse(
     [property: JsonPropertyName("index_markdown")] string IndexMarkdown,
     [property: JsonPropertyName("templates")] IReadOnlyList<PromptTemplateSummaryEnvelope> Templates);
 
+public sealed record WindowModesByToolEnvelope(
+    [property: JsonPropertyName("tool_name")] string ToolName,
+    [property: JsonPropertyName("supported_modes")] IReadOnlyList<string> SupportedModes);
+
+public sealed record ToolCapabilityEnvelope(
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("tool_version")] string ToolVersion,
+    [property: JsonPropertyName("supported_parameters")] IReadOnlyDictionary<string, IReadOnlyList<string>> SupportedParameters,
+    [property: JsonPropertyName("capabilities")] string Capabilities);
+
+public sealed record MetricsCapabilitiesEnvelope(
+    [property: JsonPropertyName("implemented_metric_names")] IReadOnlyList<string> ImplementedMetricNames,
+    [property: JsonPropertyName("compute_window_metrics_allowed")] IReadOnlyList<string> ComputeWindowMetricsAllowed,
+    [property: JsonPropertyName("summarize_window_aggregates_allowed_sources")] IReadOnlyList<string> SummarizeWindowAggregatesAllowedSources,
+    [property: JsonPropertyName("association_allowed_indicators")] IReadOnlyList<string> AssociationAllowedIndicators);
+
+public sealed record GenerationStrategyEnvelope(
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("version")] string Version);
+
+public sealed record GenerationCapabilitiesEnvelope(
+    [property: JsonPropertyName("strategies")] IReadOnlyList<GenerationStrategyEnvelope> Strategies,
+    [property: JsonPropertyName("search_methods")] IReadOnlyList<string> SearchMethods,
+    [property: JsonPropertyName("supported_filters")] IReadOnlyList<string> SupportedFilters);
+
+public sealed record DiscoverCapabilitiesResponse(
+    [property: JsonPropertyName("tool_version")] string ToolVersion,
+    [property: JsonPropertyName("deterministic_hash")] string DeterministicHash,
+    [property: JsonPropertyName("build_profile")] string BuildProfile,
+    [property: JsonPropertyName("dataset_requirements")] IReadOnlyList<string> DatasetRequirements,
+    [property: JsonPropertyName("window_modes_supported")] IReadOnlyList<WindowModesByToolEnvelope> WindowModesSupported,
+    [property: JsonPropertyName("tools")] IReadOnlyList<ToolCapabilityEnvelope> Tools,
+    [property: JsonPropertyName("metrics")] MetricsCapabilitiesEnvelope Metrics,
+    [property: JsonPropertyName("generation")] GenerationCapabilitiesEnvelope Generation);
+
 public sealed record GenerateCandidatePlanItemRequest(
     [property: JsonPropertyName("strategy_name")] string StrategyName,
     [property: JsonPropertyName("count")] int Count,
@@ -334,9 +371,11 @@ public sealed class V0Tools
     private readonly SummarizeWindowAggregatesUseCase _summarizeWindowAggregatesUseCase;
     private readonly GenerateCandidateGamesUseCase _generateCandidateGamesUseCase;
     private readonly ExplainCandidateGamesUseCase _explainCandidateGamesUseCase;
+    private readonly WindowMetricDispatcher _windowMetricDispatcher;
     private readonly DeterministicHashService _deterministicHashService;
     private readonly string _fixturePath;
     private const string HelpToolVersion = "1.0.0";
+    private const string DiscoverCapabilitiesToolVersion = "1.0.0";
 
     public V0Tools(string? fixturePath = null)
     {
@@ -362,6 +401,7 @@ public sealed class V0Tools
             new HhiColunaPorConcursoMetric(),
             new AtrasoPorDezenaMetric(),
             new AssimetriaBlocosMetric());
+        _windowMetricDispatcher = windowMetricDispatcher;
         _computeWindowMetricsUseCase = new ComputeWindowMetricsUseCase(
             fixtureProvider,
             datasetVersionService,
@@ -495,6 +535,186 @@ public sealed class V0Tools
                     ["reason"] = ex.Message
                 });
         }
+    }
+
+    public object DiscoverCapabilities(DiscoverCapabilitiesRequest request)
+    {
+        var _ = request;
+        var implementedMetricNames = _windowMetricDispatcher.GetRegisteredMetricNames();
+        var computeWindowAllowed = MetricAvailabilityCatalog.GetComputeWindowMetricsAllowedMetrics()
+            .OrderBy(static metric => metric, StringComparer.Ordinal)
+            .ToArray();
+        var knownMetricNames = MetricAvailabilityCatalog.GetKnownMetricNames()
+            .OrderBy(static metric => metric, StringComparer.Ordinal)
+            .ToArray();
+
+        var response = new DiscoverCapabilitiesResponse(
+            ToolVersion: DiscoverCapabilitiesToolVersion,
+            DeterministicHash: string.Empty,
+            BuildProfile: "v0",
+            DatasetRequirements:
+            [
+                "requires synthetic fixture json path configured in server build/runtime"
+            ],
+            WindowModesSupported:
+            [
+                new WindowModesByToolEnvelope("get_draw_window", ["window_size+end_contest_id", "start_contest_id+end_contest_id"]),
+                new WindowModesByToolEnvelope("compute_window_metrics", ["window_size+end_contest_id", "start_contest_id+end_contest_id"]),
+                new WindowModesByToolEnvelope("analyze_indicator_stability", ["window_size+end_contest_id"]),
+                new WindowModesByToolEnvelope("compose_indicator_analysis", ["window_size+end_contest_id"]),
+                new WindowModesByToolEnvelope("analyze_indicator_associations", ["window_size+end_contest_id"]),
+                new WindowModesByToolEnvelope("summarize_window_patterns", ["window_size+end_contest_id"]),
+                new WindowModesByToolEnvelope("summarize_window_aggregates", ["window_size+end_contest_id"]),
+                new WindowModesByToolEnvelope("generate_candidate_games", ["window_size+end_contest_id"]),
+                new WindowModesByToolEnvelope("explain_candidate_games", ["window_size+end_contest_id"])
+            ],
+            Tools:
+            [
+                new ToolCapabilityEnvelope(
+                    Name: "discover_capabilities",
+                    ToolVersion: DiscoverCapabilitiesToolVersion,
+                    SupportedParameters: new Dictionary<string, IReadOnlyList<string>>(),
+                    Capabilities: "Returns deterministic build-surface metadata without executing metrics."),
+                new ToolCapabilityEnvelope(
+                    Name: "compute_window_metrics",
+                    ToolVersion: ComputeWindowMetricsUseCase.ToolVersion,
+                    SupportedParameters: new Dictionary<string, IReadOnlyList<string>>
+                    {
+                        ["window_modes"] = ["window_size+end_contest_id", "start_contest_id+end_contest_id"],
+                        ["metric_names"] = computeWindowAllowed
+                    },
+                    Capabilities: "Computes cataloged metrics allowed in this build for a resolved window."),
+                new ToolCapabilityEnvelope(
+                    Name: "analyze_indicator_stability",
+                    ToolVersion: AnalyzeIndicatorStabilityUseCase.ToolVersion,
+                    SupportedParameters: new Dictionary<string, IReadOnlyList<string>>
+                    {
+                        ["normalization_method"] = ["madn", "coefficient_of_variation"],
+                        ["aggregation"] = ["identity", "mean", "max", "l2_norm", "per_component"]
+                    },
+                    Capabilities: "Ranks indicator stability using scalarized series and supported normalization methods."),
+                new ToolCapabilityEnvelope(
+                    Name: "compose_indicator_analysis",
+                    ToolVersion: ComposeIndicatorAnalysisUseCase.ToolVersion,
+                    SupportedParameters: new Dictionary<string, IReadOnlyList<string>>
+                    {
+                        ["target"] = ["dezena"],
+                        ["operator"] = ["weighted_rank"],
+                        ["transform"] =
+                        [
+                            "normalize_max",
+                            "invert_normalize_max",
+                            "rank_percentile",
+                            "identity_unit_interval",
+                            "one_minus_unit_interval",
+                            "shift_scale_unit_interval"
+                        ]
+                    },
+                    Capabilities: "Builds deterministic weighted compositions over supported dezena indicators."),
+                new ToolCapabilityEnvelope(
+                    Name: "analyze_indicator_associations",
+                    ToolVersion: AnalyzeIndicatorAssociationsUseCase.ToolVersion,
+                    SupportedParameters: new Dictionary<string, IReadOnlyList<string>>
+                    {
+                        ["method"] = ["spearman"],
+                        ["aggregation"] = ["identity", "mean", "max", "l2_norm", "per_component"],
+                        ["stability_check"] = Array.Empty<string>()
+                    },
+                    Capabilities: "Computes association magnitude for compatible scalarized series in the same window."),
+                new ToolCapabilityEnvelope(
+                    Name: "summarize_window_patterns",
+                    ToolVersion: SummarizeWindowPatternsUseCase.ToolVersion,
+                    SupportedParameters: new Dictionary<string, IReadOnlyList<string>>
+                    {
+                        ["range_method"] = ["iqr"],
+                        ["feature_metric_name"] = ["pares_no_concurso"],
+                        ["aggregation"] = ["identity"]
+                    },
+                    Capabilities: "Summarizes window pattern distributions with deterministic IQR statistics."),
+                new ToolCapabilityEnvelope(
+                    Name: "summarize_window_aggregates",
+                    ToolVersion: SummarizeWindowAggregatesUseCase.ToolVersion,
+                    SupportedParameters: new Dictionary<string, IReadOnlyList<string>>
+                    {
+                        ["aggregate_type"] =
+                        [
+                            "histogram_scalar_series",
+                            "topk_patterns_count_vector5_series",
+                            "histogram_count_vector5_series_per_position_matrix"
+                        ],
+                        ["source_metric_name"] = implementedMetricNames
+                    },
+                    Capabilities: "Builds canonical aggregate payloads over implemented source metrics."),
+                new ToolCapabilityEnvelope(
+                    Name: "generate_candidate_games",
+                    ToolVersion: GenerateCandidateGamesUseCase.ToolVersion,
+                    SupportedParameters: new Dictionary<string, IReadOnlyList<string>>
+                    {
+                        ["strategy_name"] = ["common_repetition_frequency"],
+                        ["search_method"] = ["exhaustive", "sampled", "greedy_topk"]
+                    },
+                    Capabilities: "Generates deterministic candidate games from supported strategy plans."),
+                new ToolCapabilityEnvelope(
+                    Name: "explain_candidate_games",
+                    ToolVersion: ExplainCandidateGamesUseCase.ToolVersion,
+                    SupportedParameters: new Dictionary<string, IReadOnlyList<string>>
+                    {
+                        ["flags"] = ["include_metric_breakdown", "include_exclusion_breakdown"]
+                    },
+                    Capabilities: "Explains candidate strategies and exclusion breakdowns for provided games."),
+                new ToolCapabilityEnvelope(
+                    Name: "help",
+                    ToolVersion: HelpToolVersion,
+                    SupportedParameters: new Dictionary<string, IReadOnlyList<string>>(),
+                    Capabilities: "Provides onboarding resources and prompt catalog references.")
+            ],
+            Metrics: new MetricsCapabilitiesEnvelope(
+                ImplementedMetricNames: implementedMetricNames,
+                ComputeWindowMetricsAllowed: computeWindowAllowed,
+                SummarizeWindowAggregatesAllowedSources: implementedMetricNames,
+                AssociationAllowedIndicators:
+                [
+                    "repeticao_concurso_anterior",
+                    "pares_no_concurso",
+                    "quantidade_vizinhos_por_concurso",
+                    "sequencia_maxima_vizinhos_por_concurso",
+                    "frequencia_por_dezena",
+                    "distribuicao_linha_por_concurso",
+                    "distribuicao_coluna_por_concurso",
+                    "entropia_linha_por_concurso"
+                ]),
+            Generation: new GenerationCapabilitiesEnvelope(
+                Strategies:
+                [
+                    new GenerationStrategyEnvelope("common_repetition_frequency", "1.0.0")
+                ],
+                SearchMethods: ["exhaustive", "sampled", "greedy_topk"],
+                SupportedFilters: Array.Empty<string>()));
+
+        var deterministicHash = _deterministicHashService.Compute(
+            new
+            {
+                build_profile = response.BuildProfile,
+                dataset_requirements = response.DatasetRequirements,
+                window_modes_supported = response.WindowModesSupported,
+                tools = response.Tools.Select(tool => new
+                {
+                    name = tool.Name,
+                    tool_version = tool.ToolVersion,
+                    supported_parameters = tool.SupportedParameters,
+                    capabilities = tool.Capabilities
+                }).ToArray(),
+                metrics = response.Metrics,
+                generation = response.Generation,
+                known_metric_names = knownMetricNames
+            },
+            datasetVersion: "build_capabilities_v0",
+            toolVersion: DiscoverCapabilitiesToolVersion);
+
+        return response with
+        {
+            DeterministicHash = deterministicHash
+        };
     }
 
     public object ComputeWindowMetrics(ComputeWindowMetricsRequest request)

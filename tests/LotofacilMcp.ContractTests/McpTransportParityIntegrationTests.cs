@@ -64,6 +64,17 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         await AssertToolDiscoveryAsync(_stdioMcpClient);
         await AssertToolDiscoveryAsync(_httpMcpClient);
 
+        var discoverRequest = new Dictionary<string, object?>();
+        var httpDiscoverResponse = await _httpClient.PostAsJsonAsync("/tools/discover_capabilities", discoverRequest);
+        Assert.Equal(HttpStatusCode.OK, httpDiscoverResponse.StatusCode);
+
+        var stdioDiscoverResponse = await _stdioMcpClient.CallToolAsync("discover_capabilities", discoverRequest);
+        var httpMcpDiscoverResponse = await _httpMcpClient.CallToolAsync("discover_capabilities", discoverRequest);
+
+        var httpDiscoverPayload = await ReadHttpJsonAsync(httpDiscoverResponse);
+        Assert.True(JsonElement.DeepEquals(httpDiscoverPayload, ReadMcpStructuredJson(stdioDiscoverResponse)));
+        Assert.True(JsonElement.DeepEquals(httpDiscoverPayload, ReadMcpStructuredJson(httpMcpDiscoverResponse)));
+
         var getDrawWindowRequest = new
         {
             window_size = 3,
@@ -683,6 +694,7 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
     private static async Task AssertToolDiscoveryAsync(McpClient client)
     {
         var listedTools = await client.ListToolsAsync();
+        Assert.Contains(listedTools, tool => tool.Name is "discover_capabilities");
         Assert.Contains(listedTools, tool => tool.Name is "help");
         Assert.Contains(listedTools, tool => tool.Name is "get_draw_window");
         Assert.Contains(listedTools, tool => tool.Name is "compute_window_metrics");
