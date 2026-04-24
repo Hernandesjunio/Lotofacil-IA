@@ -161,6 +161,386 @@ public sealed class PhaseB2Adr0008WindowD2AndInvalidRequestContractTests : IAsyn
     }
 
     [Fact]
+    public async Task D2_EquivalentForms_AnalyzeIndicatorStability_ProduceIdenticalJson()
+    {
+        const int startContestId = 1001;
+        const int endContestId = 1003;
+        const int windowSize = endContestId - startContestId + 1;
+
+        const string indicators = "[{\"name\":\"pares_no_concurso\",\"aggregation\":\"identity\"}]";
+        var byWindowAndEnd = $"{{\"window_size\":{windowSize},\"end_contest_id\":{endContestId},\"min_history\":{windowSize},\"indicators\":{indicators}}}";
+        var byStartAndEnd = $"{{\"start_contest_id\":{startContestId},\"end_contest_id\":{endContestId},\"min_history\":{windowSize},\"indicators\":{indicators}}}";
+
+        var httpBaseline = await _httpClient.PostAsync(
+            "/tools/analyze_indicator_stability",
+            new StringContent(byWindowAndEnd, Encoding.UTF8, "application/json"));
+        var httpD2 = await _httpClient.PostAsync(
+            "/tools/analyze_indicator_stability",
+            new StringContent(byStartAndEnd, Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.OK, httpBaseline.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, httpD2.StatusCode);
+
+        var baseEl = await ReadHttpJsonElementAsync(httpBaseline);
+        var d2El = await ReadHttpJsonElementAsync(httpD2);
+        Assert.True(JsonElement.DeepEquals(baseEl, d2El));
+
+        var argsBase = new Dictionary<string, object?>
+        {
+            ["window_size"] = windowSize,
+            ["end_contest_id"] = endContestId,
+            ["min_history"] = windowSize,
+            ["indicators"] = new object[]
+            {
+                new Dictionary<string, object?> { ["name"] = "pares_no_concurso", ["aggregation"] = "identity" }
+            }
+        };
+        var argsD2 = new Dictionary<string, object?>
+        {
+            ["start_contest_id"] = startContestId,
+            ["end_contest_id"] = endContestId,
+            ["min_history"] = windowSize,
+            ["indicators"] = new object[]
+            {
+                new Dictionary<string, object?> { ["name"] = "pares_no_concurso", ["aggregation"] = "identity" }
+            }
+        };
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _stdioMcpClient.CallToolAsync("analyze_indicator_stability", argsBase))));
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _httpMcpClient.CallToolAsync("analyze_indicator_stability", argsBase))));
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _stdioMcpClient.CallToolAsync("analyze_indicator_stability", argsD2))));
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _httpMcpClient.CallToolAsync("analyze_indicator_stability", argsD2))));
+    }
+
+    [Fact]
+    public async Task D2_EquivalentForms_ComposeIndicatorAnalysis_ProduceIdenticalJson()
+    {
+        const int startContestId = 1001;
+        const int endContestId = 1003;
+        const int windowSize = endContestId - startContestId + 1;
+
+        const string components = "[{\"metric_name\":\"frequencia_por_dezena\",\"transform\":\"normalize_max\",\"weight\":1.0}]";
+        var byWindowAndEnd =
+            $"{{\"window_size\":{windowSize},\"end_contest_id\":{endContestId},\"target\":\"dezena\",\"operator\":\"weighted_rank\",\"components\":{components},\"top_k\":10}}";
+        var byStartAndEnd =
+            $"{{\"start_contest_id\":{startContestId},\"end_contest_id\":{endContestId},\"target\":\"dezena\",\"operator\":\"weighted_rank\",\"components\":{components},\"top_k\":10}}";
+
+        var httpBaseline = await _httpClient.PostAsync(
+            "/tools/compose_indicator_analysis",
+            new StringContent(byWindowAndEnd, Encoding.UTF8, "application/json"));
+        var httpD2 = await _httpClient.PostAsync(
+            "/tools/compose_indicator_analysis",
+            new StringContent(byStartAndEnd, Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.OK, httpBaseline.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, httpD2.StatusCode);
+
+        var baseEl = await ReadHttpJsonElementAsync(httpBaseline);
+        var d2El = await ReadHttpJsonElementAsync(httpD2);
+        Assert.True(JsonElement.DeepEquals(baseEl, d2El));
+
+        var baseArgs = new Dictionary<string, object?>
+        {
+            ["window_size"] = windowSize,
+            ["end_contest_id"] = endContestId,
+            ["target"] = "dezena",
+            ["operator"] = "weighted_rank",
+            ["top_k"] = 10,
+            ["components"] = new object[]
+            {
+                new Dictionary<string, object?>
+                {
+                    ["metric_name"] = "frequencia_por_dezena",
+                    ["transform"] = "normalize_max",
+                    ["weight"] = 1.0
+                }
+            }
+        };
+        var d2Args = new Dictionary<string, object?>(baseArgs)
+        {
+            ["window_size"] = null,
+            ["start_contest_id"] = startContestId
+        };
+        d2Args.Remove("window_size");
+
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _stdioMcpClient.CallToolAsync("compose_indicator_analysis", baseArgs))));
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _httpMcpClient.CallToolAsync("compose_indicator_analysis", baseArgs))));
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _stdioMcpClient.CallToolAsync("compose_indicator_analysis", d2Args))));
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _httpMcpClient.CallToolAsync("compose_indicator_analysis", d2Args))));
+    }
+
+    [Fact]
+    public async Task D2_EquivalentForms_AnalyzeIndicatorAssociations_ProduceIdenticalJson()
+    {
+        const int startContestId = 1001;
+        const int endContestId = 1003;
+        const int windowSize = endContestId - startContestId + 1;
+
+        const string items = "[{\"name\":\"pares_no_concurso\",\"aggregation\":\"identity\"},{\"name\":\"repeticao_concurso_anterior\",\"aggregation\":\"identity\"}]";
+        var byWindowAndEnd =
+            $"{{\"window_size\":{windowSize},\"end_contest_id\":{endContestId},\"method\":\"spearman\",\"top_k\":5,\"items\":{items}}}";
+        var byStartAndEnd =
+            $"{{\"start_contest_id\":{startContestId},\"end_contest_id\":{endContestId},\"method\":\"spearman\",\"top_k\":5,\"items\":{items}}}";
+
+        var httpBaseline = await _httpClient.PostAsync(
+            "/tools/analyze_indicator_associations",
+            new StringContent(byWindowAndEnd, Encoding.UTF8, "application/json"));
+        var httpD2 = await _httpClient.PostAsync(
+            "/tools/analyze_indicator_associations",
+            new StringContent(byStartAndEnd, Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.OK, httpBaseline.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, httpD2.StatusCode);
+
+        var baseEl = await ReadHttpJsonElementAsync(httpBaseline);
+        var d2El = await ReadHttpJsonElementAsync(httpD2);
+        Assert.True(JsonElement.DeepEquals(baseEl, d2El));
+
+        var baseArgs = new Dictionary<string, object?>
+        {
+            ["window_size"] = windowSize,
+            ["end_contest_id"] = endContestId,
+            ["method"] = "spearman",
+            ["top_k"] = 5,
+            ["items"] = new object[]
+            {
+                new Dictionary<string, object?> { ["name"] = "pares_no_concurso", ["aggregation"] = "identity" },
+                new Dictionary<string, object?> { ["name"] = "repeticao_concurso_anterior", ["aggregation"] = "identity" }
+            }
+        };
+        var d2Args = new Dictionary<string, object?>
+        {
+            ["start_contest_id"] = startContestId,
+            ["end_contest_id"] = endContestId,
+            ["method"] = "spearman",
+            ["top_k"] = 5,
+            ["items"] = new object[]
+            {
+                new Dictionary<string, object?> { ["name"] = "pares_no_concurso", ["aggregation"] = "identity" },
+                new Dictionary<string, object?> { ["name"] = "repeticao_concurso_anterior", ["aggregation"] = "identity" }
+            }
+        };
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _stdioMcpClient.CallToolAsync("analyze_indicator_associations", baseArgs))));
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _httpMcpClient.CallToolAsync("analyze_indicator_associations", baseArgs))));
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _stdioMcpClient.CallToolAsync("analyze_indicator_associations", d2Args))));
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _httpMcpClient.CallToolAsync("analyze_indicator_associations", d2Args))));
+    }
+
+    [Fact]
+    public async Task D2_EquivalentForms_SummarizeWindowPatterns_ProduceIdenticalJson()
+    {
+        const int startContestId = 1001;
+        const int endContestId = 1003;
+        const int windowSize = endContestId - startContestId + 1;
+
+        const string features = "[{\"metric_name\":\"pares_no_concurso\",\"aggregation\":\"identity\"}]";
+        var byWindowAndEnd =
+            $"{{\"window_size\":{windowSize},\"end_contest_id\":{endContestId},\"coverage_threshold\":0.8,\"range_method\":\"iqr\",\"features\":{features}}}";
+        var byStartAndEnd =
+            $"{{\"start_contest_id\":{startContestId},\"end_contest_id\":{endContestId},\"coverage_threshold\":0.8,\"range_method\":\"iqr\",\"features\":{features}}}";
+
+        var httpBaseline = await _httpClient.PostAsync(
+            "/tools/summarize_window_patterns",
+            new StringContent(byWindowAndEnd, Encoding.UTF8, "application/json"));
+        var httpD2 = await _httpClient.PostAsync(
+            "/tools/summarize_window_patterns",
+            new StringContent(byStartAndEnd, Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.OK, httpBaseline.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, httpD2.StatusCode);
+
+        var baseEl = await ReadHttpJsonElementAsync(httpBaseline);
+        var d2El = await ReadHttpJsonElementAsync(httpD2);
+        Assert.True(JsonElement.DeepEquals(baseEl, d2El));
+
+        var baseArgs = new Dictionary<string, object?>
+        {
+            ["window_size"] = windowSize,
+            ["end_contest_id"] = endContestId,
+            ["coverage_threshold"] = 0.8,
+            ["range_method"] = "iqr",
+            ["features"] = new object[]
+            {
+                new Dictionary<string, object?> { ["metric_name"] = "pares_no_concurso", ["aggregation"] = "identity" }
+            }
+        };
+        var d2Args = new Dictionary<string, object?>
+        {
+            ["start_contest_id"] = startContestId,
+            ["end_contest_id"] = endContestId,
+            ["coverage_threshold"] = 0.8,
+            ["range_method"] = "iqr",
+            ["features"] = new object[]
+            {
+                new Dictionary<string, object?> { ["metric_name"] = "pares_no_concurso", ["aggregation"] = "identity" }
+            }
+        };
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _stdioMcpClient.CallToolAsync("summarize_window_patterns", baseArgs))));
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _httpMcpClient.CallToolAsync("summarize_window_patterns", baseArgs))));
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _stdioMcpClient.CallToolAsync("summarize_window_patterns", d2Args))));
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _httpMcpClient.CallToolAsync("summarize_window_patterns", d2Args))));
+    }
+
+    [Fact]
+    public async Task D2_EquivalentForms_SummarizeWindowAggregates_ProduceIdenticalJson()
+    {
+        const int startContestId = 1001;
+        const int endContestId = 1003;
+        const int windowSize = endContestId - startContestId + 1;
+
+        const string aggregates =
+            """
+            [
+              {
+                "id": "pairs_hist",
+                "source_metric_name": "pares_no_concurso",
+                "aggregate_type": "histogram_scalar_series",
+                "params": { "bucket_spec": { "bucket_values": [0,1,2,3,4,5] } }
+              }
+            ]
+            """;
+        var byWindowAndEnd = $"{{\"window_size\":{windowSize},\"end_contest_id\":{endContestId},\"aggregates\":{aggregates}}}";
+        var byStartAndEnd = $"{{\"start_contest_id\":{startContestId},\"end_contest_id\":{endContestId},\"aggregates\":{aggregates}}}";
+
+        var httpBaseline = await _httpClient.PostAsync(
+            "/tools/summarize_window_aggregates",
+            new StringContent(byWindowAndEnd, Encoding.UTF8, "application/json"));
+        var httpD2 = await _httpClient.PostAsync(
+            "/tools/summarize_window_aggregates",
+            new StringContent(byStartAndEnd, Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.OK, httpBaseline.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, httpD2.StatusCode);
+
+        var baseEl = await ReadHttpJsonElementAsync(httpBaseline);
+        var d2El = await ReadHttpJsonElementAsync(httpD2);
+        Assert.True(JsonElement.DeepEquals(baseEl, d2El));
+
+        var baseArgs = new Dictionary<string, object?>
+        {
+            ["window_size"] = windowSize,
+            ["end_contest_id"] = endContestId,
+            ["aggregates"] = new object[]
+            {
+                new Dictionary<string, object?>
+                {
+                    ["id"] = "pairs_hist",
+                    ["source_metric_name"] = "pares_no_concurso",
+                    ["aggregate_type"] = "histogram_scalar_series",
+                    ["params"] = new Dictionary<string, object?>
+                    {
+                        ["bucket_spec"] = new Dictionary<string, object?>
+                        {
+                            ["bucket_values"] = new[] { 0, 1, 2, 3, 4, 5 }
+                        }
+                    }
+                }
+            }
+        };
+        var d2Args = new Dictionary<string, object?>
+        {
+            ["start_contest_id"] = startContestId,
+            ["end_contest_id"] = endContestId,
+            ["aggregates"] = baseArgs["aggregates"]
+        };
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _stdioMcpClient.CallToolAsync("summarize_window_aggregates", baseArgs))));
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _httpMcpClient.CallToolAsync("summarize_window_aggregates", baseArgs))));
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _stdioMcpClient.CallToolAsync("summarize_window_aggregates", d2Args))));
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _httpMcpClient.CallToolAsync("summarize_window_aggregates", d2Args))));
+    }
+
+    [Fact]
+    public async Task D2_EquivalentForms_GenerateCandidateGames_ProduceIdenticalJson()
+    {
+        const int startContestId = 1001;
+        const int endContestId = 1003;
+        const int windowSize = endContestId - startContestId + 1;
+
+        const string plan = "[{\"strategy_name\":\"common_repetition_frequency\",\"count\":1,\"search_method\":\"greedy_topk\"}]";
+        var byWindowAndEnd = $"{{\"window_size\":{windowSize},\"end_contest_id\":{endContestId},\"seed\":424242,\"plan\":{plan}}}";
+        var byStartAndEnd = $"{{\"start_contest_id\":{startContestId},\"end_contest_id\":{endContestId},\"seed\":424242,\"plan\":{plan}}}";
+
+        var httpBaseline = await _httpClient.PostAsync(
+            "/tools/generate_candidate_games",
+            new StringContent(byWindowAndEnd, Encoding.UTF8, "application/json"));
+        var httpD2 = await _httpClient.PostAsync(
+            "/tools/generate_candidate_games",
+            new StringContent(byStartAndEnd, Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.OK, httpBaseline.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, httpD2.StatusCode);
+
+        var baseEl = await ReadHttpJsonElementAsync(httpBaseline);
+        var d2El = await ReadHttpJsonElementAsync(httpD2);
+        Assert.True(JsonElement.DeepEquals(baseEl, d2El));
+
+        var baseArgs = new Dictionary<string, object?>
+        {
+            ["window_size"] = windowSize,
+            ["end_contest_id"] = endContestId,
+            ["seed"] = 424242UL,
+            ["plan"] = new object[]
+            {
+                new Dictionary<string, object?>
+                {
+                    ["strategy_name"] = "common_repetition_frequency",
+                    ["count"] = 1,
+                    ["search_method"] = "greedy_topk"
+                }
+            }
+        };
+        var d2Args = new Dictionary<string, object?>
+        {
+            ["start_contest_id"] = startContestId,
+            ["end_contest_id"] = endContestId,
+            ["seed"] = 424242UL,
+            ["plan"] = baseArgs["plan"]
+        };
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _stdioMcpClient.CallToolAsync("generate_candidate_games", baseArgs))));
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _httpMcpClient.CallToolAsync("generate_candidate_games", baseArgs))));
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _stdioMcpClient.CallToolAsync("generate_candidate_games", d2Args))));
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _httpMcpClient.CallToolAsync("generate_candidate_games", d2Args))));
+    }
+
+    [Fact]
+    public async Task D2_EquivalentForms_ExplainCandidateGames_ProduceIdenticalJson()
+    {
+        const int startContestId = 1001;
+        const int endContestId = 1003;
+        const int windowSize = endContestId - startContestId + 1;
+
+        const string games = "[[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]]";
+        var byWindowAndEnd = $"{{\"window_size\":{windowSize},\"end_contest_id\":{endContestId},\"games\":{games}}}";
+        var byStartAndEnd = $"{{\"start_contest_id\":{startContestId},\"end_contest_id\":{endContestId},\"games\":{games}}}";
+
+        var httpBaseline = await _httpClient.PostAsync(
+            "/tools/explain_candidate_games",
+            new StringContent(byWindowAndEnd, Encoding.UTF8, "application/json"));
+        var httpD2 = await _httpClient.PostAsync(
+            "/tools/explain_candidate_games",
+            new StringContent(byStartAndEnd, Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.OK, httpBaseline.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, httpD2.StatusCode);
+
+        var baseEl = await ReadHttpJsonElementAsync(httpBaseline);
+        var d2El = await ReadHttpJsonElementAsync(httpD2);
+        Assert.True(JsonElement.DeepEquals(baseEl, d2El));
+
+        var baseArgs = new Dictionary<string, object?>
+        {
+            ["window_size"] = windowSize,
+            ["end_contest_id"] = endContestId,
+            ["games"] = new object[]
+            {
+                new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 }
+            }
+        };
+        var d2Args = new Dictionary<string, object?>
+        {
+            ["start_contest_id"] = startContestId,
+            ["end_contest_id"] = endContestId,
+            ["games"] = baseArgs["games"]
+        };
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _stdioMcpClient.CallToolAsync("explain_candidate_games", baseArgs))));
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _httpMcpClient.CallToolAsync("explain_candidate_games", baseArgs))));
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _stdioMcpClient.CallToolAsync("explain_candidate_games", d2Args))));
+        Assert.True(JsonElement.DeepEquals(baseEl, ReadMcpStructuredJson(await _httpMcpClient.CallToolAsync("explain_candidate_games", d2Args))));
+    }
+
+    [Fact]
     public async Task AmbiguousWindow_IncompatibleSizeAndStartEnd_RejectedWithInvalidRequest_OnComputeAndGet_AcrossTransports()
     {
         // 1001..1003 = 3 concursos; window_size=2 conflitua.

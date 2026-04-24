@@ -36,10 +36,11 @@ public sealed record StabilityIndicatorRequestDto(
     [property: JsonPropertyName("aggregation")] string? Aggregation);
 
 public sealed record AnalyzeIndicatorStabilityRequest(
-    [property: JsonPropertyName("window_size")] int WindowSize,
-    [property: JsonPropertyName("end_contest_id")] int? EndContestId,
-    [property: JsonPropertyName("indicators")] IReadOnlyList<StabilityIndicatorRequestDto>? Indicators,
-    [property: JsonPropertyName("normalization_method")] string? NormalizationMethod,
+    [property: JsonPropertyName("window_size")] int? WindowSize = null,
+    [property: JsonPropertyName("start_contest_id")] int? StartContestId = null,
+    [property: JsonPropertyName("end_contest_id")] int? EndContestId = null,
+    [property: JsonPropertyName("indicators")] IReadOnlyList<StabilityIndicatorRequestDto>? Indicators = null,
+    [property: JsonPropertyName("normalization_method")] string? NormalizationMethod = null,
     [property: JsonPropertyName("top_k")] int TopK = 5,
     [property: JsonPropertyName("min_history")] int MinHistory = 20);
 
@@ -107,12 +108,13 @@ public sealed record ComposeIndicatorComponentRequest(
     [property: JsonPropertyName("weight")] double Weight);
 
 public sealed record ComposeIndicatorAnalysisRequest(
-    [property: JsonPropertyName("window_size")] int WindowSize,
-    [property: JsonPropertyName("end_contest_id")] int? EndContestId,
-    [property: JsonPropertyName("target")] string Target,
-    [property: JsonPropertyName("operator")] string Operator,
-    [property: JsonPropertyName("components")] IReadOnlyList<ComposeIndicatorComponentRequest> Components,
-    [property: JsonPropertyName("top_k")] int TopK);
+    [property: JsonPropertyName("window_size")] int? WindowSize = null,
+    [property: JsonPropertyName("start_contest_id")] int? StartContestId = null,
+    [property: JsonPropertyName("end_contest_id")] int? EndContestId = null,
+    [property: JsonPropertyName("target")] string Target = "",
+    [property: JsonPropertyName("operator")] string Operator = "",
+    [property: JsonPropertyName("components")] IReadOnlyList<ComposeIndicatorComponentRequest>? Components = null,
+    [property: JsonPropertyName("top_k")] int TopK = 10);
 
 public sealed record WeightedDezenaRankingEntryEnvelope(
     [property: JsonPropertyName("dezena")] int Dezena,
@@ -134,10 +136,11 @@ public sealed record AssociationItemRequest(
     [property: JsonPropertyName("aggregation")] string? Aggregation);
 
 public sealed record AnalyzeIndicatorAssociationsRequest(
-    [property: JsonPropertyName("window_size")] int WindowSize,
-    [property: JsonPropertyName("end_contest_id")] int? EndContestId,
-    [property: JsonPropertyName("items")] IReadOnlyList<AssociationItemRequest>? Items,
-    [property: JsonPropertyName("method")] string Method,
+    [property: JsonPropertyName("window_size")] int? WindowSize = null,
+    [property: JsonPropertyName("start_contest_id")] int? StartContestId = null,
+    [property: JsonPropertyName("end_contest_id")] int? EndContestId = null,
+    [property: JsonPropertyName("items")] IReadOnlyList<AssociationItemRequest>? Items = null,
+    [property: JsonPropertyName("method")] string Method = "",
     [property: JsonPropertyName("top_k")] int TopK = 5,
     [property: JsonPropertyName("stability_check")] object? StabilityCheck = null);
 
@@ -169,11 +172,12 @@ public sealed record WindowPatternFeatureRequest(
     [property: JsonPropertyName("aggregation")] string? Aggregation);
 
 public sealed record SummarizeWindowPatternsRequest(
-    [property: JsonPropertyName("window_size")] int WindowSize,
-    [property: JsonPropertyName("end_contest_id")] int? EndContestId,
-    [property: JsonPropertyName("features")] IReadOnlyList<WindowPatternFeatureRequest>? Features,
-    [property: JsonPropertyName("coverage_threshold")] double CoverageThreshold,
-    [property: JsonPropertyName("range_method")] string RangeMethod);
+    [property: JsonPropertyName("window_size")] int? WindowSize = null,
+    [property: JsonPropertyName("start_contest_id")] int? StartContestId = null,
+    [property: JsonPropertyName("end_contest_id")] int? EndContestId = null,
+    [property: JsonPropertyName("features")] IReadOnlyList<WindowPatternFeatureRequest>? Features = null,
+    [property: JsonPropertyName("coverage_threshold")] double CoverageThreshold = 0.8,
+    [property: JsonPropertyName("range_method")] string RangeMethod = "iqr");
 
 public sealed record WindowPatternSummaryEnvelope(
     [property: JsonPropertyName("metric_name")] string MetricName,
@@ -208,9 +212,10 @@ public sealed record WindowAggregateRequestDto(
     [property: JsonPropertyName("params")] JsonElement Params);
 
 public sealed record SummarizeWindowAggregatesRequest(
-    [property: JsonPropertyName("window_size")] int WindowSize,
-    [property: JsonPropertyName("end_contest_id")] int? EndContestId,
-    [property: JsonPropertyName("aggregates")] IReadOnlyList<WindowAggregateRequestDto>? Aggregates);
+    [property: JsonPropertyName("window_size")] int? WindowSize = null,
+    [property: JsonPropertyName("start_contest_id")] int? StartContestId = null,
+    [property: JsonPropertyName("end_contest_id")] int? EndContestId = null,
+    [property: JsonPropertyName("aggregates")] IReadOnlyList<WindowAggregateRequestDto>? Aggregates = null);
 
 public sealed record HistogramBucketEnvelope(
     [property: JsonPropertyName("x")] double X,
@@ -298,10 +303,11 @@ public sealed record GenerateCandidatePlanItemRequest(
     [property: JsonPropertyName("search_method")] string? SearchMethod);
 
 public sealed record GenerateCandidateGamesRequest(
-    [property: JsonPropertyName("window_size")] int WindowSize,
-    [property: JsonPropertyName("end_contest_id")] int? EndContestId,
-    [property: JsonPropertyName("seed")] ulong? Seed,
-    [property: JsonPropertyName("plan")] IReadOnlyList<GenerateCandidatePlanItemRequest>? Plan);
+    [property: JsonPropertyName("window_size")] int? WindowSize = null,
+    [property: JsonPropertyName("start_contest_id")] int? StartContestId = null,
+    [property: JsonPropertyName("end_contest_id")] int? EndContestId = null,
+    [property: JsonPropertyName("seed")] ulong? Seed = null,
+    [property: JsonPropertyName("plan")] IReadOnlyList<GenerateCandidatePlanItemRequest>? Plan = null);
 
 public sealed record CandidateGameEnvelope(
     [property: JsonPropertyName("numbers")] IReadOnlyList<int> Numbers,
@@ -319,9 +325,10 @@ public sealed record GenerateCandidateGamesResponse(
     [property: JsonPropertyName("candidate_games")] IReadOnlyList<CandidateGameEnvelope> CandidateGames);
 
 public sealed record ExplainCandidateGamesRequest(
-    [property: JsonPropertyName("window_size")] int WindowSize,
-    [property: JsonPropertyName("end_contest_id")] int? EndContestId,
-    [property: JsonPropertyName("games")] IReadOnlyList<IReadOnlyList<int>>? Games,
+    [property: JsonPropertyName("window_size")] int? WindowSize = null,
+    [property: JsonPropertyName("start_contest_id")] int? StartContestId = null,
+    [property: JsonPropertyName("end_contest_id")] int? EndContestId = null,
+    [property: JsonPropertyName("games")] IReadOnlyList<IReadOnlyList<int>>? Games = null,
     [property: JsonPropertyName("include_metric_breakdown")] bool IncludeMetricBreakdown = true,
     [property: JsonPropertyName("include_exclusion_breakdown")] bool IncludeExclusionBreakdown = true);
 
@@ -569,13 +576,13 @@ public sealed class V0Tools
             [
                 new WindowModesByToolEnvelope("get_draw_window", ["window_size+end_contest_id", "start_contest_id+end_contest_id"]),
                 new WindowModesByToolEnvelope("compute_window_metrics", ["window_size+end_contest_id", "start_contest_id+end_contest_id"]),
-                new WindowModesByToolEnvelope("analyze_indicator_stability", ["window_size+end_contest_id"]),
-                new WindowModesByToolEnvelope("compose_indicator_analysis", ["window_size+end_contest_id"]),
-                new WindowModesByToolEnvelope("analyze_indicator_associations", ["window_size+end_contest_id"]),
-                new WindowModesByToolEnvelope("summarize_window_patterns", ["window_size+end_contest_id"]),
-                new WindowModesByToolEnvelope("summarize_window_aggregates", ["window_size+end_contest_id"]),
-                new WindowModesByToolEnvelope("generate_candidate_games", ["window_size+end_contest_id"]),
-                new WindowModesByToolEnvelope("explain_candidate_games", ["window_size+end_contest_id"])
+                new WindowModesByToolEnvelope("analyze_indicator_stability", ["window_size+end_contest_id", "start_contest_id+end_contest_id"]),
+                new WindowModesByToolEnvelope("compose_indicator_analysis", ["window_size+end_contest_id", "start_contest_id+end_contest_id"]),
+                new WindowModesByToolEnvelope("analyze_indicator_associations", ["window_size+end_contest_id", "start_contest_id+end_contest_id"]),
+                new WindowModesByToolEnvelope("summarize_window_patterns", ["window_size+end_contest_id", "start_contest_id+end_contest_id"]),
+                new WindowModesByToolEnvelope("summarize_window_aggregates", ["window_size+end_contest_id", "start_contest_id+end_contest_id"]),
+                new WindowModesByToolEnvelope("generate_candidate_games", ["window_size+end_contest_id", "start_contest_id+end_contest_id"]),
+                new WindowModesByToolEnvelope("explain_candidate_games", ["window_size+end_contest_id", "start_contest_id+end_contest_id"])
             ],
             Tools:
             [
@@ -809,9 +816,14 @@ public sealed class V0Tools
     {
         try
         {
+            var (windowSize, endContestId) = WindowRequestResolver.Resolve(
+                request.WindowSize,
+                request.StartContestId,
+                request.EndContestId);
+
             var result = _analyzeIndicatorStabilityUseCase.Execute(new AnalyzeIndicatorStabilityInput(
-                WindowSize: request.WindowSize,
-                EndContestId: request.EndContestId,
+                WindowSize: windowSize,
+                EndContestId: endContestId,
                 Indicators: request.Indicators?
                     .Select(indicator => new StabilityIndicatorRequestInput(indicator.Name, indicator.Aggregation))
                     .ToArray(),
@@ -855,9 +867,14 @@ public sealed class V0Tools
     {
         try
         {
+            var (windowSize, endContestId) = WindowRequestResolver.Resolve(
+                request.WindowSize,
+                request.StartContestId,
+                request.EndContestId);
+
             var result = _composeIndicatorAnalysisUseCase.Execute(new ComposeIndicatorAnalysisInput(
-                WindowSize: request.WindowSize,
-                EndContestId: request.EndContestId,
+                WindowSize: windowSize,
+                EndContestId: endContestId,
                 Target: request.Target,
                 Operator: request.Operator,
                 Components: (request.Components ?? Array.Empty<ComposeIndicatorComponentRequest>())
@@ -913,9 +930,14 @@ public sealed class V0Tools
 
         try
         {
+            var (windowSize, endContestId) = WindowRequestResolver.Resolve(
+                request.WindowSize,
+                request.StartContestId,
+                request.EndContestId);
+
             var result = _analyzeIndicatorAssociationsUseCase.Execute(new AnalyzeIndicatorAssociationsInput(
-                WindowSize: request.WindowSize,
-                EndContestId: request.EndContestId,
+                WindowSize: windowSize,
+                EndContestId: endContestId,
                 Items: (request.Items ?? Array.Empty<AssociationItemRequest>())
                     .Select(item => new StabilityIndicatorRequestInput(item.Name, item.Aggregation))
                     .ToArray(),
@@ -962,9 +984,14 @@ public sealed class V0Tools
     {
         try
         {
+            var (windowSize, endContestId) = WindowRequestResolver.Resolve(
+                request.WindowSize,
+                request.StartContestId,
+                request.EndContestId);
+
             var result = _summarizeWindowPatternsUseCase.Execute(new SummarizeWindowPatternsInput(
-                WindowSize: request.WindowSize,
-                EndContestId: request.EndContestId,
+                WindowSize: windowSize,
+                EndContestId: endContestId,
                 Features: (request.Features ?? Array.Empty<WindowPatternFeatureRequest>())
                     .Select(feature => new WindowPatternFeatureInput(feature.MetricName, feature.Aggregation))
                     .ToArray(),
@@ -1016,9 +1043,14 @@ public sealed class V0Tools
     {
         try
         {
+            var (windowSize, endContestId) = WindowRequestResolver.Resolve(
+                request.WindowSize,
+                request.StartContestId,
+                request.EndContestId);
+
             var result = _summarizeWindowAggregatesUseCase.Execute(new SummarizeWindowAggregatesInput(
-                WindowSize: request.WindowSize,
-                EndContestId: request.EndContestId,
+                WindowSize: windowSize,
+                EndContestId: endContestId,
                 Aggregates: request.Aggregates?
                     .Select(aggregate => new WindowAggregateRequestInput(
                         Id: aggregate.Id ?? string.Empty,
@@ -1073,9 +1105,14 @@ public sealed class V0Tools
     {
         try
         {
+            var (windowSize, endContestId) = WindowRequestResolver.Resolve(
+                request.WindowSize,
+                request.StartContestId,
+                request.EndContestId);
+
             var result = _generateCandidateGamesUseCase.Execute(new GenerateCandidateGamesInput(
-                WindowSize: request.WindowSize,
-                EndContestId: request.EndContestId,
+                WindowSize: windowSize,
+                EndContestId: endContestId,
                 Seed: request.Seed,
                 Plan: (request.Plan ?? Array.Empty<GenerateCandidatePlanItemRequest>())
                     .Select(planItem => new GenerateCandidatePlanItemInput(
@@ -1118,9 +1155,14 @@ public sealed class V0Tools
     {
         try
         {
+            var (windowSize, endContestId) = WindowRequestResolver.Resolve(
+                request.WindowSize,
+                request.StartContestId,
+                request.EndContestId);
+
             var result = _explainCandidateGamesUseCase.Execute(new ExplainCandidateGamesInput(
-                WindowSize: request.WindowSize,
-                EndContestId: request.EndContestId,
+                WindowSize: windowSize,
+                EndContestId: endContestId,
                 Games: request.Games ?? Array.Empty<IReadOnlyList<int>>(),
                 IncludeMetricBreakdown: request.IncludeMetricBreakdown,
                 IncludeExclusionBreakdown: request.IncludeExclusionBreakdown,

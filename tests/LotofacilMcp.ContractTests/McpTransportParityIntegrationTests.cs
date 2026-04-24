@@ -28,8 +28,6 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
             [
                 "run",
                 "--no-build",
-                "--configuration",
-                "Release",
                 "--project",
                 GetServerProjectPath(),
                 "--",
@@ -72,8 +70,24 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         var httpMcpDiscoverResponse = await _httpMcpClient.CallToolAsync("discover_capabilities", discoverRequest);
 
         var httpDiscoverPayload = await ReadHttpJsonAsync(httpDiscoverResponse);
-        Assert.True(JsonElement.DeepEquals(httpDiscoverPayload, ReadMcpStructuredJson(stdioDiscoverResponse)));
-        Assert.True(JsonElement.DeepEquals(httpDiscoverPayload, ReadMcpStructuredJson(httpMcpDiscoverResponse)));
+        var stdioDiscoverPayload = ReadMcpStructuredJson(stdioDiscoverResponse);
+        var httpMcpDiscoverPayload = ReadMcpStructuredJson(httpMcpDiscoverResponse);
+        if (!JsonElement.DeepEquals(httpDiscoverPayload, stdioDiscoverPayload))
+        {
+            throw new Xunit.Sdk.XunitException(
+                "discover_capabilities parity failed (HTTP vs MCP stdio).\n\nHTTP:\n"
+                + JsonSerializer.Serialize(httpDiscoverPayload, _jsonOptions)
+                + "\n\nMCP stdio:\n"
+                + JsonSerializer.Serialize(stdioDiscoverPayload, _jsonOptions));
+        }
+        if (!JsonElement.DeepEquals(httpDiscoverPayload, httpMcpDiscoverPayload))
+        {
+            throw new Xunit.Sdk.XunitException(
+                "discover_capabilities parity failed (HTTP vs MCP HTTP).\n\nHTTP:\n"
+                + JsonSerializer.Serialize(httpDiscoverPayload, _jsonOptions)
+                + "\n\nMCP HTTP:\n"
+                + JsonSerializer.Serialize(httpMcpDiscoverPayload, _jsonOptions));
+        }
 
         var getDrawWindowRequest = new
         {

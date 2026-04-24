@@ -63,7 +63,9 @@ public sealed class V0McpTools
     [McpServerTool(Name = "analyze_indicator_stability"), Description("Compara indicadores na janela e ranqueia estabilidade relativa.")]
     public CallToolResult AnalyzeIndicatorStability(
         V0Tools tools,
-        [Description("Quantidade de concursos consecutivos na janela.")] int window_size = 0,
+        [Description("Quantidade de concursos consecutivos na janela.")] int? window_size = null,
+        [Description("Concurso inicial inclusivo (alternativa a window_size+end, ADR 0008 D2).")]
+        int? start_contest_id = null,
         [Description("Concurso final inclusivo da janela.")] int? end_contest_id = null,
         [Description("Indicadores canônicos para analise de estabilidade.")] IReadOnlyList<StabilityIndicatorRequestDto>? indicators = null,
         [Description("Metodo de normalizacao de volatilidade.")] string? normalization_method = null,
@@ -72,6 +74,7 @@ public sealed class V0McpTools
     {
         var payload = tools.AnalyzeIndicatorStability(new AnalyzeIndicatorStabilityRequest(
             WindowSize: window_size,
+            StartContestId: start_contest_id,
             EndContestId: end_contest_id,
             Indicators: indicators,
             NormalizationMethod: normalization_method,
@@ -84,7 +87,9 @@ public sealed class V0McpTools
     [McpServerTool(Name = "compose_indicator_analysis"), Description("Composição declarativa de indicadores (recorte: target dezena, weighted_rank).")]
     public CallToolResult ComposeIndicatorAnalysis(
         V0Tools tools,
-        [Description("Tamanho da janela.")] int window_size = 0,
+        [Description("Tamanho da janela.")] int? window_size = null,
+        [Description("Concurso inicial inclusivo (alternativa a window_size+end, ADR 0008 D2).")]
+        int? start_contest_id = null,
         [Description("Concurso final inclusivo.")] int? end_contest_id = null,
         [Description("Unidade alvo (recorte: dezena).")] string? target = null,
         [Description("Operador (recorte: weighted_rank).")] string? @operator = null,
@@ -93,6 +98,7 @@ public sealed class V0McpTools
     {
         var payload = tools.ComposeIndicatorAnalysis(new ComposeIndicatorAnalysisRequest(
             WindowSize: window_size,
+            StartContestId: start_contest_id,
             EndContestId: end_contest_id,
             Target: target ?? string.Empty,
             Operator: @operator ?? string.Empty,
@@ -105,7 +111,9 @@ public sealed class V0McpTools
     [McpServerTool(Name = "analyze_indicator_associations"), Description("Mede associacoes Spearman entre series escalares alinhadas na janela (recorte minimo).")]
     public CallToolResult AnalyzeIndicatorAssociations(
         V0Tools tools,
-        [Description("Tamanho da janela.")] int window_size = 0,
+        [Description("Tamanho da janela.")] int? window_size = null,
+        [Description("Concurso inicial inclusivo (alternativa a window_size+end, ADR 0008 D2).")]
+        int? start_contest_id = null,
         [Description("Concurso final inclusivo.")] int? end_contest_id = null,
         [Description("Itens (metrica e agregacao opcional para series vetoriais).")] IReadOnlyList<AssociationItemRequest>? items = null,
         [Description("Metodo (recorte: spearman).")] string? method = null,
@@ -114,6 +122,7 @@ public sealed class V0McpTools
     {
         var payload = tools.AnalyzeIndicatorAssociations(new AnalyzeIndicatorAssociationsRequest(
             WindowSize: window_size,
+            StartContestId: start_contest_id,
             EndContestId: end_contest_id,
             Items: items,
             Method: method ?? string.Empty,
@@ -126,7 +135,9 @@ public sealed class V0McpTools
     [McpServerTool(Name = "summarize_window_patterns"), Description("Resume padroes de janela via IQR (recorte minimo com uma feature escalar).")]
     public CallToolResult SummarizeWindowPatterns(
         V0Tools tools,
-        [Description("Tamanho da janela.")] int window_size = 0,
+        [Description("Tamanho da janela.")] int? window_size = null,
+        [Description("Concurso inicial inclusivo (alternativa a window_size+end, ADR 0008 D2).")]
+        int? start_contest_id = null,
         [Description("Concurso final inclusivo.")] int? end_contest_id = null,
         [Description("Features por concurso para resumir (recorte atual: pares_no_concurso).")] IReadOnlyList<WindowPatternFeatureRequest>? features = null,
         [Description("Limiar de cobertura no intervalo [0,1].")] double coverage_threshold = 0.8,
@@ -134,6 +145,7 @@ public sealed class V0McpTools
     {
         var payload = tools.SummarizeWindowPatterns(new SummarizeWindowPatternsRequest(
             WindowSize: window_size,
+            StartContestId: start_contest_id,
             EndContestId: end_contest_id,
             Features: features,
             CoverageThreshold: coverage_threshold,
@@ -145,12 +157,15 @@ public sealed class V0McpTools
     [McpServerTool(Name = "summarize_window_aggregates"), Description("Produz agregados canonicos de janela (histograma escalar, top-k de padroes e matriz por posicao).")]
     public CallToolResult SummarizeWindowAggregates(
         V0Tools tools,
-        [Description("Tamanho da janela.")] int window_size = 0,
+        [Description("Tamanho da janela.")] int? window_size = null,
+        [Description("Concurso inicial inclusivo (alternativa a window_size+end, ADR 0008 D2).")]
+        int? start_contest_id = null,
         [Description("Concurso final inclusivo.")] int? end_contest_id = null,
         [Description("Lista de agregados canonicos com metrica fonte, tipo e params explicitos.")] IReadOnlyList<WindowAggregateRequestDto>? aggregates = null)
     {
         var payload = tools.SummarizeWindowAggregates(new SummarizeWindowAggregatesRequest(
             WindowSize: window_size,
+            StartContestId: start_contest_id,
             EndContestId: end_contest_id,
             Aggregates: aggregates));
 
@@ -160,13 +175,16 @@ public sealed class V0McpTools
     [McpServerTool(Name = "generate_candidate_games"), Description("Gera jogos candidatos por estrategia nominal simples com orcamento e determinismo.")]
     public CallToolResult GenerateCandidateGames(
         V0Tools tools,
-        [Description("Tamanho da janela.")] int window_size = 0,
+        [Description("Tamanho da janela.")] int? window_size = null,
+        [Description("Concurso inicial inclusivo (alternativa a window_size+end, ADR 0008 D2).")]
+        int? start_contest_id = null,
         [Description("Concurso final inclusivo.")] int? end_contest_id = null,
         [Description("Seed obrigatoria para metodos sampled ou greedy_topk.")] ulong? seed = null,
         [Description("Plano de geracao por estrategia nominal.")] IReadOnlyList<GenerateCandidatePlanItemRequest>? plan = null)
     {
         var payload = tools.GenerateCandidateGames(new GenerateCandidateGamesRequest(
             WindowSize: window_size,
+            StartContestId: start_contest_id,
             EndContestId: end_contest_id,
             Seed: seed,
             Plan: plan));
@@ -177,7 +195,9 @@ public sealed class V0McpTools
     [McpServerTool(Name = "explain_candidate_games"), Description("Explica jogos candidatos com ranking deterministico de estrategias e breakdown rastreavel.")]
     public CallToolResult ExplainCandidateGames(
         V0Tools tools,
-        [Description("Tamanho da janela.")] int window_size = 0,
+        [Description("Tamanho da janela.")] int? window_size = null,
+        [Description("Concurso inicial inclusivo (alternativa a window_size+end, ADR 0008 D2).")]
+        int? start_contest_id = null,
         [Description("Concurso final inclusivo.")] int? end_contest_id = null,
         [Description("Lista de jogos candidatos para explicacao.")] IReadOnlyList<IReadOnlyList<int>>? games = null,
         [Description("Inclui detalhamento por metrica e contribuicao.")] bool include_metric_breakdown = true,
@@ -185,6 +205,7 @@ public sealed class V0McpTools
     {
         var payload = tools.ExplainCandidateGames(new ExplainCandidateGamesRequest(
             WindowSize: window_size,
+            StartContestId: start_contest_id,
             EndContestId: end_contest_id,
             Games: games,
             IncludeMetricBreakdown: include_metric_breakdown,
