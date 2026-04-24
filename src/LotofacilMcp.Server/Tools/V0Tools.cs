@@ -355,6 +355,7 @@ public sealed record GenerateTypicalRangeSpecRequest(
     [property: JsonPropertyName("method")] string Method,
     [property: JsonPropertyName("coverage")] double Coverage,
     [property: JsonPropertyName("params")] GenerateTypicalRangeParamsRequest? Params = null,
+    [property: JsonPropertyName("window_ref")] string? WindowRef = null,
     [property: JsonPropertyName("inclusive")] bool? Inclusive = null);
 
 public sealed record GenerateCandidateCriterionRequest(
@@ -1295,6 +1296,7 @@ public sealed class V0Tools
                                             : new GenerateTypicalRangeParamsInput(
                                                 criterion.TypicalRange.Params.PLow,
                                                 criterion.TypicalRange.Params.PHigh),
+                                        criterion.TypicalRange.WindowRef,
                                         criterion.TypicalRange.Inclusive),
                                 criterion.Mode))
                             .ToArray(),
@@ -1329,6 +1331,7 @@ public sealed class V0Tools
                                             : new GenerateTypicalRangeParamsInput(
                                                 filter.TypicalRange.Params.PLow,
                                                 filter.TypicalRange.Params.PHigh),
+                                        filter.TypicalRange.WindowRef,
                                         filter.TypicalRange.Inclusive),
                                 filter.Mode,
                                 filter.Version))
@@ -1403,6 +1406,7 @@ public sealed class V0Tools
                                                 : new GenerateTypicalRangeParamsRequest(
                                                     criterion.TypicalRange.Params.PLow,
                                                     criterion.TypicalRange.Params.PHigh),
+                                            criterion.TypicalRange.WindowRef,
                                             criterion.TypicalRange.Inclusive),
                                     criterion.Mode))
                                 .ToArray(),
@@ -1437,6 +1441,7 @@ public sealed class V0Tools
                                                 : new GenerateTypicalRangeParamsRequest(
                                                     filter.TypicalRange.Params.PLow,
                                                     filter.TypicalRange.Params.PHigh),
+                                            filter.TypicalRange.WindowRef,
                                             filter.TypicalRange.Inclusive),
                                     filter.Mode,
                                     filter.Version))

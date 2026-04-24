@@ -11,6 +11,7 @@ public sealed record TypicalRangeSpec(
     string Method,
     double Coverage,
     TypicalRangePercentileParams? Params,
+    string? WindowRef,
     bool? Inclusive);
 
 public sealed record ResolvedRange(

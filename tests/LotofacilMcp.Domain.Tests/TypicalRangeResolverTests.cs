@@ -14,6 +14,7 @@ public sealed class TypicalRangeResolverTests
             Method: "iqr",
             Coverage: 0.8d,
             Params: null,
+            WindowRef: null,
             Inclusive: null);
         var series = new[] { 1d, 2d, 3d, 4d, 100d };
 
@@ -35,6 +36,7 @@ public sealed class TypicalRangeResolverTests
             Method: "percentile",
             Coverage: 0.8d,
             Params: new TypicalRangePercentileParams(0.1d, 0.9d),
+            WindowRef: null,
             Inclusive: true);
         var series = new[] { 1d, 2d, 3d, 4d, 100d };
 
@@ -58,6 +60,7 @@ public sealed class TypicalRangeResolverTests
             Method: "iqr",
             Coverage: coverage,
             Params: null,
+            WindowRef: null,
             Inclusive: true);
 
         Assert.Throws<DomainInvariantViolationException>(() => resolver.Resolve(spec, new[] { 1d, 2d, 3d }));
@@ -72,6 +75,7 @@ public sealed class TypicalRangeResolverTests
             Method: "percentile",
             Coverage: 0.5d,
             Params: new TypicalRangePercentileParams(0.9d, 0.1d),
+            WindowRef: null,
             Inclusive: true);
 
         Assert.Throws<DomainInvariantViolationException>(() => resolver.Resolve(spec, new[] { 1d, 2d, 3d }));

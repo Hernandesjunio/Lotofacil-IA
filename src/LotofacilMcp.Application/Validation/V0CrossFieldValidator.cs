@@ -72,8 +72,7 @@ public sealed class V0CrossFieldValidator
 
     private static readonly HashSet<string> SupportedConstraintModes =
     [
-        "hard",
-        "soft"
+        "hard"
     ];
 
     private static readonly HashSet<string> SupportedTypicalRangeMethods =
@@ -921,6 +920,11 @@ public sealed class V0CrossFieldValidator
                             continue;
                         }
 
+                        if (filter.TypicalRange is not null)
+                        {
+                            continue;
+                        }
+
                         if (!filter.Min.HasValue || !filter.Max.HasValue || filter.Min.Value > filter.Max.Value)
                         {
                             throw new ApplicationValidationException(
@@ -997,6 +1001,13 @@ public sealed class V0CrossFieldValidator
                 });
         }
 
+        if (!MetricAvailabilityCatalog.IsKnownMetric(typicalRange.MetricName))
+        {
+            throw CreateUnknownMetricForRoute(
+                metricName: typicalRange.MetricName,
+                message: "metric name is not listed in the metric catalog.");
+        }
+
         if (string.IsNullOrWhiteSpace(typicalRange.Method) ||
             !SupportedTypicalRangeMethods.Contains(typicalRange.Method))
         {
@@ -1068,7 +1079,7 @@ public sealed class V0CrossFieldValidator
 
         throw new ApplicationValidationException(
             code: "INVALID_REQUEST",
-            message: "mode must be hard or soft.",
+            message: "mode must be hard.",
             details: new Dictionary<string, object?>
             {
                 ["field"] = field,

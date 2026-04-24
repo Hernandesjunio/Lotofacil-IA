@@ -34,6 +34,7 @@ public sealed record GenerateTypicalRangeSpecInput(
     string Method,
     double Coverage,
     GenerateTypicalRangeParamsInput? Params,
+    string? WindowRef,
     bool? Inclusive);
 
 public sealed record GenerateCandidateWeightInput(
@@ -624,6 +625,7 @@ public sealed class GenerateCandidateGamesUseCase
                         @params = f.TypicalRange.Params is null
                             ? null
                             : new { p_low = f.TypicalRange.Params.PLow, p_high = f.TypicalRange.Params.PHigh },
+                        window_ref = f.TypicalRange.WindowRef,
                         inclusive = f.TypicalRange.Inclusive
                     },
                 mode = f.Mode,
@@ -707,6 +709,7 @@ public sealed class GenerateCandidateGamesUseCase
                 Params: typicalRange.Params is null
                     ? null
                     : new TypicalRangePercentileParams(typicalRange.Params.PLow, typicalRange.Params.PHigh),
+                WindowRef: typicalRange.WindowRef,
                 Inclusive: typicalRange.Inclusive),
             metric.Value);
 
@@ -1014,6 +1017,19 @@ public sealed class GenerateCandidateGamesUseCase
 
     private static ApplicationValidationException MapDomainError(DomainInvariantViolationException ex)
     {
+        const string unknownMetricPrefix = "UNKNOWN_METRIC:";
+        if (ex.Message.StartsWith(unknownMetricPrefix, StringComparison.Ordinal))
+        {
+            var metricName = ex.Message[unknownMetricPrefix.Length..].Trim();
+            return new ApplicationValidationException(
+                code: "UNKNOWN_METRIC",
+                message: "metric name is not listed in the metric catalog.",
+                details: new Dictionary<string, object?>
+                {
+                    ["metric_name"] = metricName
+                });
+        }
+
         if (ex.Message.Contains("requested end_contest_id", StringComparison.Ordinal))
         {
             return new ApplicationValidationException(

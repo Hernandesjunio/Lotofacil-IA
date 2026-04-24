@@ -366,6 +366,144 @@ public sealed class Phase20GenerateCandidateGamesContractTests
 
         Assert.True(resolvedDefaults.TryGetProperty("plan[0].criteria[0].typical_range.method_version", out var methodVersion));
         Assert.Equal("1.0.0", methodVersion.GetString());
+
+        Assert.True(resolvedDefaults.TryGetProperty("plan[0].criteria[0].typical_range.inclusive", out var defaultInclusive));
+        Assert.True(defaultInclusive.GetBoolean());
+
+        Assert.True(resolvedDefaults.TryGetProperty("plan[0].criteria[0].mode", out var defaultMode));
+        Assert.Equal("hard", defaultMode.GetString());
+    }
+
+    [Fact]
+    public void GenerateCandidateGames_TypicalRangeInFilter_ResolvesAndEchoesDefaults()
+    {
+        var sut = new V0Tools();
+        var request = new GenerateCandidateGamesRequest(
+            WindowSize: 5,
+            EndContestId: 1005,
+            Seed: 424242UL,
+            Plan:
+            [
+                new GenerateCandidatePlanItemRequest(
+                    StrategyName: "common_repetition_frequency",
+                    Count: 1,
+                    SearchMethod: "sampled",
+                    Filters:
+                    [
+                        new GenerateCandidateFilterRequest(
+                            Name: "repeat_range",
+                            TypicalRange: new GenerateTypicalRangeSpecRequest(
+                                MetricName: "repeticao_concurso_anterior",
+                                Method: "iqr",
+                                Coverage: 0.8))
+                    ])
+            ]);
+
+        var response = sut.GenerateCandidateGames(request);
+        var payload = Assert.IsType<GenerateCandidateGamesResponse>(response);
+        Assert.Single(payload.CandidateGames);
+
+        using var json = JsonSerializer.SerializeToDocument(payload);
+        var resolvedDefaults = json.RootElement
+            .GetProperty("candidate_games")[0]
+            .GetProperty("applied_configuration")
+            .GetProperty("resolved_defaults");
+
+        Assert.True(resolvedDefaults.TryGetProperty("plan[0].filters[0].typical_range.resolved_range", out var resolvedRange));
+        Assert.True(resolvedRange.TryGetProperty("min", out _));
+        Assert.True(resolvedRange.TryGetProperty("max", out _));
+        Assert.True(resolvedDefaults.TryGetProperty("plan[0].filters[0].typical_range.coverage_observed", out _));
+        Assert.True(resolvedDefaults.TryGetProperty("plan[0].filters[0].typical_range.inclusive", out var defaultInclusive));
+        Assert.True(defaultInclusive.GetBoolean());
+        Assert.True(resolvedDefaults.TryGetProperty("plan[0].filters[0].mode", out var defaultMode));
+        Assert.Equal("hard", defaultMode.GetString());
+    }
+
+    [Fact]
+    public void GenerateCandidateGames_TypicalRangeUnknownMetric_ReturnsUnknownMetric()
+    {
+        var sut = new V0Tools();
+        var request = new GenerateCandidateGamesRequest(
+            WindowSize: 5,
+            EndContestId: 1005,
+            Seed: 424242UL,
+            Plan:
+            [
+                new GenerateCandidatePlanItemRequest(
+                    StrategyName: "common_repetition_frequency",
+                    Count: 1,
+                    SearchMethod: "sampled",
+                    Criteria:
+                    [
+                        new GenerateCandidateCriterionRequest(
+                            Name: "min_top10_overlap",
+                            TypicalRange: new GenerateTypicalRangeSpecRequest(
+                                MetricName: "metrica_que_nao_existe",
+                                Method: "iqr",
+                                Coverage: 0.8))
+                    ])
+            ]);
+
+        var response = sut.GenerateCandidateGames(request);
+        var error = Assert.IsType<ContractErrorEnvelope>(response).Error;
+        Assert.Equal("UNKNOWN_METRIC", error.Code);
+        Assert.True(error.Details.TryGetValue("metric_name", out var metricName));
+        Assert.Equal("metrica_que_nao_existe", Assert.IsType<string>(metricName));
+    }
+
+    [Fact]
+    public void GenerateCandidateGames_TypicalRangeWindowRefChangesHash()
+    {
+        var sut = new V0Tools();
+        var baseRequest = new GenerateCandidateGamesRequest(
+            WindowSize: 5,
+            EndContestId: 1005,
+            Seed: 424242UL,
+            Plan:
+            [
+                new GenerateCandidatePlanItemRequest(
+                    StrategyName: "common_repetition_frequency",
+                    Count: 1,
+                    SearchMethod: "sampled",
+                    Criteria:
+                    [
+                        new GenerateCandidateCriterionRequest(
+                            Name: "min_top10_overlap",
+                            TypicalRange: new GenerateTypicalRangeSpecRequest(
+                                MetricName: "repeticao_concurso_anterior",
+                                Method: "iqr",
+                                Coverage: 0.8,
+                                WindowRef: "window-A"))
+                    ])
+            ]);
+
+        var basePlanItem = Assert.Single(baseRequest.Plan!);
+        var baseCriterion = Assert.Single(basePlanItem.Criteria!);
+        var baseTypicalRange = baseCriterion.TypicalRange!;
+
+        var requestB = baseRequest with
+        {
+            Plan =
+            [
+                basePlanItem with
+                {
+                    Criteria =
+                    [
+                        baseCriterion with
+                        {
+                            TypicalRange = baseTypicalRange with { WindowRef = "window-B" }
+                        }
+                    ]
+                }
+            ]
+        };
+
+        var responseA = sut.GenerateCandidateGames(baseRequest);
+        var responseB = sut.GenerateCandidateGames(requestB);
+        var payloadA = Assert.IsType<GenerateCandidateGamesResponse>(responseA);
+        var payloadB = Assert.IsType<GenerateCandidateGamesResponse>(responseB);
+
+        Assert.NotEqual(payloadA.DeterministicHash, payloadB.DeterministicHash);
     }
 
     [Fact]
