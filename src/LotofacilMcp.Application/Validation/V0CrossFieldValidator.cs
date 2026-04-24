@@ -70,6 +70,12 @@ public sealed class V0CrossFieldValidator
         "histogram_count_vector5_series_per_position_matrix"
     ];
 
+    private static readonly HashSet<string> SupportedConstraintModes =
+    [
+        "hard",
+        "soft"
+    ];
+
     public void ValidateGetDrawWindow(GetDrawWindowInput input)
     {
         if (input.WindowSize <= 0)
@@ -764,6 +770,33 @@ public sealed class V0CrossFieldValidator
                                 ["field"] = "plan[].criteria[].name"
                             });
                     }
+
+                    ValidateConstraintMode(
+                        hasLegacyMode: criterion.Value.HasValue,
+                        hasRangeMode: criterion.Range is not null,
+                        hasAllowedValuesMode: criterion.AllowedValues is not null,
+                        fieldPrefix: "plan[].criteria[]");
+
+                    ValidateConstraintModeValue(criterion.Mode, "plan[].criteria[].mode");
+
+                    if (criterion.Range is not null && criterion.Range.Min > criterion.Range.Max)
+                    {
+                        throw new ApplicationValidationException(
+                            code: "INVALID_REQUEST",
+                            message: "range requires min <= max.",
+                            details: new Dictionary<string, object?>
+                            {
+                                ["field"] = "plan[].criteria[].range"
+                            });
+                    }
+
+                    if (criterion.AllowedValues is not null)
+                    {
+                        ValidateAllowedValues(
+                            criterion.Name,
+                            criterion.AllowedValues.Values,
+                            "plan[].criteria[].allowed_values.values");
+                    }
                 }
             }
 
@@ -826,6 +859,49 @@ public sealed class V0CrossFieldValidator
 
                     if (string.Equals(filter.Name, "repeat_range", StringComparison.Ordinal))
                     {
+                        ValidateConstraintMode(
+                            hasLegacyMode: filter.Value.HasValue || filter.Min.HasValue || filter.Max.HasValue,
+                            hasRangeMode: filter.Range is not null,
+                            hasAllowedValuesMode: filter.AllowedValues is not null,
+                            fieldPrefix: "plan[].filters[].repeat_range");
+                    }
+                    else
+                    {
+                        ValidateConstraintMode(
+                            hasLegacyMode: filter.Value.HasValue || filter.Min.HasValue || filter.Max.HasValue,
+                            hasRangeMode: filter.Range is not null,
+                            hasAllowedValuesMode: filter.AllowedValues is not null,
+                            fieldPrefix: "plan[].filters[]");
+                    }
+
+                    ValidateConstraintModeValue(filter.Mode, "plan[].filters[].mode");
+
+                    if (filter.Range is not null && filter.Range.Min > filter.Range.Max)
+                    {
+                        throw new ApplicationValidationException(
+                            code: "INVALID_REQUEST",
+                            message: "range requires min <= max.",
+                            details: new Dictionary<string, object?>
+                            {
+                                ["field"] = "plan[].filters[].range"
+                            });
+                    }
+
+                    if (filter.AllowedValues is not null)
+                    {
+                        ValidateAllowedValues(
+                            filter.Name,
+                            filter.AllowedValues.Values,
+                            "plan[].filters[].allowed_values.values");
+                    }
+
+                    if (string.Equals(filter.Name, "repeat_range", StringComparison.Ordinal))
+                    {
+                        if (filter.Range is not null)
+                        {
+                            continue;
+                        }
+
                         if (!filter.Min.HasValue || !filter.Max.HasValue || filter.Min.Value > filter.Max.Value)
                         {
                             throw new ApplicationValidationException(
@@ -837,7 +913,7 @@ public sealed class V0CrossFieldValidator
                                 });
                         }
                     }
-                    else if (!filter.Value.HasValue)
+                    else if (filter.Range is null && filter.AllowedValues is null && !filter.Value.HasValue)
                     {
                         throw new ApplicationValidationException(
                             code: "INVALID_REQUEST",
@@ -862,6 +938,109 @@ public sealed class V0CrossFieldValidator
                     ["total_count"] = totalCount
                 });
         }
+    }
+
+    private static void ValidateConstraintMode(
+        bool hasLegacyMode,
+        bool hasRangeMode,
+        bool hasAllowedValuesMode,
+        string fieldPrefix)
+    {
+        var selectedModes = (hasLegacyMode ? 1 : 0) + (hasRangeMode ? 1 : 0) + (hasAllowedValuesMode ? 1 : 0);
+        if (selectedModes == 1)
+        {
+            return;
+        }
+
+        throw new ApplicationValidationException(
+            code: "INVALID_REQUEST",
+            message: "mixed or missing constraint mode is not allowed; use exactly one of legacy value/min/max, range, or allowed_values.",
+            details: new Dictionary<string, object?>
+            {
+                ["field"] = fieldPrefix
+            });
+    }
+
+    private static void ValidateConstraintModeValue(string? mode, string field)
+    {
+        if (string.IsNullOrWhiteSpace(mode))
+        {
+            return;
+        }
+
+        if (SupportedConstraintModes.Contains(mode))
+        {
+            return;
+        }
+
+        throw new ApplicationValidationException(
+            code: "INVALID_REQUEST",
+            message: "mode must be hard or soft.",
+            details: new Dictionary<string, object?>
+            {
+                ["field"] = field,
+                ["mode"] = mode
+            });
+    }
+
+    private static void ValidateAllowedValues(
+        string constraintName,
+        IReadOnlyList<double>? values,
+        string field)
+    {
+        if (values is null || values.Count == 0)
+        {
+            throw new ApplicationValidationException(
+                code: "INVALID_REQUEST",
+                message: "allowed_values.values must be a non-empty array.",
+                details: new Dictionary<string, object?>
+                {
+                    ["field"] = field
+                });
+        }
+
+        var requiresInteger = RequiresIntegerConstraint(constraintName);
+        foreach (var value in values)
+        {
+            if (!double.IsFinite(value))
+            {
+                throw new ApplicationValidationException(
+                    code: "INVALID_REQUEST",
+                    message: "allowed_values.values must contain finite numbers.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["field"] = field
+                    });
+            }
+
+            if (requiresInteger && !IsInteger(value))
+            {
+                throw new ApplicationValidationException(
+                    code: "INVALID_REQUEST",
+                    message: "allowed_values.values must contain integers for this constraint.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["field"] = field,
+                        ["constraint_name"] = constraintName
+                    });
+            }
+        }
+    }
+
+    private static bool RequiresIntegerConstraint(string name)
+    {
+        return name.Contains("count", StringComparison.Ordinal) ||
+               name.Contains("repeat", StringComparison.Ordinal) ||
+               name.Contains("pairs", StringComparison.Ordinal) ||
+               name.Contains("neighbor", StringComparison.Ordinal) ||
+               name.Contains("top10_overlap", StringComparison.Ordinal) ||
+               string.Equals(name, "max_consecutive_run", StringComparison.Ordinal) ||
+               string.Equals(name, "min_top10_overlap", StringComparison.Ordinal);
+    }
+
+    private static bool IsInteger(double value)
+    {
+        return Math.Abs(value - Math.Round(value)) <= 1e-9d;
     }
 
     private static string ResolveDefaultSearchMethod(string strategyName, string? requested)

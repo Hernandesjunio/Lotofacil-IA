@@ -338,9 +338,20 @@ public sealed record GenerateCandidatePlanItemRequest(
     [property: JsonPropertyName("weights")] IReadOnlyList<GenerateCandidateWeightRequest>? Weights = null,
     [property: JsonPropertyName("filters")] IReadOnlyList<GenerateCandidateFilterRequest>? Filters = null);
 
+public sealed record GenerateRangeSpecRequest(
+    [property: JsonPropertyName("min")] double Min,
+    [property: JsonPropertyName("max")] double Max,
+    [property: JsonPropertyName("inclusive")] bool? Inclusive = null);
+
+public sealed record GenerateAllowedValuesSpecRequest(
+    [property: JsonPropertyName("values")] IReadOnlyList<double>? Values = null);
+
 public sealed record GenerateCandidateCriterionRequest(
     [property: JsonPropertyName("name")] string Name,
-    [property: JsonPropertyName("value")] double Value);
+    [property: JsonPropertyName("value")] double? Value = null,
+    [property: JsonPropertyName("range")] GenerateRangeSpecRequest? Range = null,
+    [property: JsonPropertyName("allowed_values")] GenerateAllowedValuesSpecRequest? AllowedValues = null,
+    [property: JsonPropertyName("mode")] string? Mode = null);
 
 public sealed record GenerateCandidateWeightRequest(
     [property: JsonPropertyName("name")] string Name,
@@ -351,6 +362,9 @@ public sealed record GenerateCandidateFilterRequest(
     [property: JsonPropertyName("value")] double? Value = null,
     [property: JsonPropertyName("min")] double? Min = null,
     [property: JsonPropertyName("max")] double? Max = null,
+    [property: JsonPropertyName("range")] GenerateRangeSpecRequest? Range = null,
+    [property: JsonPropertyName("allowed_values")] GenerateAllowedValuesSpecRequest? AllowedValues = null,
+    [property: JsonPropertyName("mode")] string? Mode = null,
     [property: JsonPropertyName("version")] string? Version = null);
 
 public sealed record GenerateGlobalConstraintsRequest(
@@ -759,9 +773,9 @@ public sealed class V0Tools
                     {
                         ["strategy_name"] = ["common_repetition_frequency", "declared_composite_profile"],
                         ["search_method"] = ["exhaustive", "sampled", "greedy_topk"],
-                        ["plan.criteria"] = ["name", "value"],
+                        ["plan.criteria"] = ["name", "value|range|allowed_values", "mode"],
                         ["plan.weights"] = ["name", "weight"],
-                        ["plan.filters"] = ["name", "value|min|max", "version"]
+                        ["plan.filters"] = ["name", "value|min|max|range|allowed_values", "mode", "version"]
                     },
                     Capabilities: "Generates deterministic candidate games from supported strategy plans."),
                 new ToolCapabilityEnvelope(
@@ -1247,7 +1261,17 @@ public sealed class V0Tools
                         planItem.Criteria?
                             .Select(criterion => new GenerateCandidateCriteriaInput(
                                 criterion.Name,
-                                criterion.Value))
+                                criterion.Value,
+                                criterion.Range is null
+                                    ? null
+                                    : new GenerateRangeSpecInput(
+                                        criterion.Range.Min,
+                                        criterion.Range.Max,
+                                        criterion.Range.Inclusive),
+                                criterion.AllowedValues is null
+                                    ? null
+                                    : new GenerateAllowedValuesSpecInput(criterion.AllowedValues.Values),
+                                criterion.Mode))
                             .ToArray(),
                         planItem.Weights?
                             .Select(weight => new GenerateCandidateWeightInput(
@@ -1260,6 +1284,16 @@ public sealed class V0Tools
                                 filter.Value,
                                 filter.Min,
                                 filter.Max,
+                                filter.Range is null
+                                    ? null
+                                    : new GenerateRangeSpecInput(
+                                        filter.Range.Min,
+                                        filter.Range.Max,
+                                        filter.Range.Inclusive),
+                                filter.AllowedValues is null
+                                    ? null
+                                    : new GenerateAllowedValuesSpecInput(filter.AllowedValues.Values),
+                                filter.Mode,
                                 filter.Version))
                             .ToArray()))
                     .ToArray(),
@@ -1311,7 +1345,17 @@ public sealed class V0Tools
                             Criteria: game.AppliedConfiguration.Criteria
                                 .Select(criterion => new GenerateCandidateCriterionRequest(
                                     criterion.Name,
-                                    criterion.Value))
+                                    criterion.Value,
+                                    criterion.Range is null
+                                        ? null
+                                        : new GenerateRangeSpecRequest(
+                                            criterion.Range.Min,
+                                            criterion.Range.Max,
+                                            criterion.Range.Inclusive),
+                                    criterion.AllowedValues is null
+                                        ? null
+                                        : new GenerateAllowedValuesSpecRequest(criterion.AllowedValues.Values),
+                                    criterion.Mode))
                                 .ToArray(),
                             Weights: game.AppliedConfiguration.Weights
                                 .Select(weight => new GenerateCandidateWeightRequest(
@@ -1324,6 +1368,16 @@ public sealed class V0Tools
                                     filter.Value,
                                     filter.Min,
                                     filter.Max,
+                                    filter.Range is null
+                                        ? null
+                                        : new GenerateRangeSpecRequest(
+                                            filter.Range.Min,
+                                            filter.Range.Max,
+                                            filter.Range.Inclusive),
+                                    filter.AllowedValues is null
+                                        ? null
+                                        : new GenerateAllowedValuesSpecRequest(filter.AllowedValues.Values),
+                                    filter.Mode,
                                     filter.Version))
                                 .ToArray(),
                             ResolvedDefaults: game.AppliedConfiguration.ResolvedDefaults)))

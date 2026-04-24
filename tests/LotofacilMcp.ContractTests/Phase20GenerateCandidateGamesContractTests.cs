@@ -198,6 +198,128 @@ public sealed class Phase20GenerateCandidateGamesContractTests
         Assert.NotEqual(payloadA.DeterministicHash, payloadB.DeterministicHash);
     }
 
+    [Fact]
+    public void GenerateCandidateGames_MixedCriterionModes_ReturnsInvalidRequest()
+    {
+        var sut = new V0Tools();
+        var request = new GenerateCandidateGamesRequest(
+            WindowSize: 5,
+            EndContestId: 1005,
+            Seed: 424242UL,
+            Plan:
+            [
+                new GenerateCandidatePlanItemRequest(
+                    StrategyName: "declared_composite_profile",
+                    Count: 1,
+                    SearchMethod: "sampled",
+                    Criteria:
+                    [
+                        new GenerateCandidateCriterionRequest(
+                            Name: "repeat_count",
+                            Value: 8,
+                            Range: new GenerateRangeSpecRequest(7, 9))
+                    ])
+            ]);
+
+        var response = sut.GenerateCandidateGames(request);
+        var error = Assert.IsType<ContractErrorEnvelope>(response).Error;
+        Assert.Equal("INVALID_REQUEST", error.Code);
+    }
+
+    [Fact]
+    public void GenerateCandidateGames_EmptyAllowedValues_ReturnsInvalidRequest()
+    {
+        var sut = new V0Tools();
+        var request = new GenerateCandidateGamesRequest(
+            WindowSize: 5,
+            EndContestId: 1005,
+            Seed: 424242UL,
+            Plan:
+            [
+                new GenerateCandidatePlanItemRequest(
+                    StrategyName: "declared_composite_profile",
+                    Count: 1,
+                    SearchMethod: "sampled",
+                    Criteria:
+                    [
+                        new GenerateCandidateCriterionRequest(
+                            Name: "neighbors_count",
+                            AllowedValues: new GenerateAllowedValuesSpecRequest(Array.Empty<double>()))
+                    ])
+            ]);
+
+        var response = sut.GenerateCandidateGames(request);
+        var error = Assert.IsType<ContractErrorEnvelope>(response).Error;
+        Assert.Equal("INVALID_REQUEST", error.Code);
+    }
+
+    [Fact]
+    public void GenerateCandidateGames_NonIntegerAllowedValuesForIntegerConstraint_ReturnsInvalidRequest()
+    {
+        var sut = new V0Tools();
+        var request = new GenerateCandidateGamesRequest(
+            WindowSize: 5,
+            EndContestId: 1005,
+            Seed: 424242UL,
+            Plan:
+            [
+                new GenerateCandidatePlanItemRequest(
+                    StrategyName: "declared_composite_profile",
+                    Count: 1,
+                    SearchMethod: "sampled",
+                    Criteria:
+                    [
+                        new GenerateCandidateCriterionRequest(
+                            Name: "neighbors_count",
+                            AllowedValues: new GenerateAllowedValuesSpecRequest([8.5, 9]))
+                    ])
+            ]);
+
+        var response = sut.GenerateCandidateGames(request);
+        var error = Assert.IsType<ContractErrorEnvelope>(response).Error;
+        Assert.Equal("INVALID_REQUEST", error.Code);
+    }
+
+    [Fact]
+    public void GenerateCandidateGames_AllowedValuesAreNormalized_AndDefaultModeIsResolved()
+    {
+        var sut = new V0Tools();
+        var request = new GenerateCandidateGamesRequest(
+            WindowSize: 5,
+            EndContestId: 1005,
+            Seed: 424242UL,
+            Plan:
+            [
+                new GenerateCandidatePlanItemRequest(
+                    StrategyName: "declared_composite_profile",
+                    Count: 1,
+                    SearchMethod: "sampled",
+                    Criteria:
+                    [
+                        new GenerateCandidateCriterionRequest(
+                            Name: "neighbors_count",
+                            AllowedValues: new GenerateAllowedValuesSpecRequest([10, 8, 10, 9]))
+                    ])
+            ]);
+
+        var response = sut.GenerateCandidateGames(request);
+        var payload = Assert.IsType<GenerateCandidateGamesResponse>(response);
+        Assert.Single(payload.CandidateGames);
+
+        using var json = JsonSerializer.SerializeToDocument(payload);
+        var resolvedDefaults = json.RootElement
+            .GetProperty("candidate_games")[0]
+            .GetProperty("applied_configuration")
+            .GetProperty("resolved_defaults");
+
+        Assert.True(resolvedDefaults.TryGetProperty("plan[0].criteria[0].mode", out var mode));
+        Assert.Equal("hard", mode.GetString());
+
+        Assert.True(resolvedDefaults.TryGetProperty("plan[0].criteria[0].allowed_values.values", out var allowed));
+        var normalized = allowed.EnumerateArray().Select(static item => item.GetDouble()).ToArray();
+        Assert.Equal([8d, 9d, 10d], normalized);
+    }
+
     private static int CountNeighbors(IReadOnlyList<int> game)
     {
         var count = 0;

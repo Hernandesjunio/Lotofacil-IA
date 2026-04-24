@@ -10,7 +10,18 @@ namespace LotofacilMcp.Application.UseCases;
 
 public sealed record GenerateCandidateCriteriaInput(
     string Name,
-    double Value);
+    double? Value,
+    GenerateRangeSpecInput? Range,
+    GenerateAllowedValuesSpecInput? AllowedValues,
+    string? Mode);
+
+public sealed record GenerateRangeSpecInput(
+    double Min,
+    double Max,
+    bool? Inclusive);
+
+public sealed record GenerateAllowedValuesSpecInput(
+    IReadOnlyList<double>? Values);
 
 public sealed record GenerateCandidateWeightInput(
     string Name,
@@ -21,6 +32,9 @@ public sealed record GenerateCandidateFilterInput(
     double? Value,
     double? Min,
     double? Max,
+    GenerateRangeSpecInput? Range,
+    GenerateAllowedValuesSpecInput? AllowedValues,
+    string? Mode,
     string? Version);
 
 public sealed record GenerateGlobalConstraintsInput(
@@ -414,21 +428,45 @@ public sealed class GenerateCandidateGamesUseCase
     {
         if (item.Criteria is { Count: > 0 })
         {
-            return item.Criteria.ToArray();
+            var resolved = new List<GenerateCandidateCriteriaInput>(item.Criteria.Count);
+            for (var criterionIndex = 0; criterionIndex < item.Criteria.Count; criterionIndex++)
+            {
+                var criterion = item.Criteria[criterionIndex];
+                var mode = ResolveMode(
+                    criterion.Mode,
+                    $"plan[{planIndex}].criteria[{criterionIndex}]",
+                    defaults);
+                var range = NormalizeRange(
+                    criterion.Range,
+                    $"plan[{planIndex}].criteria[{criterionIndex}]",
+                    defaults);
+                var allowedValues = NormalizeAllowedValues(
+                    criterion.AllowedValues,
+                    $"plan[{planIndex}].criteria[{criterionIndex}]",
+                    defaults);
+                resolved.Add(criterion with
+                {
+                    Mode = mode,
+                    Range = range,
+                    AllowedValues = allowedValues
+                });
+            }
+
+            return resolved;
         }
 
         GenerateCandidateCriteriaInput[] criteria = string.Equals(item.StrategyName, DeclaredCompositeProfileStrategy, StringComparison.Ordinal)
             ?
             [
-                new GenerateCandidateCriteriaInput("min_composite_score", 0.55d)
+                new GenerateCandidateCriteriaInput("min_composite_score", 0.55d, null, null, "hard")
             ]
             :
             [
-                new GenerateCandidateCriteriaInput("min_frequency_alignment", 0.55d),
-                new GenerateCandidateCriteriaInput("min_repeat_alignment", 0.5d),
-                new GenerateCandidateCriteriaInput("min_top10_overlap", 6d)
+                new GenerateCandidateCriteriaInput("min_frequency_alignment", 0.55d, null, null, "hard"),
+                new GenerateCandidateCriteriaInput("min_repeat_alignment", 0.5d, null, null, "hard"),
+                new GenerateCandidateCriteriaInput("min_top10_overlap", 6d, null, null, "hard")
             ];
-        defaults[$"plan[{planIndex}].criteria"] = criteria.Select(static c => new { name = c.Name, value = c.Value }).ToArray();
+        defaults[$"plan[{planIndex}].criteria"] = criteria.Select(static c => new { name = c.Name, value = c.Value, mode = c.Mode }).ToArray();
         return criteria;
     }
 
@@ -468,12 +506,12 @@ public sealed class GenerateCandidateGamesUseCase
     {
         var fromStructural = new Dictionary<string, GenerateCandidateFilterInput>(StringComparer.Ordinal)
         {
-            ["max_consecutive_run"] = new GenerateCandidateFilterInput("max_consecutive_run", structuralExclusions.MaxConsecutiveRun, null, null, "1.0.0"),
-            ["max_neighbor_count"] = new GenerateCandidateFilterInput("max_neighbor_count", structuralExclusions.MaxNeighborCount, null, null, "1.0.0"),
-            ["min_row_entropy_norm"] = new GenerateCandidateFilterInput("min_row_entropy_norm", structuralExclusions.MinRowEntropyNorm, null, null, "1.0.0"),
-            ["max_hhi_linha"] = new GenerateCandidateFilterInput("max_hhi_linha", structuralExclusions.MaxHhiLinha, null, null, "1.0.0"),
-            ["min_slot_alignment"] = new GenerateCandidateFilterInput("min_slot_alignment", structuralExclusions.MinSlotAlignment, null, null, "1.0.0"),
-            ["max_outlier_score"] = new GenerateCandidateFilterInput("max_outlier_score", structuralExclusions.MaxOutlierScore, null, null, "1.0.0")
+            ["max_consecutive_run"] = new GenerateCandidateFilterInput("max_consecutive_run", structuralExclusions.MaxConsecutiveRun, null, null, null, null, "hard", "1.0.0"),
+            ["max_neighbor_count"] = new GenerateCandidateFilterInput("max_neighbor_count", structuralExclusions.MaxNeighborCount, null, null, null, null, "hard", "1.0.0"),
+            ["min_row_entropy_norm"] = new GenerateCandidateFilterInput("min_row_entropy_norm", structuralExclusions.MinRowEntropyNorm, null, null, null, null, "hard", "1.0.0"),
+            ["max_hhi_linha"] = new GenerateCandidateFilterInput("max_hhi_linha", structuralExclusions.MaxHhiLinha, null, null, null, null, "hard", "1.0.0"),
+            ["min_slot_alignment"] = new GenerateCandidateFilterInput("min_slot_alignment", structuralExclusions.MinSlotAlignment, null, null, null, null, "hard", "1.0.0"),
+            ["max_outlier_score"] = new GenerateCandidateFilterInput("max_outlier_score", structuralExclusions.MaxOutlierScore, null, null, null, null, "hard", "1.0.0")
         };
 
         if (structuralExclusions.RepeatRange is not null)
@@ -483,15 +521,34 @@ public sealed class GenerateCandidateGamesUseCase
                 null,
                 structuralExclusions.RepeatRange.Min,
                 structuralExclusions.RepeatRange.Max,
+                null,
+                null,
+                "hard",
                 "1.0.0");
         }
 
         if (item.Filters is { Count: > 0 })
         {
-            foreach (var filter in item.Filters)
+            for (var filterIndex = 0; filterIndex < item.Filters.Count; filterIndex++)
             {
+                var filter = item.Filters[filterIndex];
+                var mode = ResolveMode(
+                    filter.Mode,
+                    $"plan[{planIndex}].filters[{filterIndex}]",
+                    defaults);
+                var range = NormalizeRange(
+                    filter.Range,
+                    $"plan[{planIndex}].filters[{filterIndex}]",
+                    defaults);
+                var allowedValues = NormalizeAllowedValues(
+                    filter.AllowedValues,
+                    $"plan[{planIndex}].filters[{filterIndex}]",
+                    defaults);
                 fromStructural[filter.Name] = filter with
                 {
+                    Mode = mode,
+                    Range = range,
+                    AllowedValues = allowedValues,
                     Version = string.IsNullOrWhiteSpace(filter.Version) ? "1.0.0" : filter.Version
                 };
             }
@@ -501,9 +558,73 @@ public sealed class GenerateCandidateGamesUseCase
         }
 
         defaults[$"plan[{planIndex}].filters"] = fromStructural.Values
-            .Select(static f => new { name = f.Name, value = f.Value, min = f.Min, max = f.Max, version = f.Version })
+            .Select(static f => new
+            {
+                name = f.Name,
+                value = f.Value,
+                min = f.Min,
+                max = f.Max,
+                range = f.Range is null ? null : new { min = f.Range.Min, max = f.Range.Max, inclusive = f.Range.Inclusive },
+                allowed_values = f.AllowedValues?.Values?.ToArray(),
+                mode = f.Mode,
+                version = f.Version
+            })
             .ToArray();
         return fromStructural.Values.ToArray();
+    }
+
+    private static string ResolveMode(
+        string? mode,
+        string pathPrefix,
+        IDictionary<string, object?> defaults)
+    {
+        if (!string.IsNullOrWhiteSpace(mode))
+        {
+            return mode;
+        }
+
+        defaults[$"{pathPrefix}.mode"] = "hard";
+        return "hard";
+    }
+
+    private static GenerateRangeSpecInput? NormalizeRange(
+        GenerateRangeSpecInput? range,
+        string pathPrefix,
+        IDictionary<string, object?> defaults)
+    {
+        if (range is null)
+        {
+            return null;
+        }
+
+        if (range.Inclusive.HasValue)
+        {
+            return range;
+        }
+
+        defaults[$"{pathPrefix}.range.inclusive"] = true;
+        return range with { Inclusive = true };
+    }
+
+    private static GenerateAllowedValuesSpecInput? NormalizeAllowedValues(
+        GenerateAllowedValuesSpecInput? allowedValues,
+        string pathPrefix,
+        IDictionary<string, object?> defaults)
+    {
+        if (allowedValues?.Values is not { Count: > 0 })
+        {
+            return allowedValues;
+        }
+
+        var normalized = allowedValues.Values
+            .Distinct()
+            .OrderBy(static value => value)
+            .ToArray();
+        defaults[$"{pathPrefix}.allowed_values.values"] = normalized;
+        return allowedValues with
+        {
+            Values = normalized
+        };
     }
 
     private static GenerateGlobalConstraintsInput ResolveGlobalConstraints(GenerateGlobalConstraintsInput? input)
@@ -609,7 +730,9 @@ public sealed class GenerateCandidateGamesUseCase
         double compositeScore,
         IReadOnlyList<GenerateCandidateCriteriaInput> criteria)
     {
-        var lookup = criteria.ToDictionary(c => c.Name, c => c.Value, StringComparer.Ordinal);
+        var lookup = criteria
+            .Where(static c => c.Value.HasValue)
+            .ToDictionary(c => c.Name, c => c.Value!.Value, StringComparer.Ordinal);
         if (string.Equals(strategyName, CommonRepetitionFrequencyStrategy, StringComparison.Ordinal))
         {
             var minFrequency = lookup.TryGetValue("min_frequency_alignment", out var valueFrequency) ? valueFrequency : 0d;
@@ -674,8 +797,8 @@ public sealed class GenerateCandidateGamesUseCase
 
             if (string.Equals(filter.Name, "repeat_range", StringComparison.Ordinal))
             {
-                var min = filter.Min ?? 0d;
-                var max = filter.Max ?? 15d;
+                var min = filter.Range?.Min ?? filter.Min ?? 0d;
+                var max = filter.Range?.Max ?? filter.Max ?? 15d;
                 if (profile.RepeatCount < min || profile.RepeatCount > max)
                 {
                     return false;
