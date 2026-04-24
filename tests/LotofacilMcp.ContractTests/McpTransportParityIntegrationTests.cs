@@ -681,6 +681,7 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
     private static async Task AssertToolDiscoveryAsync(McpClient client)
     {
         var listedTools = await client.ListToolsAsync();
+        Assert.Contains(listedTools, tool => tool.Name is "help");
         Assert.Contains(listedTools, tool => tool.Name is "get_draw_window");
         Assert.Contains(listedTools, tool => tool.Name is "compute_window_metrics");
         Assert.Contains(listedTools, tool => tool.Name is "analyze_indicator_stability");
@@ -690,6 +691,47 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         Assert.Contains(listedTools, tool => tool.Name is "summarize_window_aggregates");
         Assert.Contains(listedTools, tool => tool.Name is "generate_candidate_games");
         Assert.Contains(listedTools, tool => tool.Name is "explain_candidate_games");
+    }
+
+    [Fact]
+    public async Task McpResourceDiscovery_IncludesPromptIndex_AndHelpReturnsIndex()
+    {
+        var stdioResources = await _stdioMcpClient.ListResourcesAsync();
+        var httpResources = await _httpMcpClient.ListResourcesAsync();
+
+        Assert.Contains(stdioResources, r => r.Uri is "lotofacil-ia://prompts/index@1.0.0");
+        Assert.Contains(httpResources, r => r.Uri is "lotofacil-ia://prompts/index@1.0.0");
+
+        var stdioIndex = stdioResources.First(r => r.Uri is "lotofacil-ia://prompts/index@1.0.0");
+        var httpIndex = httpResources.First(r => r.Uri is "lotofacil-ia://prompts/index@1.0.0");
+
+        var stdioIndexRead = await stdioIndex.ReadAsync();
+        var httpIndexRead = await httpIndex.ReadAsync();
+
+        var stdioText = stdioIndexRead.Contents.OfType<TextResourceContents>().First().Text;
+        var httpText = httpIndexRead.Contents.OfType<TextResourceContents>().First().Text;
+
+        Assert.Contains("Índice de templates", stdioText);
+        Assert.Contains("Índice de templates", httpText);
+
+        var stdioHelp = await _stdioMcpClient.CallToolAsync("help", new Dictionary<string, object?>());
+        var httpHelp = await _httpMcpClient.CallToolAsync("help", new Dictionary<string, object?>());
+
+        Assert.False(stdioHelp.IsError);
+        Assert.False(httpHelp.IsError);
+
+        var stdioHelpJson = ReadMcpStructuredJson(stdioHelp);
+        var httpHelpJson = ReadMcpStructuredJson(httpHelp);
+
+        Assert.True(stdioHelpJson.TryGetProperty("index_resource_uri", out var stdioIndexUri));
+        Assert.Equal("lotofacil-ia://prompts/index@1.0.0", stdioIndexUri.GetString());
+        Assert.True(stdioHelpJson.TryGetProperty("index_markdown", out var stdioIndexMarkdown));
+        Assert.Contains("Índice de templates", stdioIndexMarkdown.GetString());
+
+        Assert.True(httpHelpJson.TryGetProperty("index_resource_uri", out var httpIndexUri));
+        Assert.Equal("lotofacil-ia://prompts/index@1.0.0", httpIndexUri.GetString());
+        Assert.True(httpHelpJson.TryGetProperty("index_markdown", out var httpIndexMarkdown));
+        Assert.Contains("Índice de templates", httpIndexMarkdown.GetString());
     }
 
     private async Task<JsonElement> ReadHttpJsonAsync(HttpResponseMessage response)

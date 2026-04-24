@@ -14,7 +14,8 @@ builder.Services.AddV0Server(builder.Configuration, builder.Environment);
 builder.Services
     .AddMcpServer()
     .WithHttpTransport()
-    .WithTools<V0McpTools>();
+    .WithTools<V0McpTools>()
+    .WithResources<LotofacilMcp.Server.Resources.PromptResources>();
 
 var app = builder.Build();
 

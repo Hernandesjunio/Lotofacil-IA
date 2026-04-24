@@ -238,6 +238,19 @@ public sealed record SummarizeWindowAggregatesResponse(
     [property: JsonPropertyName("window")] WindowEnvelope Window,
     [property: JsonPropertyName("aggregates")] IReadOnlyList<WindowAggregateEnvelope> Aggregates);
 
+public sealed record PromptTemplateSummaryEnvelope(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("resource_uri")] string ResourceUri,
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("description")] string Description,
+    [property: JsonPropertyName("suggested_windows")] string SuggestedWindows);
+
+public sealed record HelpResponse(
+    [property: JsonPropertyName("tool_version")] string ToolVersion,
+    [property: JsonPropertyName("index_resource_uri")] string IndexResourceUri,
+    [property: JsonPropertyName("index_markdown")] string IndexMarkdown,
+    [property: JsonPropertyName("templates")] IReadOnlyList<PromptTemplateSummaryEnvelope> Templates);
+
 public sealed record GenerateCandidatePlanItemRequest(
     [property: JsonPropertyName("strategy_name")] string StrategyName,
     [property: JsonPropertyName("count")] int Count,
@@ -319,6 +332,7 @@ public sealed class V0Tools
     private readonly ExplainCandidateGamesUseCase _explainCandidateGamesUseCase;
     private readonly DeterministicHashService _deterministicHashService;
     private readonly string _fixturePath;
+    private const string HelpToolVersion = "1.0.0";
 
     public V0Tools(string? fixturePath = null)
     {
@@ -420,6 +434,40 @@ public sealed class V0Tools
             new Sha256Hasher());
 
         _fixturePath = fixturePath ?? GetDefaultFixturePath();
+    }
+
+    public object Help()
+    {
+        try
+        {
+            var indexPath = Path.Combine(AppContext.BaseDirectory, "resources", "prompts", "index@1.0.0.md");
+            var indexMarkdown = File.ReadAllText(indexPath);
+
+            var templates = LotofacilMcp.Server.Prompting.PromptCatalog.Templates
+                .Select(t => new PromptTemplateSummaryEnvelope(
+                    t.Id,
+                    t.Uri,
+                    t.Title,
+                    t.Description,
+                    t.SuggestedWindows))
+                .ToArray();
+
+            return new HelpResponse(
+                ToolVersion: HelpToolVersion,
+                IndexResourceUri: LotofacilMcp.Server.Prompting.PromptCatalog.IndexUri,
+                IndexMarkdown: indexMarkdown,
+                Templates: templates);
+        }
+        catch (Exception ex)
+        {
+            return ToContractError(
+                "HELP_UNAVAILABLE",
+                "Unable to load help index resource.",
+                new Dictionary<string, object?>
+                {
+                    ["reason"] = ex.Message
+                });
+        }
     }
 
     public object ComputeWindowMetrics(ComputeWindowMetricsRequest request)

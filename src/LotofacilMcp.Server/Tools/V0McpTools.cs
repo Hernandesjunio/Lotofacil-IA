@@ -10,6 +10,13 @@ public sealed class V0McpTools
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
+    [McpServerTool(Name = "help"), Description("Retorna ajuda básica e o índice de templates (resources) disponíveis.")]
+    public CallToolResult Help(V0Tools tools)
+    {
+        var payload = tools.Help();
+        return ToToolResult(payload, payload is ContractErrorEnvelope);
+    }
+
     [McpServerTool(Name = "get_draw_window"), Description("Retorna um recorte canônico de concursos da Lotofácil.")]
     public CallToolResult GetDrawWindow(
         V0Tools tools,
