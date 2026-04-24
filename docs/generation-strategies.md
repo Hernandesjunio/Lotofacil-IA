@@ -1,10 +1,27 @@
 # Estratégias de geração
 
-**Navegação:** [← Brief (índice)](brief.md) · [README](../README.md)
+**Navegação:** [← Brief (índice)](brief.md) · [README](../README.md) · [Contrato MCP](mcp-tool-contract.md) · [ADR 0020](adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md)
 
 ## Objetivo
 
 Separar a semântica das estratégias de geração do contrato MCP e da implementação do motor. Cada estratégia é um contrato formal testável.
+
+## Modo de geração no pedido MCP (`generation_mode`)
+
+A superfície **`generate_candidate_games`** exige `generation_mode` no JSON do pedido ([mcp-tool-contract.md](mcp-tool-contract.md), [ADR 0020 D1](adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md)):
+
+| Modo | Leitura operacional |
+|------|---------------------|
+| `random_unrestricted` | Amostragem (ou processo equivalente documentado) sobre jogos válidos da Lotofácil **sem** aplicar `structural_exclusions` nem critérios/filtros em `plan[]` **que não estejam declarados**; **proibido** injectar defaults conservadores não pedidos ao nível transversal. |
+| `behavior_filtered` | Só entram restrições **explicitamente** declaradas (`structural_exclusions`, `plan[].criteria`, `plan[].filters`, faixas [ADR 0019](adrs/0019-criterios-por-faixa-e-cobertura-na-geracao-v1.md), pesos, estratégia); combinação por **interseção** dos conjuntos admissíveis \(S_i\) ([ADR 0020 D4](adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md)). |
+
+**Nota:** cada estratégia abaixo pode ainda impor **filtros intrínsecos** (tabela *Filtros* da própria estratégia). O modo `random_unrestricted` impede guardrails **extra** não declarados no request; **não** redefine a semântica interna da estratégia escolhida.
+
+## `seed`, replay e hash (alinhamento [ADR 0020 D7](adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md) / [ADR 0001](adrs/0001-fechamento-semantico-e-determinismo-v1.md))
+
+- A resposta MCP inclui **`replay_guaranteed`** (boolean canónico). **`false`** significa que a **lista ordenada de candidatos** pode variar entre chamadas com o mesmo JSON (tipicamente `seed` ausente com busca estocástica); **`true`** exige bit-a-bit o mesmo lote sob o mesmo pedido canónico + `dataset_version` + `tool_version`.
+- **`deterministic_hash`:** com `replay_guaranteed: true`, o hash cobre os insumos que fixam o episódio (incl. `seed` quando aplicável); com `false`, **exclui** a sequência concreta de candidatos — ver [mcp-tool-contract.md](mcp-tool-contract.md) (*Canonização*, *`deterministic_hash` e `replay_guaranteed`*).
+- Para testes goldens que fixem dezenas, o cliente **deve** enviar `seed` e validar `replay_guaranteed: true`.
 
 ## Contrato obrigatório de uma estratégia
 
@@ -19,7 +36,7 @@ Toda estratégia declara:
 | `filtros` | sim | Restrições hard |
 | `score` | sim | Fórmula fechada `score(game, window) -> R` |
 | `search_method` | sim | `exhaustive | sampled | greedy_topk` |
-| `seed` | sim quando necessário | `uint64` |
+| `seed` | sim quando necessário para RNG **e** replay; opcional no MCP se `replay_guaranteed: false` ([ADR 0020](adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md)) | `uint64` |
 | `tie_break_rule` | sim | Desempate determinístico |
 | `interpretacao_correta` | sim | Como ler a saída |
 | `interpretacao_incorreta` | sim | Leitura proibida |
@@ -28,12 +45,12 @@ Regras gerais:
 
 1. Fórmula de score documentada e testável.
 2. Payload de explicação definido.
-3. Mesmo `{seed, window, dataset_version}` implica mesma saída.
+3. Mesmo `{seed, window, dataset_version}` implica mesma saída **quando** a resposta MCP declara `replay_guaranteed: true`; com `replay_guaranteed: false`, a saída pode variar conforme [mcp-tool-contract.md](mcp-tool-contract.md).
 4. Termos como "equilíbrio", "aderência" e "central" precisam de definição operacional.
 
-## Guardrails estruturais canônicos
+## Guardrails estruturais canônicos (`structural_exclusions`, opt-in)
 
-Toda estratégia V1 pode receber filtros adicionais por `structural_exclusions`, desde que o payload os declare explicitamente. Os filtros canônicos são:
+No MCP, **`structural_exclusions` é opt-in por campo**: só se aplica o que o cliente enviar no objeto; omissão total significa **nenhuma** exclusão estrutural transversal além dos filtros **intrínsecos** da estratégia escolhida. Em `behavior_filtered`, defaults conservadores **não** preenchem lacunas não pedidas ([ADR 0020 D2](adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md)). Toda estratégia V1 pode receber filtros **adicionais** por `structural_exclusions`, desde que o payload os declare explicitamente. Os filtros canônicos são:
 
 - `max_consecutive_run`: rejeita jogos com `sequencia_maxima_vizinhos > limite`.
 - `max_neighbor_count`: rejeita jogos com `quantidade_vizinhos > limite`.
@@ -229,7 +246,7 @@ Todos os componentes são truncados para `[0, 1]` após a fórmula.
 - 15 dezenas únicas em `[1..25]`;
 - todos os componentes usados devem estar declarados no request com pesos explícitos;
 - os pesos devem somar `1.0 ± 1e-9`;
-- `structural_exclusions`, quando presentes, são aplicados antes do score.
+- `structural_exclusions`, quando **presentes no request**, são aplicados por **interseção** com os filtros intrínsecos da estratégia, antes do score ([ADR 0020 D4](adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md)).
 
 **Score:**
 
@@ -248,10 +265,10 @@ score = Σ_i w_i * component_i(jogo, janela)
 
 ## Orçamento e contrato com o motor
 
-- `MAX_COUNT_PER_STRATEGY = 100`
-- `MAX_TOTAL_COUNT = 250`
-- estratégias `sampled` declaram `n_samples_used`
-- a saída sempre inclui `strategy_name`, `strategy_version`, `seed_used`, `search_method`, `tie_break_rule` e filtros aplicados
+- `MAX_COUNT_PER_STRATEGY = 100` (por item de `plan[]`)
+- soma dos `count` em `plan[]` **≤ 1000** por pedido `generate_candidate_games` ([ADR 0020 D6](adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md); ver [mcp-tool-contract.md](mcp-tool-contract.md))
+- estratégias `sampled` declaram `n_samples_used` quando aplicável
+- a saída MCP inclui `replay_guaranteed` e, quando aplicável, `strategy_name`, `strategy_version`, `seed_used`, `search_method`, `tie_break_rule` e filtros efetivos / `applied_configuration`
 
 ## Matriz de prontidão para V1
 

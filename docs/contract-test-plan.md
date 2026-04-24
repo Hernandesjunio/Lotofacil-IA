@@ -68,7 +68,7 @@ Documentação de referência: [mcp-tool-contract.md](mcp-tool-contract.md).
 | `analyze_indicator_associations` | Método permitido; séries compatíveis. |
 | `summarize_window_patterns` | Agregações e features compatíveis. |
 | `summarize_window_aggregates` | Validação de `aggregate_type`, bucket spec/matriz, compatibilidade de `shape` e ordenação canônica. |
-| `generate_candidate_games` | `seed`, estratégia, versão, exclusões reportadas, e restrições flexíveis por `range`/`allowed_values`/`typical_range` (ADR 0019) quando o recorte as incluir. |
+| `generate_candidate_games` | `generation_mode`, `replay_guaranteed`, política de `deterministic_hash` *vs.* `seed`, interseção de restrições, opt-in de `structural_exclusions`/critérios, orçamento (soma **≤ 1000**), e restrições flexíveis por `range`/`allowed_values`/`typical_range` (ADR 0019) quando o recorte as incluir. |
 | `explain_candidate_games` | Breakdown e métricas declaradas. |
 
 ### Matriz mínima — Fase B.1 (`summarize_window_aggregates`)
@@ -118,7 +118,20 @@ Adicionar esta bateria quando o recorte de `generate_candidate_games` incluir `r
 | `typical_range.metric_name` desconhecida | Erro `UNKNOWN_METRIC`. |
 | `typical_range` válido | Sucesso e eco de `resolved_range` + `coverage_observed` em `applied_configuration.resolved_defaults` (semântica auditável). |
 | `count` alto com orçamento pequeno | `STRUCTURAL_EXCLUSION_CONFLICT` com `available_count` e pistas estáveis em `details` (quando aplicável). |
-| Determinismo | Mesmo request + dataset ⇒ mesmo `deterministic_hash` e mesma lista de candidatos (ordem canônica). |
+| Determinismo (replay) | Com `seed` e `replay_guaranteed: true`: mesmo request + dataset ⇒ mesmo `deterministic_hash` e mesma lista de candidatos (ordem canônica). Com `replay_guaranteed: false`: mesmo hash **sem** exigir mesma lista; ver [mcp-tool-contract.md](mcp-tool-contract.md) (*Canonização*). |
+
+### Matriz mínima — ADR 0020 (modos, opt-in, interseção, `replay_guaranteed`)
+
+Acrescentar na **próxima fatia** que materializar [ADR 0020](adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md) no servidor/validator:
+
+| Caso | Esperado |
+|------|----------|
+| `generation_mode: random_unrestricted` sem `structural_exclusions` | Sucesso **sem** aplicar exclusões estruturais não declaradas; `applied_configuration.resolved_defaults` não inventa guardrails. |
+| `generation_mode: behavior_filtered` com dois critérios *hard* | Candidatos satisfazem **ambos** (interseção); falha com `STRUCTURAL_EXCLUSION_CONFLICT` / `available_count` quando o conjunto admissível for vazio. |
+| `seed` ausente + trajectória estocástica | `replay_guaranteed: false`; duas chamadas podem divergir nas dezenas; `deterministic_hash` estável se o request não aleatório for idêntico. |
+| `seed` presente + mesmo request | `replay_guaranteed: true` (quando aplicável); lista e hash conforme contrato. |
+| Soma `plan[].count` > 1000 | `INVALID_REQUEST` (ou código dedicado) com `details` útil. |
+| Omissão de `generation_mode` | `INVALID_REQUEST` (`missing_field` ou equivalente). |
 
 ## Matriz — Fase C (métrica × tipo de teste)
 

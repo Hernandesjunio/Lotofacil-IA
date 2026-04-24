@@ -42,6 +42,7 @@ Referências normativas:
 - [ADR 0009](adrs/0009-help-e-catalogo-de-templates-resources-v1.md)
 - [ADR 0017](adrs/0017-geracao-declarativa-de-candidatos-filtros-e-estrategias-v1.md)
 - [ADR 0019](adrs/0019-criterios-por-faixa-e-cobertura-na-geracao-v1.md)
+- [ADR 0020](adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md)
 
 ## Regra operacional principal
 
@@ -727,9 +728,34 @@ Critério mínimo de aceite:
 - o MCP deixa de “prometer e falhar” sem diagnóstico: gaps residuais ficam claros via discovery + erro canônico/determinístico;
 - cada cluster fechado cumpre a definição operacional do ADR 0010 (código + contrato + discovery + testes).
 
+### Fase 26 — Flexibilidade de geração: aleatório explícito, filtros opt-in, interseção, teto 1k e `seed` opcional (ADR 0020)
+
+Objetivo: materializar o [ADR 0020](adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md) na superfície `generate_candidate_games` / `explain_candidate_games`, sem alterar a premissa do [brief.md](brief.md) (descritivo, não preditivo): o utilizador pode pedir **candidatos aleatórios sem guardrails** ou **filtrar por comportamentos** declarados (muitas vezes por **faixas**, alinhado ao [ADR 0019](adrs/0019-criterios-por-faixa-e-cobertura-na-geracao-v1.md)); a combinação de critérios segue **interseção** salvo modo documentado em contrário.
+
+Norma:
+
+- [ADR 0020](adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md) (modos, opt-in, interseção, teto de volume, `seed` opcional e semântica de replay)
+- Cruzamento: [ADR 0017](adrs/0017-geracao-declarativa-de-candidatos-filtros-e-estrategias-v1.md), [ADR 0019](adrs/0019-criterios-por-faixa-e-cobertura-na-geracao-v1.md), [ADR 0002](adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md), [ADR 0001](adrs/0001-fechamento-semantico-e-determinismo-v1.md) (afinamento na rota de geração quando `seed` ausente)
+
+Passos atômicos (recorte, ordem recomendada):
+
+- **26.1 — Contrato MCP + `generation-strategies.md`:** fechar nomes e localização dos campos (modo de geração, `replay_guaranteed` ou equivalente, erro para `sum(plan[].count) > 1000`, semântica de `deterministic_hash` com e sem `seed`). Documentar interseção e opt-in de `structural_exclusions` face aos defaults atuais.
+- **26.2 — Validação e erros:** implementar rejeição determinística do teto **1000** jogos por pedido; mensagem que orienta **nova rodada** para lotes maiores.
+- **26.3 — Motor de geração:** implementar modos `random_unrestricted` vs `behavior_filtered` (ou nomes finais do contrato); no modo aleatório, **não** aplicar defaults conservadores de exclusão estrutural não solicitados; no modo filtrado, aplicar **só** o declarado + eco em `applied_configuration.resolved_defaults`.
+- **26.4 — `seed` opcional:** com `seed` → replay da parte estocástica garantido (demais inputs iguais); sem `seed` → episódio não replayável com campo explícito na resposta; ajustar testes que hoje exigem `seed` obrigatório onde a nova semântica aplicar.
+- **26.5 — Discovery e contrato:** atualizar `discover_capabilities` / schemas expostos para refletir limites, modos e obrigatoriedade de `seed` por caminho; paridade HTTP ↔ MCP onde existir.
+- **26.6 — Testes de contrato:** cobrir: teto 1000; modo aleatório sem defaults indesejados; interseção de dois critérios; `seed` presente vs ausente (comportamento de hash/replay conforme contrato fechado em 26.1).
+
+Critério mínimo de aceite:
+
+- o contrato e a implementação refletem o ADR 0020 sem contradição com ADR 0017/0019;
+- pedidos acima de 1000 jogos falham de forma clara;
+- o utilizador consegue gerar candidatos **sem** filtros explícitos sem herdar silenciosamente os defaults atuais de exclusão estrutural no modo aleatório;
+- `seed` deixa de ser obrigatório nos caminhos normativos definidos em 26.1, com semântica de replay documentada e testada.
+
 Nota operacional: template para pedidos atômicos
 
-- Catálogo completo de **pedidos atômicos por fase** (0–20 do guia e **extensões** posteriores, ex.: Fase 21 alinhada ao [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md), Fase 22 ao [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md) e **Fase 23** ao [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md)): [fases-execucao-templates.md](fases-execucao-templates.md). O nome do ficheiro **não** fixa a quantidade de fases; novas entregas normativas podem acrescentar secções no mesmo padrão.
+- Catálogo completo de **pedidos atômicos por fase** (0–20 do guia e **extensões** posteriores, ex.: Fase 21 alinhada ao [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md), Fase 22 ao [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md), **Fase 23** ao [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) e **Fase 26** ao [ADR 0020](adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md)): [fases-execucao-templates.md](fases-execucao-templates.md). O nome do ficheiro **não** fixa a quantidade de fases; novas entregas normativas podem acrescentar secções no mesmo padrão.
 - O template abaixo pode (e deve) ser usado para gerar “pedidos atômicos” para implementação, mantendo o fluxo spec-driven:
 
 ```md

@@ -2,7 +2,7 @@
 
 **Navegação:** [← Brief (índice)](brief.md) · [spec-driven-execution-guide.md](spec-driven-execution-guide.md)
 
-Este documento transforma as fases do [spec-driven-execution-guide.md](spec-driven-execution-guide.md) (numeradas 0 a 20 no guia) em **pedidos atômicos** prontos para uso com IA, preservando o formato normativo de template. A **contagem de fases no guia não é teto** — secções adicionais (a partir da *Fase 21* abaixo) estendem o roteiro quando surgem entregas normativas (ex.: [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md), [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md) e [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md), incluindo a [Fase 23](#fase-23-adr-0008-descoberta-janela-por-extremos-e-mapeamento-legado) para o 0008) sem reabrir a numeração fechada do guia; novas fases seguem o **mesmo padrão** (bloco `Implemente apenas…`, referências, arquivos, regras, critério de pronto). A Fase 23 do [guia de execução](spec-driven-execution-guide.md) (secção *Fase 23: Descoberta híbrida…*) e esta secção cobrem a mesma entrega normativa.
+Este documento transforma as fases do [spec-driven-execution-guide.md](spec-driven-execution-guide.md) (numeradas 0 a 20 no guia) em **pedidos atômicos** prontos para uso com IA, preservando o formato normativo de template. A **contagem de fases no guia não é teto** — secções adicionais (a partir da *Fase 21* abaixo) estendem o roteiro quando surgem entregas normativas (ex.: [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md), [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md) e [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md), incluindo a [Fase 23](#fase-23-adr-0008-descoberta-janela-por-extremos-e-mapeamento-legado) para o 0008; [Fase 26](#fase-26---adr-0020-flexibilidade-de-geracao-aleatorio-explicito-filtros-opt-in-intersecao-teto-1k-seed-opcional) para o [ADR 0020](adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md)) sem reabrir a numeração fechada do guia; novas fases seguem o **mesmo padrão** (bloco `Implemente apenas…`, referências, arquivos, regras, critério de pronto). A Fase 23 do [guia de execução](spec-driven-execution-guide.md) (secção *Fase 23: Descoberta híbrida…*) e esta secção cobrem a mesma entrega normativa. A Fase 26 do [guia de execução](spec-driven-execution-guide.md) (secção homónima) corresponde à secção *Fase 26* abaixo (ADR 0020).
 
 ## Fase 0 - Congelar a base
 
@@ -1694,5 +1694,142 @@ Regras:
 
 Critério de pronto:
 - cada métrica entregue aparece em `compute_window_metrics` (quando aplicável) e em `discover_capabilities` com status correto.
+```
+
+## Fase 26 - ADR 0020: flexibilidade de geracao (aleatorio explicito, filtros opt-in, intersecao, teto 1k, seed opcional)
+
+*Extensão pós–Fase 25. Norma: [ADR 0020](adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md). Espelha a [Fase 26 do guia](spec-driven-execution-guide.md). Cruzamento: [ADR 0017](adrs/0017-geracao-declarativa-de-candidatos-filtros-e-estrategias-v1.md), [ADR 0019](adrs/0019-criterios-por-faixa-e-cobertura-na-geracao-v1.md), [ADR 0002](adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md), [ADR 0001](adrs/0001-fechamento-semantico-e-determinismo-v1.md) (afinamento na rota de geração).*
+
+### Template 26.1 — Contrato: modos de geração, opt-in de exclusões, interseção e semântica de `deterministic_hash`
+
+```md
+Implemente apenas a atualização normativa de `docs/mcp-tool-contract.md` e `docs/generation-strategies.md` para fechar: (1) modo de geração explícito (aleatório sem guardrails declarados *vs.* filtrado por comportamento); (2) que `structural_exclusions` e critérios são opt-in conforme ADR 0020; (3) semântica de interseção de restrições; (4) significado de `deterministic_hash` quando `seed` estiver ausente *vs.* presente; (5) campo de resposta para “replay não garantido” (nome canónico a fechar).
+
+Referências obrigatórias:
+- docs/adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md
+- docs/adrs/0017-geracao-declarativa-de-candidatos-filtros-e-estrategias-v1.md
+- docs/adrs/0019-criterios-por-faixa-e-cobertura-na-geracao-v1.md
+- docs/adrs/0001-fechamento-semantico-e-determinismo-v1.md
+
+Arquivos esperados:
+- docs/mcp-tool-contract.md
+- docs/generation-strategies.md
+- (se aplicável) docs/contract-test-plan.md (pistas de teste a adicionar na próxima fatia)
+
+Regras:
+- não prometer predição de resultado; linguagem descritiva.
+- qualquer default aplicado continua a ter de ser ecoado em `applied_configuration.resolved_defaults` quando a implementação existir.
+
+Critério de pronto:
+- o contrato descreve sem ambiguidade os modos, a interseção e a política de `seed`/hash alinhadas ao ADR 0020.
+```
+
+### Template 26.2 — Validação: teto de 1000 jogos por pedido (`sum(plan[].count)`)
+
+```md
+Implemente apenas validação + erro canónico quando a soma dos `count` em `plan[]` exceder 1000, com mensagem que orienta nova rodada (novo request) para lotes maiores, conforme ADR 0020 D6.
+
+Referências obrigatórias:
+- docs/adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md
+- docs/mcp-tool-contract.md
+
+Arquivos esperados:
+- src/LotofacilMcp.Application/Validation/
+- tests/LotofacilMcp.ContractTests/
+
+Regras:
+- erro determinístico (mesmo request inválido ⇒ mesma resposta de erro).
+- não alterar o teto por build silenciosamente: 1000 é norma v1 desta ADR até revisão.
+
+Critério de pronto:
+- `sum(count) = 1001` falha sempre com o código/mensagem acordados;
+- `sum(count) = 1000` continua válido (se o restante do request for válido).
+```
+
+### Template 26.3 — Motor: modos `random_unrestricted` vs `behavior_filtered` (nomes finais do contrato)
+
+```md
+Implemente apenas a ramificação do motor de `generate_candidate_games` para respeitar o modo declarado: no modo aleatório explícito, não aplicar defaults conservadores de `structural_exclusions` não solicitados; no modo filtrado, aplicar somente o declarado e ecoar resoluções em `applied_configuration.resolved_defaults`, conforme ADR 0020 D1–D3.
+
+Referências obrigatórias:
+- docs/adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md
+- docs/adrs/0017-geracao-declarativa-de-candidatos-filtros-e-estrategias-v1.md
+- docs/generation-strategies.md
+
+Arquivos esperados:
+- src/LotofacilMcp.Domain/Generation/
+- src/LotofacilMcp.Application/UseCases/
+- src/LotofacilMcp.Server/Tools/
+- tests/LotofacilMcp.ContractTests/ (mínimo: um caso por modo)
+
+Regras:
+- interseção de critérios declarados: candidato deve satisfazer todas as restrições (salvo modo documentado em contrário).
+- não extrapolar para métricas fora do recorte da ADR 0020.
+
+Critério de pronto:
+- teste(s) mostram diferença observável entre “omitir filtros no modo aleatório” *vs.* o comportamento legado de defaults quando o contrato ainda exigir compatibilidade retroativa (se aplicável).
+```
+
+### Template 26.4 — `seed` opcional e envelope de resposta (replay garantido ou não)
+
+```md
+Implemente apenas a política de `seed` opcional em `generate_candidate_games`: com `seed`, garantir reprodutibilidade da parte estocástica para o mesmo request canónico + dataset; sem `seed`, não garantir replay e preencher campo explícito na resposta; ajustar `deterministic_hash` conforme contrato fechado em Template 26.1. Atualizar testes que assumem `seed` obrigatória onde a nova semântica aplicar.
+
+Referências obrigatórias:
+- docs/adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md (D7)
+- docs/mcp-tool-contract.md
+- docs/adrs/0001-fechamento-semantico-e-determinismo-v1.md
+
+Arquivos esperados:
+- src/LotofacilMcp.Application/UseCases/
+- src/LotofacilMcp.Server/Tools/
+- tests/LotofacilMcp.ContractTests/
+
+Regras:
+- testes “golden” que dependem de candidatos idênticos devem passar a incluir `seed` ou declarar expectativa de não-replay quando `seed` for omitido.
+
+Critério de pronto:
+- contrato + testes cobrem presença e ausência de `seed` sem contradição com o envelope JSON.
+```
+
+### Template 26.5 — Discovery: `discover_capabilities` e paridade HTTP/MCP
+
+```md
+Implemente apenas a atualização de `discover_capabilities` (e paridade HTTP ↔ MCP, se existir) para publicar: teto de 1000 jogos por pedido, obrigatoriedade de `seed` por caminho, modos de geração suportados, e qualquer enum novo exigido pelo contrato fechado em 26.1.
+
+Referências obrigatórias:
+- docs/adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md
+- docs/adrs/0011-tool-de-discovery-de-capacidades-por-build-v1.md (formato de discovery)
+
+Arquivos esperados:
+- src/LotofacilMcp.Server/Tools/ (discovery + registro de capacidades)
+- tests/LotofacilMcp.ContractTests/
+
+Regras:
+- discovery continua determinística para a mesma build.
+
+Critério de pronto:
+- payload de discovery reflete fielmente as novas regras sem drift com validadores.
+```
+
+### Template 26.6 — `explain_candidate_games` alinhado a modos e a replay
+
+```md
+Implemente apenas a evolução de `explain_candidate_games` para refletir modo de geração, política de `seed`/replay e interseção de restrições quando relevante para a justificativa do candidato, sem alterar métricas fora do escopo do ADR 0020.
+
+Referências obrigatórias:
+- docs/adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md
+- docs/mcp-tool-contract.md
+
+Arquivos esperados:
+- src/LotofacilMcp.Server/Tools/
+- src/LotofacilMcp.Application/UseCases/
+- tests/LotofacilMcp.ContractTests/
+
+Regras:
+- não introduzir linguagem preditiva.
+
+Critério de pronto:
+- explicação audita modo, restrições efetivas e (quando aplicável) se o episódio foi replayável.
 ```
 

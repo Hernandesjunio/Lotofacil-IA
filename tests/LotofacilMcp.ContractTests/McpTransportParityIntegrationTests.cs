@@ -28,7 +28,11 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
             [
                 "run",
                 "-c",
+#if DEBUG
+                "Debug",
+#else
                 "Release",
+#endif
                 "--no-build",
                 "--project",
                 GetServerProjectPath(),
