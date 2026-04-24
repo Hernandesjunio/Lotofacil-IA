@@ -15,7 +15,11 @@ builder.Services
     .AddMcpServer()
     .WithHttpTransport()
     .WithTools<V0McpTools>()
-    .WithResources<LotofacilMcp.Server.Resources.PromptResources>();
+    .WithResources(
+    [
+        typeof(LotofacilMcp.Server.Resources.PromptResources),
+        typeof(LotofacilMcp.Server.Resources.HelpResources)
+    ]);
 
 var app = builder.Build();
 

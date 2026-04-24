@@ -247,6 +247,8 @@ public sealed record PromptTemplateSummaryEnvelope(
 
 public sealed record HelpResponse(
     [property: JsonPropertyName("tool_version")] string ToolVersion,
+    [property: JsonPropertyName("getting_started_resource_uri"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        string? GettingStartedResourceUri,
     [property: JsonPropertyName("index_resource_uri")] string IndexResourceUri,
     [property: JsonPropertyName("index_markdown")] string IndexMarkdown,
     [property: JsonPropertyName("templates")] IReadOnlyList<PromptTemplateSummaryEnvelope> Templates);
@@ -452,8 +454,23 @@ public sealed class V0Tools
                     t.SuggestedWindows))
                 .ToArray();
 
+            string? gettingStartedUri = null;
+            try
+            {
+                var gettingStartedPath = Path.Combine(AppContext.BaseDirectory, "resources", "help", "getting-started@1.0.0.md");
+                if (File.Exists(gettingStartedPath))
+                {
+                    gettingStartedUri = LotofacilMcp.Server.Helping.HelpCatalog.GettingStartedUri;
+                }
+            }
+            catch
+            {
+                gettingStartedUri = null;
+            }
+
             return new HelpResponse(
                 ToolVersion: HelpToolVersion,
+                GettingStartedResourceUri: gettingStartedUri,
                 IndexResourceUri: LotofacilMcp.Server.Prompting.PromptCatalog.IndexUri,
                 IndexMarkdown: indexMarkdown,
                 Templates: templates);

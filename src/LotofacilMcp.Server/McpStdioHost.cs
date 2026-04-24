@@ -31,7 +31,11 @@ internal static class McpStdioHost
             .AddMcpServer()
             .WithStdioServerTransport()
             .WithTools<V0McpTools>()
-            .WithResources<LotofacilMcp.Server.Resources.PromptResources>();
+            .WithResources(
+            [
+                typeof(LotofacilMcp.Server.Resources.PromptResources),
+                typeof(LotofacilMcp.Server.Resources.HelpResources)
+            ]);
 
         await builder.Build().RunAsync();
     }

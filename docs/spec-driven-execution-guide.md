@@ -76,9 +76,14 @@ Objetivo: expor uma superfície mínima de **ajuda** e **templates Markdown** pa
 
 Passos atômicos (recorte):
 
-- Adicionar o resource de onboarding curto `lotofacil-ia://help/getting-started@1.0.0` com o fluxo recomendado (help → índice → pipeline mínimo) e lembretes normativos (janela explícita, sem predição, rastreabilidade).
+- Adicionar o resource de onboarding curto `lotofacil-ia://help/getting-started@1.0.0` com **linguagem simples (leigo-first)**, seguindo:
+  - guia de 3 passos com CTA (“Peça ajuda” → “Escolha um caminho” → “Escolha o período”);
+  - menu curto (2–4 caminhos) com rótulos humanos (“Painel geral”, “Frequência e atraso”, etc.);
+  - secção “Se der erro” em termos humanos;
+  - secção separada “Para DEV/integração” (opcional), para detalhes técnicos e invariantes.
 - Adicionar resources `lotofacil-ia://prompts/index@1.0.0` e 10 templates versionados.
-- Adicionar a tool `help` retornando `index_markdown`, `index_resource_uri` e `templates[]` (metadados).
+- Adicionar a tool `help` retornando `index_markdown`, `index_resource_uri`, `templates[]` (metadados) e, quando existir, `getting_started_resource_uri`.
+- (Recomendado, não-breaking) Incluir no `help` um “topo de UX” opcional (ex.: `quick_start_markdown` ou entrypoints curtos) para evitar que “liste ajuda” vire um catálogo confuso.
 - Padronizar nos templates a preferência de exibição `display_mode = simple | advanced | both` (default `both`) para suportar usuários leigos e experts.
 - Atualizar `docs/brief.md`, `docs/prompt-catalog.md` e `docs/test-plan.md` com a nova superfície.
 - Adicionar testes de contrato para:

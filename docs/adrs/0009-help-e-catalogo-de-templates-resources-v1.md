@@ -10,6 +10,14 @@ Consumidores do MCP (ex.: Cursor, UI web, CLI) têm dificuldade em:
 - escolher **combinações de métricas** por objetivo (painel geral, repetição, forma, ranking etc.);
 - descobrir rapidamente “o que pedir” sem ler todo `docs/`.
 
+Além disso, há um problema recorrente de **experiência de entrada (onboarding)**:
+
+- o usuário pede “getting started” e recebe texto **técnico demais**, com jargões (tools, envelopes, campos) antes de valor prático;
+- referências internas (ex.: “ADR 0008”) aparecem em contexto de onboarding, o que é **ruído** para iniciantes;
+- pedidos como “liste ajuda” retornam **catálogo grande** (tools + templates) e deixam a pessoa sem saber “qual é o próximo passo”.
+
+Esta ADR existe para reduzir esse atrito: quando a pessoa pede ajuda, ela precisa de um **caminho simples e curto** (menu) e só depois de detalhes.
+
 O contrato atual já reconhece as primitivas opcionais do protocolo MCP:
 
 - **Resources** como *norma estável* (conteúdo read-only, Camada B);
@@ -36,6 +44,13 @@ Referências: [docs/mcp-tool-contract.md](../mcp-tool-contract.md) e [ADR 0008](
    - um seletor persistente (Simples | Avançado | Ambos) que controla apenas o `display_mode` no prompt do LLM;
    - o usuário pode alternar a qualquer momento;
    - o template pode aceitar override pontual (ex.: o usuário escrever `display_mode=advanced` no texto).
+
+6) **Priorizar linguagem simples e progressão por camadas (progressive disclosure)** no onboarding e na “ajuda”:
+   - primeiro: objetivo do produto + **3 passos** (“por onde começo?”);
+   - depois: um **menu curto** (2–4 caminhos comuns) com rótulos humanos (“Painel geral”, “Frequência e atraso”, “Repetição entre concursos”…);
+   - por último: detalhes técnicos (nomes canônicos, campos, invariantes), em secção separada “Para integração/DEV”.
+
+7) **Evitar referências internas** (ADRs, nomes de decisões, códigos de fase) nos textos voltados a iniciantes. Se necessário, manter apenas numa secção final “Notas para DEV”.
 
 ### Por que Resource e não Tool (para os templates)
 
@@ -136,10 +151,23 @@ Deve conter (Markdown, curto e copiável):
   - `get_draw_window` (opcional, quando precisar do recorte bruto ou ancorar extremos)
   - `compute_window_metrics` (batch)
   - tools analíticas conforme a pergunta (`analyze_indicator_stability`, `summarize_window_patterns`, `analyze_indicator_associations`, etc.)
-- lembretes obrigatórios:
-  - janela sempre explícita (`window_size` + `end_contest_id` ou extremos, ADR 0008 D2/D4);
-  - evitar linguagem preditiva ("mais provável de sair");
-  - conferir `dataset_version`, `tool_version`, `deterministic_hash` e `window` em todas as respostas.
+
+#### Regras de linguagem e estrutura (onboarding para leigos)
+
+- O conteúdo principal deve ser **leigo-first**:
+  - usar termos humanos (“período”, “último concurso”, “painel”) e só depois (se necessário) mencionar campos técnicos entre parênteses;
+  - evitar jargões como “ADR”, “allowlist”, “envelope” no texto principal.
+- Deve começar com um **guia de 3 passos**, com CTA claro (ex.: “Peça ajuda”, “Escolha um caminho”, “Escolha o período”).
+- Deve oferecer um **menu curto** (2–4 opções) de “o que fazer agora”, por exemplo:
+  - “Quero um painel geral (recomendado para começar)”
+  - “Quero ver frequência e atraso”
+  - “Quero entender repetição entre concursos”
+  - “Quero analisar forma (linhas/colunas)”
+- Deve ter uma secção “Se der erro” com explicação humana do que fazer, sem despejar códigos.
+- Os lembretes normativos podem existir, mas preferir forma simples:
+  - janela/período sempre informado pelo usuário (sem “últimos N” escondido);
+  - evitar linguagem preditiva (“vai sair”, “garantia”);
+  - rastreabilidade/determinismo podem ficar como “Detalhes (para DEV)” se o público-alvo for iniciante.
 
 ### Tool `help`
 
@@ -151,6 +179,13 @@ Deve conter (Markdown, curto e copiável):
   - `index_resource_uri`
   - `index_markdown`
   - `templates[]`: `{ id, resource_uri, title, description, suggested_windows }`
+
+#### Extensão recomendada (não-breaking) para UX (v1.x)
+
+Para reduzir confusão no primeiro contato, `help` pode incluir campos opcionais adicionais (sem quebrar clientes existentes), por exemplo:
+
+- `quick_start_markdown`: “o que fazer agora” em 3 passos + menu curto (2–4 caminhos);
+- `recommended_entrypoints[]`: lista curta de templates com rótulo “comece aqui”.
 
 **Invariantes:**
 

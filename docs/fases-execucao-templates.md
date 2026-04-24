@@ -1278,11 +1278,17 @@ Referências obrigatórias:
 - docs/test-plan.md (cobertura por tool e resources)
 
 Escopo:
-- Expor o resource de onboarding curto `lotofacil-ia://help/getting-started@1.0.0` (ponto de entrada agnóstico ao host), com fluxo recomendado `help → index → pipeline mínimo` e lembretes normativos (janela explícita, sem predição, rastreabilidade).
+- Expor o resource de onboarding curto `lotofacil-ia://help/getting-started@1.0.0` (ponto de entrada agnóstico ao host) com **onboarding leigo-first**:
+  - começar com “O que é / o que não é” em linguagem simples (sem promessa, sem predição);
+  - incluir **3 passos** com CTA claro (“Peça ajuda” → “Escolha um caminho” → “Escolha o período”);
+  - oferecer um **menu curto** (2–4 caminhos) e um “comece aqui” (ex.: painel geral);
+  - incluir “Se der erro” com instruções humanas (sem despejar códigos);
+  - manter detalhes técnicos (campos/invariantes) em secção separada “Para DEV/integração”, se necessário.
 - Expor resources Markdown sob `lotofacil-ia://prompts/`, incluindo `index@1.0.0` e 10 templates versionados.
 - Padronizar em todos os templates a preferência de exibição `display_mode = simple | advanced | both` (default `both` quando não declarado).
 - Implementar a tool `help` retornando:
   - `tool_version`
+  - (recomendado) um “topo de UX” curto opcional (ex.: `quick_start_markdown` ou entrypoints), para que um pedido “ajuda” não vire um catálogo
   - `getting_started_resource_uri` (opcional; recomendado quando o resource existir)
   - `index_resource_uri`
   - `index_markdown`
@@ -1305,5 +1311,6 @@ Critério de pronto:
 - `help` aparece em `tools/list` e responde com payload estruturado válido.
 - `resources/list` inclui `lotofacil-ia://help/getting-started@1.0.0`, o índice e os templates; `resources/read` do getting-started e do índice retorna Markdown.
 - testes de contrato cobrem tool discovery e resources list/read.
+- leitura humana: uma pessoa sem contexto consegue seguir o getting-started e executar “primeiro uso” sem ler ADRs nem catálogo completo.
 ```
 

@@ -28,6 +28,8 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
             [
                 "run",
                 "--no-build",
+                "--configuration",
+                "Release",
                 "--project",
                 GetServerProjectPath(),
                 "--",
@@ -701,18 +703,28 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
 
         Assert.Contains(stdioResources, r => r.Uri is "lotofacil-ia://prompts/index@1.0.0");
         Assert.Contains(httpResources, r => r.Uri is "lotofacil-ia://prompts/index@1.0.0");
+        Assert.Contains(stdioResources, r => r.Uri is "lotofacil-ia://help/getting-started@1.0.0");
+        Assert.Contains(httpResources, r => r.Uri is "lotofacil-ia://help/getting-started@1.0.0");
 
         var stdioIndex = stdioResources.First(r => r.Uri is "lotofacil-ia://prompts/index@1.0.0");
         var httpIndex = httpResources.First(r => r.Uri is "lotofacil-ia://prompts/index@1.0.0");
+        var stdioGettingStarted = stdioResources.First(r => r.Uri is "lotofacil-ia://help/getting-started@1.0.0");
+        var httpGettingStarted = httpResources.First(r => r.Uri is "lotofacil-ia://help/getting-started@1.0.0");
 
         var stdioIndexRead = await stdioIndex.ReadAsync();
         var httpIndexRead = await httpIndex.ReadAsync();
+        var stdioGettingStartedRead = await stdioGettingStarted.ReadAsync();
+        var httpGettingStartedRead = await httpGettingStarted.ReadAsync();
 
         var stdioText = stdioIndexRead.Contents.OfType<TextResourceContents>().First().Text;
         var httpText = httpIndexRead.Contents.OfType<TextResourceContents>().First().Text;
+        var stdioGettingStartedText = stdioGettingStartedRead.Contents.OfType<TextResourceContents>().First().Text;
+        var httpGettingStartedText = httpGettingStartedRead.Contents.OfType<TextResourceContents>().First().Text;
 
         Assert.Contains("Índice de templates", stdioText);
         Assert.Contains("Índice de templates", httpText);
+        Assert.Contains("Getting started", stdioGettingStartedText);
+        Assert.Contains("Getting started", httpGettingStartedText);
 
         var stdioHelp = await _stdioMcpClient.CallToolAsync("help", new Dictionary<string, object?>());
         var httpHelp = await _httpMcpClient.CallToolAsync("help", new Dictionary<string, object?>());
@@ -723,11 +735,15 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         var stdioHelpJson = ReadMcpStructuredJson(stdioHelp);
         var httpHelpJson = ReadMcpStructuredJson(httpHelp);
 
+        Assert.True(stdioHelpJson.TryGetProperty("getting_started_resource_uri", out var stdioGettingStartedUri));
+        Assert.Equal("lotofacil-ia://help/getting-started@1.0.0", stdioGettingStartedUri.GetString());
         Assert.True(stdioHelpJson.TryGetProperty("index_resource_uri", out var stdioIndexUri));
         Assert.Equal("lotofacil-ia://prompts/index@1.0.0", stdioIndexUri.GetString());
         Assert.True(stdioHelpJson.TryGetProperty("index_markdown", out var stdioIndexMarkdown));
         Assert.Contains("Índice de templates", stdioIndexMarkdown.GetString());
 
+        Assert.True(httpHelpJson.TryGetProperty("getting_started_resource_uri", out var httpGettingStartedUri));
+        Assert.Equal("lotofacil-ia://help/getting-started@1.0.0", httpGettingStartedUri.GetString());
         Assert.True(httpHelpJson.TryGetProperty("index_resource_uri", out var httpIndexUri));
         Assert.Equal("lotofacil-ia://prompts/index@1.0.0", httpIndexUri.GetString());
         Assert.True(httpHelpJson.TryGetProperty("index_markdown", out var httpIndexMarkdown));
