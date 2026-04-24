@@ -42,7 +42,7 @@ public sealed class Phase20ExplainCandidateGamesContractTests
         var payloadB = Assert.IsType<ExplainCandidateGamesResponse>(second);
 
         Assert.Equal(payloadA.DeterministicHash, payloadB.DeterministicHash);
-        Assert.Equal("1.0.0", payloadA.ToolVersion);
+        Assert.Equal("1.1.0", payloadA.ToolVersion);
         var gameExplanation = Assert.Single(payloadA.Explanations);
         Assert.Equal(15, gameExplanation.Game.Count);
         Assert.NotEmpty(gameExplanation.CandidateStrategies);
@@ -58,6 +58,7 @@ public sealed class Phase20ExplainCandidateGamesContractTests
         Assert.False(string.IsNullOrWhiteSpace(firstStrategy.StrategyVersion));
         Assert.NotEmpty(firstStrategy.MetricBreakdown);
         Assert.NotEmpty(firstStrategy.ExclusionBreakdown);
+        Assert.NotEmpty(firstStrategy.ConstraintBreakdown);
         Assert.All(firstStrategy.MetricBreakdown, metric => Assert.False(string.IsNullOrWhiteSpace(metric.MetricVersion)));
         Assert.All(firstStrategy.ExclusionBreakdown, exclusion => Assert.False(string.IsNullOrWhiteSpace(exclusion.ExclusionVersion)));
 
@@ -80,5 +81,19 @@ public sealed class Phase20ExplainCandidateGamesContractTests
         Assert.Equal(JsonValueKind.Array, metricBreakdown.ValueKind);
         Assert.True(strategy.TryGetProperty("exclusion_breakdown", out var exclusionBreakdown));
         Assert.Equal(JsonValueKind.Array, exclusionBreakdown.ValueKind);
+        Assert.True(strategy.TryGetProperty("constraint_breakdown", out var constraintBreakdown));
+        Assert.Equal(JsonValueKind.Array, constraintBreakdown.ValueKind);
+
+        var firstConstraint = constraintBreakdown[0];
+        Assert.True(firstConstraint.TryGetProperty("kind", out _));
+        Assert.True(firstConstraint.TryGetProperty("name", out _));
+        Assert.True(firstConstraint.TryGetProperty("mode", out _));
+        Assert.True(firstConstraint.TryGetProperty("observed_value", out _));
+        Assert.True(firstConstraint.TryGetProperty("applied", out var applied));
+        Assert.Equal(JsonValueKind.Object, applied.ValueKind);
+        Assert.True(firstConstraint.TryGetProperty("result", out var result));
+        Assert.Equal(JsonValueKind.Object, result.ValueKind);
+        Assert.True(result.TryGetProperty("passed", out _));
+        Assert.True(result.TryGetProperty("penalty", out _));
     }
 }

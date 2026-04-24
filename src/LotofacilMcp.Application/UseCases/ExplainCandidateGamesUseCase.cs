@@ -38,6 +38,40 @@ public sealed record ExclusionBreakdownEntryView(
     double Threshold,
     string Explanation);
 
+public sealed record ConstraintRangeView(
+    double Min,
+    double Max,
+    bool Inclusive);
+
+public sealed record ConstraintAllowedValuesView(IReadOnlyList<double> Values);
+
+public sealed record ConstraintTypicalRangeView(
+    string MetricName,
+    string Method,
+    double Coverage,
+    ConstraintRangeView ResolvedRange,
+    double CoverageObserved,
+    string MethodVersion);
+
+public sealed record ConstraintSpecView(
+    double? Value,
+    ConstraintRangeView? Range,
+    ConstraintAllowedValuesView? AllowedValues,
+    ConstraintTypicalRangeView? TypicalRange);
+
+public sealed record ConstraintResultView(
+    bool Passed,
+    double Penalty);
+
+public sealed record ConstraintBreakdownEntryView(
+    string Kind,
+    string Name,
+    string Mode,
+    double ObservedValue,
+    ConstraintSpecView Applied,
+    ConstraintResultView Result,
+    string Explanation);
+
 public sealed record CandidateStrategyExplanationView(
     string StrategyName,
     string StrategyVersion,
@@ -45,7 +79,8 @@ public sealed record CandidateStrategyExplanationView(
     string TieBreakRule,
     double Score,
     IReadOnlyList<MetricBreakdownEntryView> MetricBreakdown,
-    IReadOnlyList<ExclusionBreakdownEntryView> ExclusionBreakdown);
+    IReadOnlyList<ExclusionBreakdownEntryView> ExclusionBreakdown,
+    IReadOnlyList<ConstraintBreakdownEntryView> ConstraintBreakdown);
 
 public sealed record GameExplanationView(
     IReadOnlyList<int> Game,
@@ -60,9 +95,10 @@ public sealed record ExplainCandidateGamesResult(
 
 public sealed class ExplainCandidateGamesUseCase
 {
-    public const string ToolVersion = "1.0.0";
+    public const string ToolVersion = "1.1.0";
     private const string StrategyVersion = "1.0.0";
     private const string ExclusionVersion = "1.0.0";
+    private const string TypicalRangeMethodVersion = "1.0.0";
 
     private readonly SyntheticFixtureProvider _fixtureProvider;
     private readonly DatasetVersionService _datasetVersionService;
@@ -104,7 +140,8 @@ public sealed class ExplainCandidateGamesUseCase
             var top10Metric = _windowMetricDispatcher.Dispatch("top10_mais_sorteados", window);
             var top10Set = top10Metric.Value.Select(static value => (int)value).ToHashSet();
             var lastDraw = window.Draws[^1];
-            var repetitionMedian = Median(repeatMetric.Value);
+            var repeatStats = QuantileStats(repeatMetric.Value);
+            var repetitionMedian = repeatStats.Median;
 
             var explanations = input.Games
                 .Select(game => BuildGameExplanation(
@@ -116,6 +153,7 @@ public sealed class ExplainCandidateGamesUseCase
                     top10Metric.Version,
                     top10Set,
                     repetitionMedian,
+                    repeatStats,
                     lastDraw.Numbers,
                     frequencyMetric.Value))
                 .ToArray();
@@ -147,6 +185,7 @@ public sealed class ExplainCandidateGamesUseCase
         string top10Version,
         HashSet<int> top10Set,
         double repetitionMedian,
+        QuantileStatsResult repeatStats,
         IReadOnlyList<int> lastDrawNumbers,
         IReadOnlyList<double> frequencyByDezena)
     {
@@ -155,7 +194,7 @@ public sealed class ExplainCandidateGamesUseCase
 
         var strategies = new List<CandidateStrategyExplanationView>
         {
-            BuildCommonRepetitionFrequency(profile, includeMetricBreakdown, exclusions, frequencyVersion, repetitionVersion, top10Version),
+            BuildCommonRepetitionFrequency(profile, includeMetricBreakdown, exclusions, frequencyVersion, repetitionVersion, top10Version, repeatStats),
             BuildRowEntropyBalance(profile, includeMetricBreakdown, exclusions, frequencyVersion),
             BuildSlotWeighted(profile, includeMetricBreakdown, exclusions),
             BuildOutlierCandidate(profile, includeMetricBreakdown, exclusions),
@@ -176,12 +215,15 @@ public sealed class ExplainCandidateGamesUseCase
         IReadOnlyList<ExclusionBreakdownEntryView> exclusions,
         string frequencyVersion,
         string repetitionVersion,
-        string top10Version)
+        string top10Version,
+        QuantileStatsResult repeatStats)
     {
         var score = Clamp01(0.6 * profile.FrequencyAlignment + 0.4 * profile.RepeatAlignment);
+        var penalty = 0d;
         if (profile.Top10OverlapCount < 6)
         {
-            score = Clamp01(score - 0.1);
+            penalty = 0.1;
+            score = Clamp01(score - penalty);
         }
 
         var metricBreakdown = includeMetricBreakdown
@@ -208,6 +250,47 @@ public sealed class ExplainCandidateGamesUseCase
             }
             : Array.Empty<MetricBreakdownEntryView>();
 
+        var constraintBreakdown = BuildConstraintBreakdown(
+            profile,
+            exclusions,
+            additional:
+            [
+                new ConstraintBreakdownEntryView(
+                    Kind: "criterion",
+                    Name: "top10_overlap_count",
+                    Mode: "soft",
+                    ObservedValue: profile.Top10OverlapCount,
+                    Applied: new ConstraintSpecView(
+                        Value: null,
+                        Range: new ConstraintRangeView(6, 10, true),
+                        AllowedValues: null,
+                        TypicalRange: null),
+                    Result: new ConstraintResultView(
+                        Passed: profile.Top10OverlapCount >= 6,
+                        Penalty: penalty),
+                    Explanation: "Penaliza candidatos com sobreposicao no top10 historico abaixo do limiar."),
+                new ConstraintBreakdownEntryView(
+                    Kind: "criterion",
+                    Name: "repeat_count",
+                    Mode: "hard",
+                    ObservedValue: profile.RepeatCount,
+                    Applied: new ConstraintSpecView(
+                        Value: null,
+                        Range: null,
+                        AllowedValues: null,
+                        TypicalRange: new ConstraintTypicalRangeView(
+                            MetricName: "repeticao_concurso_anterior",
+                            Method: "iqr",
+                            Coverage: 0.8,
+                            ResolvedRange: new ConstraintRangeView(repeatStats.Q1, repeatStats.Q3, true),
+                            CoverageObserved: repeatStats.CoverageObservedInIqr,
+                            MethodVersion: TypicalRangeMethodVersion)),
+                    Result: new ConstraintResultView(
+                        Passed: IsInRange(profile.RepeatCount, repeatStats.Q1, repeatStats.Q3, inclusive: true),
+                        Penalty: 0d),
+                    Explanation: "Audita aderencia do repeat_count do jogo a faixa tipica (IQR) da repeticao na janela.")
+            ]);
+
         return new CandidateStrategyExplanationView(
             StrategyName: "common_repetition_frequency",
             StrategyVersion: StrategyVersion,
@@ -215,7 +298,8 @@ public sealed class ExplainCandidateGamesUseCase
             TieBreakRule: "hhi_linha_asc_then_lexicographic_numbers_asc",
             Score: score,
             MetricBreakdown: metricBreakdown,
-            ExclusionBreakdown: exclusions);
+            ExclusionBreakdown: exclusions,
+            ConstraintBreakdown: constraintBreakdown);
     }
 
     private static CandidateStrategyExplanationView BuildRowEntropyBalance(
@@ -225,14 +309,18 @@ public sealed class ExplainCandidateGamesUseCase
         string frequencyVersion)
     {
         var score = profile.FrequencyAlignment;
+        var entropyPenalty = 0d;
         if (profile.RowEntropyNorm < 0.95)
         {
-            score -= 0.15;
+            entropyPenalty = 0.15;
+            score -= entropyPenalty;
         }
 
+        var hhiPenalty = 0d;
         if (profile.HhiLinha > 0.25)
         {
-            score -= 0.15;
+            hhiPenalty = 0.15;
+            score -= hhiPenalty;
         }
 
         var metricBreakdown = includeMetricBreakdown
@@ -248,16 +336,51 @@ public sealed class ExplainCandidateGamesUseCase
                     MetricName: "entropia_linha",
                     MetricVersion: "1.0.0",
                     Value: profile.RowEntropyNorm,
-                    Contribution: profile.RowEntropyNorm < 0.95 ? -0.15 : 0d,
+                    Contribution: profile.RowEntropyNorm < 0.95 ? -entropyPenalty : 0d,
                     Explanation: "Penaliza jogos abaixo do limiar de entropia de linhas da estrategia."),
                 new MetricBreakdownEntryView(
                     MetricName: "hhi_concentracao",
                     MetricVersion: "1.0.0",
                     Value: profile.HhiLinha,
-                    Contribution: profile.HhiLinha > 0.25 ? -0.15 : 0d,
+                    Contribution: profile.HhiLinha > 0.25 ? -hhiPenalty : 0d,
                     Explanation: "Penaliza concentracao excessiva em linhas para manter equilibrio.")
             }
             : Array.Empty<MetricBreakdownEntryView>();
+
+        var constraintBreakdown = BuildConstraintBreakdown(
+            profile,
+            exclusions,
+            additional:
+            [
+                new ConstraintBreakdownEntryView(
+                    Kind: "criterion",
+                    Name: "row_entropy_norm",
+                    Mode: "soft",
+                    ObservedValue: profile.RowEntropyNorm,
+                    Applied: new ConstraintSpecView(
+                        Value: null,
+                        Range: new ConstraintRangeView(0.95, 1.0, true),
+                        AllowedValues: null,
+                        TypicalRange: null),
+                    Result: new ConstraintResultView(
+                        Passed: profile.RowEntropyNorm >= 0.95,
+                        Penalty: entropyPenalty),
+                    Explanation: "Penaliza jogos com entropia normalizada abaixo do limiar."),
+                new ConstraintBreakdownEntryView(
+                    Kind: "criterion",
+                    Name: "hhi_linha",
+                    Mode: "soft",
+                    ObservedValue: profile.HhiLinha,
+                    Applied: new ConstraintSpecView(
+                        Value: null,
+                        Range: new ConstraintRangeView(0.0, 0.25, true),
+                        AllowedValues: null,
+                        TypicalRange: null),
+                    Result: new ConstraintResultView(
+                        Passed: profile.HhiLinha <= 0.25,
+                        Penalty: hhiPenalty),
+                    Explanation: "Penaliza jogos com concentracao (HHI) acima do limiar.")
+            ]);
 
         return new CandidateStrategyExplanationView(
             StrategyName: "row_entropy_balance",
@@ -266,7 +389,8 @@ public sealed class ExplainCandidateGamesUseCase
             TieBreakRule: "hhi_coluna_asc_then_lexicographic_numbers_asc",
             Score: Clamp01(score),
             MetricBreakdown: metricBreakdown,
-            ExclusionBreakdown: exclusions);
+            ExclusionBreakdown: exclusions,
+            ConstraintBreakdown: constraintBreakdown);
     }
 
     private static CandidateStrategyExplanationView BuildSlotWeighted(
@@ -292,6 +416,8 @@ public sealed class ExplainCandidateGamesUseCase
             }
             : Array.Empty<MetricBreakdownEntryView>();
 
+        var constraintBreakdown = BuildConstraintBreakdown(profile, exclusions, additional: Array.Empty<ConstraintBreakdownEntryView>());
+
         return new CandidateStrategyExplanationView(
             StrategyName: "slot_weighted",
             StrategyVersion: StrategyVersion,
@@ -299,7 +425,8 @@ public sealed class ExplainCandidateGamesUseCase
             TieBreakRule: "surpresa_slot_asc_then_lexicographic_numbers_asc",
             Score: profile.SlotAlignment,
             MetricBreakdown: metricBreakdown,
-            ExclusionBreakdown: exclusions);
+            ExclusionBreakdown: exclusions,
+            ConstraintBreakdown: constraintBreakdown);
     }
 
     private static CandidateStrategyExplanationView BuildOutlierCandidate(
@@ -331,6 +458,8 @@ public sealed class ExplainCandidateGamesUseCase
             }
             : Array.Empty<MetricBreakdownEntryView>();
 
+        var constraintBreakdown = BuildConstraintBreakdown(profile, exclusions, additional: Array.Empty<ConstraintBreakdownEntryView>());
+
         return new CandidateStrategyExplanationView(
             StrategyName: "outlier_candidate",
             StrategyVersion: StrategyVersion,
@@ -338,7 +467,8 @@ public sealed class ExplainCandidateGamesUseCase
             TieBreakRule: "surpresa_slot_desc_then_lexicographic_numbers_asc",
             Score: profile.OutlierScore,
             MetricBreakdown: metricBreakdown,
-            ExclusionBreakdown: exclusions);
+            ExclusionBreakdown: exclusions,
+            ConstraintBreakdown: constraintBreakdown);
     }
 
     private static CandidateStrategyExplanationView BuildDeclaredCompositeProfile(
@@ -391,6 +521,8 @@ public sealed class ExplainCandidateGamesUseCase
             }
             : Array.Empty<MetricBreakdownEntryView>();
 
+        var constraintBreakdown = BuildConstraintBreakdown(profile, exclusions, additional: Array.Empty<ConstraintBreakdownEntryView>());
+
         return new CandidateStrategyExplanationView(
             StrategyName: "declared_composite_profile",
             StrategyVersion: StrategyVersion,
@@ -398,7 +530,51 @@ public sealed class ExplainCandidateGamesUseCase
             TieBreakRule: "outlier_score_asc_then_hhi_linha_asc_then_lexicographic_numbers_asc",
             Score: score,
             MetricBreakdown: metricBreakdown,
-            ExclusionBreakdown: exclusions);
+            ExclusionBreakdown: exclusions,
+            ConstraintBreakdown: constraintBreakdown);
+    }
+
+    private static IReadOnlyList<ConstraintBreakdownEntryView> BuildConstraintBreakdown(
+        GameProfile profile,
+        IReadOnlyList<ExclusionBreakdownEntryView> exclusions,
+        IReadOnlyList<ConstraintBreakdownEntryView> additional)
+    {
+        var list = new List<ConstraintBreakdownEntryView>(exclusions.Count + additional.Count);
+
+        foreach (var exclusion in exclusions)
+        {
+            list.Add(new ConstraintBreakdownEntryView(
+                Kind: "filter",
+                Name: exclusion.ExclusionName,
+                Mode: "hard",
+                ObservedValue: exclusion.ObservedValue,
+                Applied: new ConstraintSpecView(
+                    Value: exclusion.Threshold,
+                    Range: null,
+                    AllowedValues: null,
+                    TypicalRange: null),
+                Result: new ConstraintResultView(
+                    Passed: exclusion.Passed,
+                    Penalty: 0d),
+                Explanation: exclusion.Explanation));
+        }
+
+        foreach (var item in additional)
+        {
+            list.Add(item);
+        }
+
+        return list;
+    }
+
+    private static bool IsInRange(double value, double min, double max, bool inclusive)
+    {
+        if (inclusive)
+        {
+            return value >= min && value <= max;
+        }
+
+        return value > min && value < max;
     }
 
     private static IReadOnlyList<ExclusionBreakdownEntryView> BuildExclusions(GameProfile profile, bool includeExclusionBreakdown)
@@ -488,7 +664,10 @@ public sealed class ExplainCandidateGamesUseCase
             MaxConsecutiveRun: maxConsecutiveRun,
             Top10OverlapCount: top10OverlapCount,
             Top10OverlapRatio: top10OverlapRatio,
-            OutlierScore: outlierScore);
+            OutlierScore: outlierScore)
+        {
+            RepeatCount = repetition
+        };
     }
 
     private static int CountNeighbors(IReadOnlyList<int> sortedGame)
@@ -581,5 +760,44 @@ public sealed class ExplainCandidateGamesUseCase
         int MaxConsecutiveRun,
         int Top10OverlapCount,
         double Top10OverlapRatio,
-        double OutlierScore);
+        double OutlierScore)
+    {
+        public int RepeatCount { get; init; }
+    }
+
+    private static QuantileStatsResult QuantileStats(IReadOnlyList<double> values)
+    {
+        if (values.Count == 0)
+        {
+            return new QuantileStatsResult(0d, 0d, 0d, 0d, 0);
+        }
+
+        var ordered = values.OrderBy(static v => v).ToArray();
+        var median = Quantile(ordered, 0.5);
+        var q1 = Quantile(ordered, 0.25);
+        var q3 = Quantile(ordered, 0.75);
+        var coverageObserved = ordered.Count(v => v >= q1 && v <= q3) / (double)ordered.Length;
+        return new QuantileStatsResult(q1, median, q3, coverageObserved, ordered.Length);
+    }
+
+    private static double Quantile(double[] sorted, double p)
+    {
+        if (sorted.Length == 1)
+        {
+            return sorted[0];
+        }
+
+        var idx = (sorted.Length - 1) * p;
+        var lo = (int)Math.Floor(idx);
+        var hi = (int)Math.Ceiling(idx);
+        if (lo == hi)
+        {
+            return sorted[lo];
+        }
+
+        var t = idx - lo;
+        return sorted[lo] * (1d - t) + sorted[hi] * t;
+    }
+
+    private sealed record QuantileStatsResult(double Q1, double Median, double Q3, double CoverageObservedInIqr, int N);
 }

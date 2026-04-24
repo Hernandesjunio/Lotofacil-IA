@@ -33,6 +33,8 @@ public sealed class PhaseB2Adr0008WindowD2AndInvalidRequestContractTests : IAsyn
             Arguments =
             [
                 "run",
+                "-c",
+                "Release",
                 "--no-build",
                 "--project",
                 GetServerProjectPath(),

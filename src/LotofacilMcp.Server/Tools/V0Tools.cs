@@ -459,14 +459,50 @@ public sealed record ExclusionBreakdownEntryEnvelope(
     [property: JsonPropertyName("threshold")] double Threshold,
     [property: JsonPropertyName("explanation")] string Explanation);
 
+public sealed record ConstraintRangeEnvelope(
+    [property: JsonPropertyOrder(1), JsonPropertyName("min")] double Min,
+    [property: JsonPropertyOrder(2), JsonPropertyName("max")] double Max,
+    [property: JsonPropertyOrder(3), JsonPropertyName("inclusive")] bool Inclusive);
+
+public sealed record ConstraintAllowedValuesEnvelope(
+    [property: JsonPropertyOrder(1), JsonPropertyName("values")] IReadOnlyList<double> Values);
+
+public sealed record ConstraintTypicalRangeEnvelope(
+    [property: JsonPropertyOrder(1), JsonPropertyName("metric_name")] string MetricName,
+    [property: JsonPropertyOrder(2), JsonPropertyName("method")] string Method,
+    [property: JsonPropertyOrder(3), JsonPropertyName("coverage")] double Coverage,
+    [property: JsonPropertyOrder(4), JsonPropertyName("resolved_range")] ConstraintRangeEnvelope ResolvedRange,
+    [property: JsonPropertyOrder(5), JsonPropertyName("coverage_observed")] double CoverageObserved,
+    [property: JsonPropertyOrder(6), JsonPropertyName("method_version")] string MethodVersion);
+
+public sealed record ConstraintSpecEnvelope(
+    [property: JsonPropertyOrder(1), JsonPropertyName("value"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] double? Value,
+    [property: JsonPropertyOrder(2), JsonPropertyName("range"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ConstraintRangeEnvelope? Range,
+    [property: JsonPropertyOrder(3), JsonPropertyName("allowed_values"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ConstraintAllowedValuesEnvelope? AllowedValues,
+    [property: JsonPropertyOrder(4), JsonPropertyName("typical_range"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ConstraintTypicalRangeEnvelope? TypicalRange);
+
+public sealed record ConstraintResultEnvelope(
+    [property: JsonPropertyOrder(1), JsonPropertyName("passed")] bool Passed,
+    [property: JsonPropertyOrder(2), JsonPropertyName("penalty")] double Penalty);
+
+public sealed record ConstraintBreakdownEntryEnvelope(
+    [property: JsonPropertyOrder(1), JsonPropertyName("kind")] string Kind,
+    [property: JsonPropertyOrder(2), JsonPropertyName("name")] string Name,
+    [property: JsonPropertyOrder(3), JsonPropertyName("mode")] string Mode,
+    [property: JsonPropertyOrder(4), JsonPropertyName("observed_value")] double ObservedValue,
+    [property: JsonPropertyOrder(5), JsonPropertyName("applied")] ConstraintSpecEnvelope Applied,
+    [property: JsonPropertyOrder(6), JsonPropertyName("result")] ConstraintResultEnvelope Result,
+    [property: JsonPropertyOrder(7), JsonPropertyName("explanation")] string Explanation);
+
 public sealed record CandidateStrategyExplanationEnvelope(
-    [property: JsonPropertyName("strategy_name")] string StrategyName,
-    [property: JsonPropertyName("strategy_version")] string StrategyVersion,
-    [property: JsonPropertyName("search_method")] string SearchMethod,
-    [property: JsonPropertyName("tie_break_rule")] string TieBreakRule,
-    [property: JsonPropertyName("score")] double Score,
-    [property: JsonPropertyName("metric_breakdown")] IReadOnlyList<MetricBreakdownEntryEnvelope> MetricBreakdown,
-    [property: JsonPropertyName("exclusion_breakdown")] IReadOnlyList<ExclusionBreakdownEntryEnvelope> ExclusionBreakdown);
+    [property: JsonPropertyOrder(1), JsonPropertyName("strategy_name")] string StrategyName,
+    [property: JsonPropertyOrder(2), JsonPropertyName("strategy_version")] string StrategyVersion,
+    [property: JsonPropertyOrder(3), JsonPropertyName("search_method")] string SearchMethod,
+    [property: JsonPropertyOrder(4), JsonPropertyName("tie_break_rule")] string TieBreakRule,
+    [property: JsonPropertyOrder(5), JsonPropertyName("score")] double Score,
+    [property: JsonPropertyOrder(6), JsonPropertyName("metric_breakdown")] IReadOnlyList<MetricBreakdownEntryEnvelope> MetricBreakdown,
+    [property: JsonPropertyOrder(7), JsonPropertyName("exclusion_breakdown")] IReadOnlyList<ExclusionBreakdownEntryEnvelope> ExclusionBreakdown,
+    [property: JsonPropertyOrder(8), JsonPropertyName("constraint_breakdown")] IReadOnlyList<ConstraintBreakdownEntryEnvelope> ConstraintBreakdown);
 
 public sealed record GameExplanationEnvelope(
     [property: JsonPropertyName("game")] IReadOnlyList<int> Game,
@@ -1497,15 +1533,15 @@ public sealed class V0Tools
                     result.Window.EndContestId),
                 Explanations: result.Explanations
                     .Select(game => new GameExplanationEnvelope(
-                        game.Game.ToArray(),
-                        game.CandidateStrategies
+                        Game: game.Game.ToArray(),
+                        CandidateStrategies: game.CandidateStrategies
                             .Select(strategy => new CandidateStrategyExplanationEnvelope(
-                                strategy.StrategyName,
-                                strategy.StrategyVersion,
-                                strategy.SearchMethod,
-                                strategy.TieBreakRule,
-                                strategy.Score,
-                                strategy.MetricBreakdown
+                                StrategyName: strategy.StrategyName,
+                                StrategyVersion: strategy.StrategyVersion,
+                                SearchMethod: strategy.SearchMethod,
+                                TieBreakRule: strategy.TieBreakRule,
+                                Score: strategy.Score,
+                                MetricBreakdown: strategy.MetricBreakdown
                                     .Select(metric => new MetricBreakdownEntryEnvelope(
                                         metric.MetricName,
                                         metric.MetricVersion,
@@ -1513,7 +1549,7 @@ public sealed class V0Tools
                                         metric.Contribution,
                                         metric.Explanation))
                                     .ToArray(),
-                                strategy.ExclusionBreakdown
+                                ExclusionBreakdown: strategy.ExclusionBreakdown
                                     .Select(exclusion => new ExclusionBreakdownEntryEnvelope(
                                         exclusion.ExclusionName,
                                         exclusion.ExclusionVersion,
@@ -1521,6 +1557,41 @@ public sealed class V0Tools
                                         exclusion.ObservedValue,
                                         exclusion.Threshold,
                                         exclusion.Explanation))
+                                    .ToArray(),
+                                ConstraintBreakdown: strategy.ConstraintBreakdown
+                                    .Select(constraint => new ConstraintBreakdownEntryEnvelope(
+                                        constraint.Kind,
+                                        constraint.Name,
+                                        constraint.Mode,
+                                        constraint.ObservedValue,
+                                        new ConstraintSpecEnvelope(
+                                            constraint.Applied.Value,
+                                            constraint.Applied.Range is null
+                                                ? null
+                                                : new ConstraintRangeEnvelope(
+                                                    constraint.Applied.Range.Min,
+                                                    constraint.Applied.Range.Max,
+                                                    constraint.Applied.Range.Inclusive),
+                                            constraint.Applied.AllowedValues is null
+                                                ? null
+                                                : new ConstraintAllowedValuesEnvelope(
+                                                    constraint.Applied.AllowedValues.Values.ToArray()),
+                                            constraint.Applied.TypicalRange is null
+                                                ? null
+                                                : new ConstraintTypicalRangeEnvelope(
+                                                    constraint.Applied.TypicalRange.MetricName,
+                                                    constraint.Applied.TypicalRange.Method,
+                                                    constraint.Applied.TypicalRange.Coverage,
+                                                    new ConstraintRangeEnvelope(
+                                                        constraint.Applied.TypicalRange.ResolvedRange.Min,
+                                                        constraint.Applied.TypicalRange.ResolvedRange.Max,
+                                                        constraint.Applied.TypicalRange.ResolvedRange.Inclusive),
+                                                    constraint.Applied.TypicalRange.CoverageObserved,
+                                                    constraint.Applied.TypicalRange.MethodVersion)),
+                                        new ConstraintResultEnvelope(
+                                            constraint.Result.Passed,
+                                            constraint.Result.Penalty),
+                                        constraint.Explanation))
                                     .ToArray()))
                             .ToArray()))
                     .ToArray());
