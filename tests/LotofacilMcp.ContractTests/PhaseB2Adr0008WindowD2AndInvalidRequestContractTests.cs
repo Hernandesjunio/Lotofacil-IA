@@ -170,7 +170,7 @@ public sealed class PhaseB2Adr0008WindowD2AndInvalidRequestContractTests : IAsyn
 
         var shared = $"{{\"window_size\":{windowSize},\"start_contest_id\":{startContestId},\"end_contest_id\":{endContestId}}}";
         var errComputeBody = shared.TrimEnd('}')
-            + @", ""metrics"":[{""name"":""frequencia_por_dezena""}]" + "}";
+            + @", ""metrics"":[{""name"":""frequencia_por_dezena""},{""name"":""top10_mais_sorteados""}]" + "}";
 
         var httpCompute = await _httpClient.PostAsync(
             "/tools/compute_window_metrics",
@@ -191,7 +191,11 @@ public sealed class PhaseB2Adr0008WindowD2AndInvalidRequestContractTests : IAsyn
             ["window_size"] = windowSize,
             ["start_contest_id"] = startContestId,
             ["end_contest_id"] = endContestId,
-            ["metrics"] = new object[] { new Dictionary<string, object?> { ["name"] = "frequencia_por_dezena" } }
+            ["metrics"] = new object[]
+            {
+                new Dictionary<string, object?> { ["name"] = "frequencia_por_dezena" },
+                new Dictionary<string, object?> { ["name"] = "top10_mais_sorteados" }
+            }
         };
         var mcpArgsGet = new Dictionary<string, object?>
         {
