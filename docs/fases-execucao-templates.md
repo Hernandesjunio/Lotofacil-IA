@@ -1531,6 +1531,146 @@ Critério de pronto:
 - ao menos 2 estratégias públicas retornam resultados comparáveis na mesma janela.
 ```
 
+### Templates 25.7A–25.7F — Passos atômicos (ADR 0019) para implementar faixa/cobertura na geração
+
+#### Template 25.7A — Contrato: `range` / `allowed_values` / `mode` (sem `typical_range` ainda)
+
+```md
+Implemente apenas a evolução do request/validator de `generate_candidate_games` para aceitar restrições por `range` e `allowed_values` (e `mode`), mantendo retrocompatibilidade com o modo atual (`value`, `min`, `max`) e rejeitando “modos mistos”.
+
+Referências obrigatórias:
+- docs/adrs/0019-criterios-por-faixa-e-cobertura-na-geracao-v1.md (RangeSpec, AllowedValuesSpec, modo hard/soft, regras de erro)
+- docs/mcp-tool-contract.md (shape de erro `INVALID_REQUEST`)
+
+Arquivos esperados:
+- src/LotofacilMcp.Server/Tools/
+- src/LotofacilMcp.Application/Validation/
+- tests/LotofacilMcp.ContractTests/
+
+Regras:
+- não introduzir heurísticas de geração; apenas parsing/validação/normalização.
+- `allowed_values.values` deve ser normalizado (ordenar + deduplicar) e o resultado deve aparecer em `applied_configuration.resolved_defaults`.
+- `mode` default `hard` deve aparecer em `resolved_defaults` quando omitido.
+
+Critério de pronto:
+- requests antigos continuam válidos.
+- request com `value` + `range` (ou qualquer modo misto) falha com `INVALID_REQUEST`.
+- `allowed_values` inválido (vazio, não inteiro quando aplicável) falha com `INVALID_REQUEST`.
+```
+
+#### Template 25.7B — Resolvedor determinístico de `typical_range` (IQR + percentis)
+
+```md
+Implemente apenas o resolvedor determinístico de `typical_range` (métodos `iqr` e `percentile`) sobre a janela declarada, incluindo validação de parâmetros e eco de `resolved_range` + `coverage_observed` + `method_version`.
+
+Referências obrigatórias:
+- docs/adrs/0019-criterios-por-faixa-e-cobertura-na-geracao-v1.md (TypicalRangeSpec, regras de params, output de resolução)
+- docs/adrs/0001-fechamento-semantico-e-determinismo-v1.md (determinismo)
+
+Arquivos esperados:
+- src/LotofacilMcp.Domain/Generation/ (ou módulo equivalente de resolução determinística)
+- src/LotofacilMcp.Application/UseCases/
+- tests/LotofacilMcp.Domain.Tests/
+
+Regras:
+- método deve ser fechado e versionado (ex.: `method_version="1.0.0"`).
+- `coverage_observed` é sempre reportado; não prometer atingir `coverage`.
+- erro para `coverage` fora de [0,1] e percentis inválidos: `INVALID_REQUEST`.
+
+Critério de pronto:
+- para a mesma janela + input canônico, `resolved_range` é estável.
+- testes cobrem `iqr` e `percentile` com fixture pequena.
+```
+
+#### Template 25.7C — Integrar `typical_range` no request e ecoar em `resolved_defaults`
+
+```md
+Implemente apenas a aceitação de `typical_range` em critérios/filtros de `generate_candidate_games`, chamando o resolvedor determinístico e ecoando `resolved_range`, `coverage_observed` e defaults (`inclusive`, `mode`) em `applied_configuration.resolved_defaults`.
+
+Referências obrigatórias:
+- docs/adrs/0019-criterios-por-faixa-e-cobertura-na-geracao-v1.md
+- docs/mcp-tool-contract.md
+
+Arquivos esperados:
+- src/LotofacilMcp.Server/Tools/
+- src/LotofacilMcp.Application/UseCases/
+- tests/LotofacilMcp.ContractTests/
+
+Regras:
+- `deterministic_hash` deve incluir o payload original (`typical_range`) e qualquer `window_ref` quando existir.
+- não implementar ainda `mode="soft"` se isso aumentar o escopo; manter `hard` como default explícito.
+
+Critério de pronto:
+- um request com `typical_range` válido retorna `applied_configuration.resolved_defaults` com a resolução ecoada.
+- métrica desconhecida em `typical_range.metric_name` falha com `UNKNOWN_METRIC`.
+```
+
+#### Template 25.7D — Aplicar `range`/`allowed_values` no motor de geração (hard) + orçamento determinístico
+
+```md
+Implemente apenas a aplicação de `range`/`allowed_values` como restrições hard no motor de geração (pass/fail), adicionando orçamento determinístico (`max_attempts` e/ou pool multiplier) e contadores ecoados (`attempts_used`, `accepted_count`, `rejected_count_by_reason`).
+
+Referências obrigatórias:
+- docs/adrs/0019-criterios-por-faixa-e-cobertura-na-geracao-v1.md (orçamento, contadores, `STRUCTURAL_EXCLUSION_CONFLICT`)
+- docs/adrs/0017-geracao-declarativa-de-candidatos-filtros-e-estrategias-v1.md (applied_configuration)
+
+Arquivos esperados:
+- src/LotofacilMcp.Domain/Generation/
+- src/LotofacilMcp.Application/UseCases/
+- tests/LotofacilMcp.Domain.Tests/
+- tests/LotofacilMcp.ContractTests/
+
+Regras:
+- `range`/`allowed_values` definem conjunto válido; não enumerar valores no cliente.
+- orçamento e contadores devem ser determinísticos para o mesmo request (incl. seed quando aplicável).
+
+Critério de pronto:
+- `count` alto funciona com orçamento explícito.
+- quando inviável, erro `STRUCTURAL_EXCLUSION_CONFLICT` inclui pista determinística do colapso.
+```
+
+#### Template 25.7E — `mode="soft"`: penalidade determinística versionada (opcional e isolado)
+
+```md
+Implemente apenas o suporte a `mode="soft"` para um subconjunto pequeno de restrições (1–2 métricas/guardrails), aplicando penalidade determinística versionada e ecoando defaults + penalidades em `resolved_defaults`.
+
+Referências obrigatórias:
+- docs/adrs/0019-criterios-por-faixa-e-cobertura-na-geracao-v1.md (hard vs soft, determinismo, eco)
+- docs/generation-strategies.md (se a penalidade for específica de estratégia)
+
+Arquivos esperados:
+- src/LotofacilMcp.Domain/Generation/
+- tests/LotofacilMcp.Domain.Tests/
+
+Regras:
+- `soft` nunca pode virar default oculto; `hard` permanece default e aparece em `resolved_defaults`.
+- penalidade deve ser canônica (mesma entrada ⇒ mesma penalidade) e versionada.
+
+Critério de pronto:
+- requests idênticos produzem o mesmo ranking/seleção sob `soft` (determinístico).
+```
+
+#### Template 25.7F — Explicação: pass/fail vs faixa/conjunto (incl. `resolved_range`)
+
+```md
+Implemente apenas a evolução de `explain_candidate_games` para reportar, por critério/filtro, o valor observado, a faixa/conjunto aplicado (incl. `resolved_range` quando houver `typical_range`) e o resultado (pass/fail ou penalidade).
+
+Referências obrigatórias:
+- docs/adrs/0019-criterios-por-faixa-e-cobertura-na-geracao-v1.md (eco + explicabilidade)
+- docs/mcp-tool-contract.md
+
+Arquivos esperados:
+- src/LotofacilMcp.Server/Tools/
+- src/LotofacilMcp.Application/UseCases/
+- tests/LotofacilMcp.ContractTests/
+
+Regras:
+- não inventar métricas “vetoriais” como restrição; usar apenas features escalares derivadas quando necessário (ex.: `top10_overlap_count`).
+
+Critério de pronto:
+- a explicação permite auditar por que um candidato passou/falhou (ou foi penalizado) em cada restrição.
+```
+
 ### Template 25.8 — Pacote de métricas prioritárias (slots/pares/blocos/estabilidade/outlier)
 
 ```md

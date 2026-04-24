@@ -530,6 +530,13 @@ Objetivo: fechar o ciclo de geração/explicação com rastreabilidade e determi
     - quando o cliente declarar `typical_range`, ecoar `resolved_range` e `coverage_observed` em `applied_configuration.resolved_defaults` (sem inferência silenciosa);
     - quando suportado, permitir `mode = hard | soft` (default explícito em `resolved_defaults`) para evitar colapso do espaço ao combinar muitas restrições;
     - expor um orçamento determinístico (ex.: `max_attempts`/pool multiplier) e ecoar contadores (`attempts_used`, `accepted_count`, rejeições agregadas) para suportar `count` alto.
+  - sequência recomendada (ADR 0019) para manter o recorte atômico:
+    - **20.1 — Contrato + validação estrutural**: aceitar `range`, `allowed_values`, `typical_range` e `mode` no request (sem remover o modo atual); rejeitar “modos mistos” com `INVALID_REQUEST`; normalizar `allowed_values` (ordem + dedup) e registrar em `resolved_defaults`.
+    - **20.2 — Resolvedor determinístico de `typical_range`**: implementar `iqr` e `percentile` (com `params`) sobre a janela declarada; retornar `resolved_range`, `coverage_observed` e `method_version` e ecoar tudo em `resolved_defaults`.
+    - **20.3 — Aplicação no motor de geração (hard)**: aplicar `range`/`allowed_values` como conjunto válido (pass/fail) sem enumerar combinações; garantir determinismo do lote com `count` e orçamento (`max_attempts`/pool multiplier).
+    - **20.4 — `mode="soft"` (quando suportado)**: definir penalidade determinística (canônica e versionada) e ecoar defaults/penalidades aplicadas em `resolved_defaults`; manter `mode="hard"` como default explícito.
+    - **20.5 — Explicabilidade**: atualizar `explain_candidate_games` para indicar, por critério, o valor observado, a faixa/conjunto (incl. `resolved_range`) e o resultado (pass/fail ou penalidade).
+    - **20.6 — Testes**: retrocompatibilidade (requests antigos), equivalência `range` vs (`min`,`max`) quando aplicável, determinismo (`deterministic_hash`) e eco completo de `resolved_defaults`.
 - `explain_candidate_games`:
   - ranking determinístico de estratégias e breakdown de métricas/exclusões com versões.
 
