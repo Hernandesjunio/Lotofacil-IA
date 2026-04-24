@@ -683,6 +683,36 @@ Critério mínimo de aceite:
 - uma pessoa sem contexto consegue executar o “primeiro uso” lendo apenas `getting-started` (sem abrir ADRs nem aprender nomes de tools);
 - o pedido “ajuda / liste ajuda” pode ser respondido por um bloco curto antes de listar o catálogo completo.
 
+### Fase 25 — Fechamento sistemático de GAPs do brief vs `src/` (ADR 0010–0018)
+
+Objetivo: fechar os GAPs levantados em `docs/brief-vs-src-gap-matrix.md` sem remover contratos públicos, implementando as capacidades expostas e reduzindo frustração no consumo do MCP.
+
+Norma:
+
+- [ADR 0010](adrs/0010-plano-de-fechamento-de-gaps-brief-vs-src-v1.md) (governança, clusters e definição de “gap fechado”)
+- ADRs por cluster: [0011](adrs/0011-tool-de-discovery-de-capacidades-por-build-v1.md) · [0012](adrs/0012-registro-unico-de-metricas-e-disponibilidade-por-rota-v1.md) · [0013](adrs/0013-janela-uniforme-por-extremos-em-todas-as-tools-v1.md) · [0014](adrs/0014-semantica-real-de-allow-pending-v1.md) · [0015](adrs/0015-estabilidade-em-subjanelas-para-associacoes-stability-check-v1.md) · [0016](adrs/0016-expansao-de-resumos-de-janela-e-padroes-v1.md) · [0017](adrs/0017-geracao-declarativa-de-candidatos-filtros-e-estrategias-v1.md) · [0018](adrs/0018-pacote-de-metricas-prioritarias-slots-pares-blocos-outliers-v1.md)
+
+Passos atômicos (recorte, em ordem recomendada):
+
+- **25.1 — Implementar discovery por build** (`discover_capabilities`) para publicar: métricas por rota, enums suportados, estratégias/filtros e modos de janela (ADR 0011). O objetivo é eliminar tentativa-e-erro antes de chamar tools de cálculo.
+- **25.2 — Introduzir registro único de métricas/capacidades** e derivar dele validações e allowlists (ADR 0012). A partir daqui, drift entre listas manuais deve ser tratado como bug.
+- **25.3 — Uniformizar janela por extremos em toda a superfície** (ADR 0013), alinhado ao ADR 0008 D2.
+- **25.4 — Dar semântica observável a `allow_pending`** (ADR 0014), com status explícito na discovery.
+- **25.5 — Implementar `stability_check` em associações** com saída `association_stability` determinística (ADR 0015), alinhado ao ADR 0006 D2.
+- **25.6 — Expandir resumos de janela/padrões** para cobrir features escalares prioritárias (ADR 0016).
+- **25.7 — Evoluir geração para contrato declarativo** (critérios/pesos/filtros/estratégias) com rastreabilidade completa (ADR 0017).
+- **25.8 — Implementar o pacote de métricas prioritárias** (slots, pares/ímpares, blocos, estabilidade/divergência, runs/outliers) com exposição e testes (ADR 0018).
+
+Restrições:
+
+- **B18 (ingestão CEF real) permanece congelado** enquanto não aprovado; não usar isso como dependência para fechar os demais GAPs (ver ADR 0010).
+
+Critério mínimo de aceite:
+
+- discovery lista a superfície real por build (métricas por rota, enums, estratégias);
+- o MCP deixa de “prometer e falhar” sem diagnóstico: gaps residuais ficam claros via discovery + erro canônico/determinístico;
+- cada cluster fechado cumpre a definição operacional do ADR 0010 (código + contrato + discovery + testes).
+
 Nota operacional: template para pedidos atômicos
 
 - Catálogo completo de **pedidos atômicos por fase** (0–20 do guia e **extensões** posteriores, ex.: Fase 21 alinhada ao [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md), Fase 22 ao [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md) e **Fase 23** ao [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md)): [fases-execucao-templates.md](fases-execucao-templates.md). O nome do ficheiro **não** fixa a quantidade de fases; novas entregas normativas podem acrescentar secções no mesmo padrão.

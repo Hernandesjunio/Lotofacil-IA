@@ -1352,3 +1352,197 @@ Critério de pronto:
 - (se implementado) `help` responde “ajuda” com um bloco curto antes do catálogo completo.
 ```
 
+## Fase 25 — ADR 0010–0018: fechamento sistemático de GAPs (brief vs `src/`)
+
+*Extensão pós–Fase 24. Norma: [ADR 0010](adrs/0010-plano-de-fechamento-de-gaps-brief-vs-src-v1.md) e ADRs 0011–0018. Objetivo: implementar o que já foi exposto no contrato público, reduzindo frustração no consumo do MCP, com discovery e erros canônicos/determinísticos. B18 (CEF) permanece congelado.*
+
+### Template 25.1 — Tool `discover_capabilities` (discovery por build)
+
+```md
+Implemente apenas a nova tool MCP `discover_capabilities` conforme [ADR 0011](adrs/0011-tool-de-discovery-de-capacidades-por-build-v1.md), retornando um JSON determinístico com a superfície real desta build (métricas por rota, enums suportados, estratégias de geração, métodos de busca e modos de janela).
+
+Referências obrigatórias:
+- docs/adrs/0011-tool-de-discovery-de-capacidades-por-build-v1.md
+- docs/adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md (D1, descoberta instância vs norma)
+- docs/mcp-tool-contract.md
+
+Arquivos esperados:
+- src/LotofacilMcp.Server/Tools/ (registro e handler da tool)
+- tests/LotofacilMcp.ContractTests/ (teste de contrato da tool)
+
+Regras:
+- não executar cálculo de métricas; retornar apenas metadados de capacidade.
+- a resposta deve ser determinística para a mesma build/config.
+
+Critério de pronto:
+- `discover_capabilities` aparece em `tools/list` e responde com payload estruturado válido.
+- teste(s) de contrato para a tool passam.
+```
+
+### Template 25.2 — Registro único de métricas/capacidades e derivação de allowlists
+
+```md
+Implemente apenas um registro único de métricas/capacidades (fonte de verdade) conforme [ADR 0012](adrs/0012-registro-unico-de-metricas-e-disponibilidade-por-rota-v1.md) e derive dele: allowlist de `compute_window_metrics`, allowlist de `summarize_window_aggregates`, compatibilidade para associações/composição e o conteúdo de `discover_capabilities`.
+
+Referências obrigatórias:
+- docs/adrs/0012-registro-unico-de-metricas-e-disponibilidade-por-rota-v1.md
+- docs/adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md (D1, `UNKNOWN_METRIC`/allowed_metrics)
+- docs/mcp-tool-contract.md
+
+Arquivos esperados:
+- src/LotofacilMcp.Application/ (catálogo/registro e validações)
+- src/LotofacilMcp.Server/Tools/ (uso do registro na superfície)
+- tests/LotofacilMcp.ContractTests/
+
+Regras:
+- remover drift entre listas divergentes; uma única fonte deve alimentar validação e discovery.
+- manter semântica de erro canônica e determinística.
+
+Critério de pronto:
+- `compute_window_metrics` e `summarize_window_aggregates` passam a depender do registro único.
+- `discover_capabilities` reflete exatamente o registro.
+```
+
+### Template 25.3 — Janela por extremos em todas as tools
+
+```md
+Implemente apenas a padronização de janela por extremos (`start_contest_id` + `end_contest_id` inclusivos) em todas as tools orientadas a janela conforme [ADR 0013](adrs/0013-janela-uniforme-por-extremos-em-todas-as-tools-v1.md) e [ADR 0008 D2](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md).
+
+Referências obrigatórias:
+- docs/adrs/0013-janela-uniforme-por-extremos-em-todas-as-tools-v1.md
+- docs/adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md (D2)
+- docs/mcp-tool-contract.md
+- docs/contract-test-plan.md (Fase B.2, se os testes já existirem)
+
+Arquivos esperados:
+- src/LotofacilMcp.Server/Tools/
+- src/LotofacilMcp.Application/Windows/
+- tests/LotofacilMcp.ContractTests/
+
+Regras:
+- rejeitar combinações ambíguas/incompatíveis com erro canônico.
+- manter paridade HTTP ↔ MCP onde aplicável.
+
+Critério de pronto:
+- todas as tools citadas na ADR 0013 aceitam extremos e retornam `window` coerente.
+```
+
+### Template 25.4 — Semântica de `allow_pending`
+
+```md
+Implemente apenas a semântica observável de `allow_pending` conforme [ADR 0014](adrs/0014-semantica-real-de-allow-pending-v1.md), habilitando métricas marcadas como `pending` apenas quando o opt-in estiver ativo e tornando isso visível em `discover_capabilities`.
+
+Referências obrigatórias:
+- docs/adrs/0014-semantica-real-de-allow-pending-v1.md
+- docs/adrs/0012-registro-unico-de-metricas-e-disponibilidade-por-rota-v1.md
+- docs/mcp-tool-contract.md
+
+Arquivos esperados:
+- src/LotofacilMcp.Application/Validation/
+- src/LotofacilMcp.Server/Tools/
+- tests/LotofacilMcp.ContractTests/
+
+Regras:
+- sem defaults ocultos: o comportamento deve variar apenas por request explícito.
+
+Critério de pronto:
+- com `allow_pending=false`, métricas pendentes falham com erro canônico.
+- com `allow_pending=true`, as mesmas métricas funcionam onde suportadas.
+```
+
+### Template 25.5 — Implementar `stability_check` em `analyze_indicator_associations`
+
+```md
+Implemente apenas o cálculo de `stability_check` (subjanelas determinísticas) e o preenchimento de `association_stability` conforme [ADR 0015](adrs/0015-estabilidade-em-subjanelas-para-associacoes-stability-check-v1.md), mantendo determinismo e rastreabilidade.
+
+Referências obrigatórias:
+- docs/adrs/0015-estabilidade-em-subjanelas-para-associacoes-stability-check-v1.md
+- docs/adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md (D2)
+- docs/mcp-tool-contract.md
+- docs/test-plan.md / docs/contract-test-plan.md (quando o cenário existir)
+
+Arquivos esperados:
+- src/LotofacilMcp.Domain/Analytics/
+- src/LotofacilMcp.Application/UseCases/
+- src/LotofacilMcp.Server/Tools/
+- tests/LotofacilMcp.ContractTests/
+
+Regras:
+- parâmetros de `stability_check` explícitos; sem defaults semânticos ocultos.
+
+Critério de pronto:
+- com `stability_check`, `association_stability` é retornado e determinístico.
+```
+
+### Template 25.6 — Expandir `summarize_window_patterns`
+
+```md
+Implemente apenas a expansão de `summarize_window_patterns` para múltiplas features escalares prioritárias conforme [ADR 0016](adrs/0016-expansao-de-resumos-de-janela-e-padroes-v1.md), mantendo validação e erros canônicos para casos incompatíveis.
+
+Referências obrigatórias:
+- docs/adrs/0016-expansao-de-resumos-de-janela-e-padroes-v1.md
+- docs/adrs/0007-agregados-canonicos-de-janela-v1.md (quando a alternativa for agregados)
+- docs/mcp-tool-contract.md
+
+Arquivos esperados:
+- src/LotofacilMcp.Application/UseCases/
+- src/LotofacilMcp.Application/Validation/
+- tests/LotofacilMcp.ContractTests/
+
+Regras:
+- não misturar escalar com vetorial sem agregação explícita.
+
+Critério de pronto:
+- features novas aceitas retornam resumo determinístico.
+- casos incompatíveis retornam erro canônico com orientação.
+```
+
+### Template 25.7 — Geração declarativa + filtros + múltiplas estratégias
+
+```md
+Implemente apenas a evolução do contrato de `generate_candidate_games` para suportar critérios/pesos/filtros declarativos e múltiplas estratégias públicas conforme [ADR 0017](adrs/0017-geracao-declarativa-de-candidatos-filtros-e-estrategias-v1.md), retornando `applied_configuration` para auditoria.
+
+Referências obrigatórias:
+- docs/adrs/0017-geracao-declarativa-de-candidatos-filtros-e-estrategias-v1.md
+- docs/adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md
+- docs/mcp-tool-contract.md
+- docs/generation-strategies.md
+
+Arquivos esperados:
+- src/LotofacilMcp.Application/UseCases/
+- src/LotofacilMcp.Server/Tools/
+- tests/LotofacilMcp.ContractTests/
+
+Regras:
+- determinismo obrigatório; defaults aplicados devem aparecer em `applied_configuration`.
+
+Critério de pronto:
+- é possível gerar candidatos com filtros configuráveis (não apenas explicar).
+- ao menos 2 estratégias públicas retornam resultados comparáveis na mesma janela.
+```
+
+### Template 25.8 — Pacote de métricas prioritárias (slots/pares/blocos/estabilidade/outlier)
+
+```md
+Implemente apenas o pacote de métricas prioritárias definido na [ADR 0018](adrs/0018-pacote-de-metricas-prioritarias-slots-pares-blocos-outliers-v1.md), em etapas pequenas (uma família por vez), garantindo exposição, discovery e testes de contrato para cada métrica promovida.
+
+Referências obrigatórias:
+- docs/adrs/0018-pacote-de-metricas-prioritarias-slots-pares-blocos-outliers-v1.md
+- docs/metric-catalog.md
+- docs/mcp-tool-contract.md
+- docs/test-plan.md / docs/contract-test-plan.md
+
+Arquivos esperados:
+- src/LotofacilMcp.Domain/Metrics/
+- src/LotofacilMcp.Application/Validation/
+- src/LotofacilMcp.Server/Tools/
+- tests/LotofacilMcp.ContractTests/
+
+Regras:
+- atualizar catálogo + testes + código juntos quando a semântica for entregue.
+- manter discovery coerente com a implementação real da build.
+
+Critério de pronto:
+- cada métrica entregue aparece em `compute_window_metrics` (quando aplicável) e em `discover_capabilities` com status correto.
+```
+
