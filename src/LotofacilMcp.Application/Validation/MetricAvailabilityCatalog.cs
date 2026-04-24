@@ -23,10 +23,10 @@ public static class MetricAvailabilityCatalog
 
         // Known by normative catalog but not implemented in this build
         new("intersecoes_multiplas", "1.0.0", "window", "count_list_by_dezena", "stable", false, false, false, false, false),
-        new("frequencia_blocos", "1.0.0", "window", "count_vector[5]", "stable", false, false, false, false, false),
-        new("ausencia_blocos", "1.0.0", "window", "count_vector[5]", "stable", false, false, false, false, false),
-        new("estado_atual_dezena", "1.0.0", "window", "count_list_by_dezena", "stable", false, false, false, false, false),
-        new("pares_impares", "1.0.0", "window", "count_pair", "stable", false, false, false, false, false),
+        new("frequencia_blocos", "1.0.0", "window", "count_list_by_dezena", "stable", true, true, false, false, false),
+        new("ausencia_blocos", "1.0.0", "window", "count_list_by_dezena", "stable", true, true, false, false, false),
+        new("estado_atual_dezena", "1.0.0", "window", "vector_by_dezena", "stable", true, true, false, false, false),
+        new("pares_impares", "1.0.0", "candidate_game", "count_pair", "stable", true, false, false, false, false),
         new("quantidade_vizinhos", "1.0.0", "window", "scalar", "stable", false, false, false, false, false),
         new("sequencia_maxima_vizinhos", "1.0.0", "window", "scalar", "stable", false, false, false, false, false),
         new("distribuicao_linha", "1.0.0", "window", "count_vector[5]", "stable", false, false, false, false, false),
@@ -34,9 +34,9 @@ public static class MetricAvailabilityCatalog
         new("entropia_linha", "1.0.0", "window", "scalar", "stable", false, false, false, false, false),
         new("entropia_coluna", "1.0.0", "window", "scalar", "stable", false, false, false, false, false),
         new("hhi_concentracao", "1.0.0", "window", "scalar", "stable", false, false, false, false, false),
-        new("matriz_numero_slot", "1.0.0", "window", "count_matrix[25x15]", "stable", false, false, false, false, false),
-        new("analise_slot", "1.0.0", "window", "count_list_by_dezena", "stable", false, false, false, false, false),
-        new("surpresa_slot", "1.0.0", "window", "scalar", "stable", false, false, false, false, false),
+        new("matriz_numero_slot", "1.0.0", "window", "count_matrix[25x15]", "stable", true, true, false, false, false),
+        new("analise_slot", "1.0.0", "candidate_game", "scalar", "stable", true, false, false, false, false),
+        new("surpresa_slot", "1.0.0", "candidate_game", "scalar", "stable", true, false, false, false, false),
         new("intersecao_conjunto_referencia", "1.0.0", "window", "scalar", "stable", false, false, false, false, false),
         new("media_janela", "1.0.0", "window", "scalar", "stable", false, false, false, false, false),
         new("desvio_padrao_janela", "1.0.0", "window", "scalar", "stable", false, false, false, false, false),
@@ -44,12 +44,12 @@ public static class MetricAvailabilityCatalog
         new("madn_janela", "1.0.0", "window", "scalar", "stable", false, false, false, false, false),
         new("mad_janela", "1.0.0", "window", "scalar", "stable", false, false, false, false, false),
         new("tendencia_linear", "1.0.0", "window", "scalar", "stable", false, false, false, false, false),
-        new("estabilidade_ranking", "1.0.0", "window", "count_list_by_dezena", "stable", false, false, false, false, false),
-        new("divergencia_kl", "1.0.0", "window", "scalar", "stable", false, false, false, false, false),
+        new("estabilidade_ranking", "1.0.0", "window", "scalar", "stable", true, true, false, false, false),
+        new("divergencia_kl", "1.0.0", "window", "scalar", "stable", true, false, false, false, false),
         new("zscore_repeticao", "1.0.0", "window", "series", "stable", false, false, false, false, false),
-        new("persistencia_atraso_extremo", "1.0.0", "window", "scalar", "stable", false, false, false, false, false),
-        new("estatistica_runs", "1.0.0", "window", "dimensionless_pair", "stable", false, false, false, false, false),
-        new("outlier_score", "1.0.0", "window", "scalar", "stable", false, false, false, false, false)
+        new("persistencia_atraso_extremo", "2.0.0", "window", "scalar", "stable", true, false, false, false, false),
+        new("estatistica_runs", "1.0.0", "candidate_game", "count_pair", "stable", true, false, false, false, false),
+        new("outlier_score", "1.0.0", "candidate_game", "scalar", "stable", true, false, false, false, false)
     ];
 
     private static readonly IReadOnlyDictionary<string, MetricCapability> RegistryByName =

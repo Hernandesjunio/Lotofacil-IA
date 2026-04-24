@@ -180,6 +180,16 @@ public sealed class ComputeWindowMetricsUseCase
             "Série do índice Herfindahl-Hirschman (HHI) da distribuição das dezenas pelas 5 linhas do volante, por concurso (HHI = soma (contagem_i/15)^2).",
         "hhi_coluna_por_concurso" =>
             "Série do índice Herfindahl-Hirschman (HHI) da distribuição das dezenas pelas 5 colunas do volante, por concurso (HHI = soma (contagem_i/15)^2).",
+        "matriz_numero_slot" =>
+            "Matriz dezena x slot (25x15), achatada por dezena e depois slot, com contagem de ocorrência após ordenação crescente canônica das dezenas em cada concurso.",
+        "frequencia_blocos" =>
+            "Lista de blocos consecutivos de presença por dezena, codificada de forma determinística como [dezena, quantidade_blocos, blocos...].",
+        "ausencia_blocos" =>
+            "Lista de blocos consecutivos de ausência por dezena, codificada de forma determinística como [dezena, quantidade_blocos, blocos...].",
+        "estado_atual_dezena" =>
+            "Estado corrente por dezena ao fim da janela: 0 quando saiu no último concurso da janela, ou atraso atual quando não saiu.",
+        "estabilidade_ranking" =>
+            "Persistência de ranking entre sub-janelas contíguas via Spearman normalizado em [0,1], com empates por average rank e partição determinística.",
         _ => "Metrica de janela."
     };
 }

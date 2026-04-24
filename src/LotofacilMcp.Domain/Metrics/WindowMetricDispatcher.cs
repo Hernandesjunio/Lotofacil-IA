@@ -22,7 +22,12 @@ public sealed class WindowMetricDispatcher
         HhiLinhaPorConcursoMetric hhiLinhaPorConcursoMetric,
         HhiColunaPorConcursoMetric hhiColunaPorConcursoMetric,
         AtrasoPorDezenaMetric atrasoPorDezenaMetric,
-        AssimetriaBlocosMetric assimetriaBlocosMetric)
+        AssimetriaBlocosMetric assimetriaBlocosMetric,
+        MatrizNumeroSlotMetric matrizNumeroSlotMetric,
+        FrequenciaBlocosMetric frequenciaBlocosMetric,
+        AusenciaBlocosMetric ausenciaBlocosMetric,
+        EstadoAtualDezenaMetric estadoAtualDezenaMetric,
+        EstabilidadeRankingMetric estabilidadeRankingMetric)
     {
         ArgumentNullException.ThrowIfNull(frequencyByDezenaMetric);
         ArgumentNullException.ThrowIfNull(top10MaisSorteadosMetric);
@@ -39,6 +44,11 @@ public sealed class WindowMetricDispatcher
         ArgumentNullException.ThrowIfNull(hhiColunaPorConcursoMetric);
         ArgumentNullException.ThrowIfNull(atrasoPorDezenaMetric);
         ArgumentNullException.ThrowIfNull(assimetriaBlocosMetric);
+        ArgumentNullException.ThrowIfNull(matrizNumeroSlotMetric);
+        ArgumentNullException.ThrowIfNull(frequenciaBlocosMetric);
+        ArgumentNullException.ThrowIfNull(ausenciaBlocosMetric);
+        ArgumentNullException.ThrowIfNull(estadoAtualDezenaMetric);
+        ArgumentNullException.ThrowIfNull(estabilidadeRankingMetric);
 
         _dispatchByMetricName = new Dictionary<string, Func<DrawWindow, WindowMetricValue>>(StringComparer.Ordinal)
         {
@@ -56,7 +66,12 @@ public sealed class WindowMetricDispatcher
             ["hhi_linha_por_concurso"] = hhiLinhaPorConcursoMetric.Compute,
             ["hhi_coluna_por_concurso"] = hhiColunaPorConcursoMetric.Compute,
             ["atraso_por_dezena"] = atrasoPorDezenaMetric.Compute,
-            ["assimetria_blocos"] = assimetriaBlocosMetric.Compute
+            ["assimetria_blocos"] = assimetriaBlocosMetric.Compute,
+            ["matriz_numero_slot"] = matrizNumeroSlotMetric.Compute,
+            ["frequencia_blocos"] = frequenciaBlocosMetric.Compute,
+            ["ausencia_blocos"] = ausenciaBlocosMetric.Compute,
+            ["estado_atual_dezena"] = estadoAtualDezenaMetric.Compute,
+            ["estabilidade_ranking"] = estabilidadeRankingMetric.Compute
         };
     }
 

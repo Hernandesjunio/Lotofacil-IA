@@ -485,7 +485,12 @@ public sealed class V0Tools
             new HhiLinhaPorConcursoMetric(),
             new HhiColunaPorConcursoMetric(),
             new AtrasoPorDezenaMetric(),
-            new AssimetriaBlocosMetric());
+            new AssimetriaBlocosMetric(),
+            new MatrizNumeroSlotMetric(),
+            new FrequenciaBlocosMetric(),
+            new AusenciaBlocosMetric(),
+            new EstadoAtualDezenaMetric(),
+            new EstabilidadeRankingMetric());
         _computeWindowMetricsUseCase = new ComputeWindowMetricsUseCase(
             fixtureProvider,
             datasetVersionService,
