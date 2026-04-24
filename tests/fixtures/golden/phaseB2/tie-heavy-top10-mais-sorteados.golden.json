@@ -1,0 +1,12 @@
+{
+  "fixture_file": "tie_heavy.json",
+  "end_contest_id": 5005,
+  "window_size": 5,
+  "metric_name": "top10_mais_sorteados",
+  "metric_version": "1.0.0",
+  "shape": "dezena_list[10]",
+  "scope": "window",
+  "unit": "dimensionless",
+  "notes": "Tabela 2 (metric-catalog.md): ordenar frequencia_por_dezena desc, empate por dezena asc, top 10. Nesta janela as dezenas 11..25 têm a mesma frequência máxima; as dez menores nesse bloco (11..20) entram após o desempate.",
+  "expected_dezena_top10": [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+}
