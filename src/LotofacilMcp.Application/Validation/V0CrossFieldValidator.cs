@@ -992,14 +992,15 @@ public sealed class V0CrossFieldValidator
             }
         }
 
-        if (totalCount > 250)
+        if (totalCount > GenerationRequestLimits.MaxSumPlanCountPerRequest)
         {
             throw new ApplicationValidationException(
                 code: "PLAN_BUDGET_EXCEEDED",
-                message: "total planned count exceeds maximum budget of 250.",
+                message: $"total planned count exceeds maximum budget of {GenerationRequestLimits.MaxSumPlanCountPerRequest}; split into additional requests (multiple rounds) for larger volume.",
                 details: new Dictionary<string, object?>
                 {
-                    ["total_count"] = totalCount
+                    ["total_count"] = totalCount,
+                    ["max_sum_plan_count_per_request"] = GenerationRequestLimits.MaxSumPlanCountPerRequest
                 });
         }
     }

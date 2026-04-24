@@ -7,6 +7,7 @@ using LotofacilMcp.Application.Windows;
 using LotofacilMcp.Domain.Analytics;
 using LotofacilMcp.Domain.Metrics;
 using LotofacilMcp.Domain.Normalization;
+using LotofacilMcp.Domain.Generation;
 using LotofacilMcp.Domain.Windows;
 using LotofacilMcp.Infrastructure.CanonicalJson;
 using LotofacilMcp.Infrastructure.DatasetVersioning;
@@ -313,10 +314,19 @@ public sealed record GenerationStrategyEnvelope(
     [property: JsonPropertyName("name")] string Name,
     [property: JsonPropertyName("version")] string Version);
 
+public sealed record SearchMethodSeedPolicyEnvelope(
+    [property: JsonPropertyName("search_method")] string SearchMethod,
+    [property: JsonPropertyName("seed_required_for_replay_guaranteed")]
+    bool SeedRequiredForReplayGuaranteed);
+
 public sealed record GenerationCapabilitiesEnvelope(
     [property: JsonPropertyName("strategies")] IReadOnlyList<GenerationStrategyEnvelope> Strategies,
     [property: JsonPropertyName("search_methods")] IReadOnlyList<string> SearchMethods,
-    [property: JsonPropertyName("supported_filters")] IReadOnlyList<string> SupportedFilters);
+    [property: JsonPropertyName("supported_filters")] IReadOnlyList<string> SupportedFilters,
+    [property: JsonPropertyName("max_sum_plan_count_per_request")] int MaxSumPlanCountPerRequest,
+    [property: JsonPropertyName("supported_generation_modes")] IReadOnlyList<string> SupportedGenerationModes,
+    [property: JsonPropertyName("request_seed_optional")] bool RequestSeedOptional,
+    [property: JsonPropertyName("seed_by_search_method")] IReadOnlyList<SearchMethodSeedPolicyEnvelope> SeedBySearchMethod);
 
 public sealed record DiscoverCapabilitiesResponse(
     [property: JsonPropertyName("tool_version")] string ToolVersion,
@@ -531,7 +541,7 @@ public sealed class V0Tools
     private readonly DeterministicHashService _deterministicHashService;
     private readonly string _fixturePath;
     private const string HelpToolVersion = "1.0.0";
-    private const string DiscoverCapabilitiesToolVersion = "1.0.0";
+    private const string DiscoverCapabilitiesToolVersion = "1.1.0";
 
     public V0Tools(string? fixturePath = null)
     {
@@ -830,11 +840,12 @@ public sealed class V0Tools
                     {
                         ["strategy_name"] = ["common_repetition_frequency", "declared_composite_profile"],
                         ["search_method"] = ["exhaustive", "sampled", "greedy_topk"],
+                        ["generation_mode"] = [GenerationModes.RandomUnrestricted, GenerationModes.BehaviorFiltered],
                         ["plan.criteria"] = ["name", "value|range|allowed_values|typical_range", "mode"],
                         ["plan.weights"] = ["name", "weight"],
                         ["plan.filters"] = ["name", "value|min|max|range|allowed_values|typical_range", "mode", "version"]
                     },
-                    Capabilities: "Generates deterministic candidate games from supported strategy plans."),
+                    Capabilities: "Generates candidate games; max sum of plan count per request, generation modes, and seed policy follow generation envelope."),
                 new ToolCapabilityEnvelope(
                     Name: "explain_candidate_games",
                     ToolVersion: ExplainCandidateGamesUseCase.ToolVersion,
@@ -871,6 +882,19 @@ public sealed class V0Tools
                     "repeat_range",
                     "min_slot_alignment",
                     "max_outlier_score"
+                ],
+                MaxSumPlanCountPerRequest: GenerationRequestLimits.MaxSumPlanCountPerRequest,
+                SupportedGenerationModes:
+                [
+                    GenerationModes.RandomUnrestricted,
+                    GenerationModes.BehaviorFiltered
+                ],
+                RequestSeedOptional: true,
+                SeedBySearchMethod:
+                [
+                    new SearchMethodSeedPolicyEnvelope("exhaustive", SeedRequiredForReplayGuaranteed: false),
+                    new SearchMethodSeedPolicyEnvelope("greedy_topk", SeedRequiredForReplayGuaranteed: true),
+                    new SearchMethodSeedPolicyEnvelope("sampled", SeedRequiredForReplayGuaranteed: true)
                 ]));
 
         var deterministicHash = _deterministicHashService.Compute(
