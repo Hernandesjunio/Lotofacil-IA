@@ -274,6 +274,7 @@ public sealed record ToolCapabilityEnvelope(
 
 public sealed record MetricsCapabilitiesEnvelope(
     [property: JsonPropertyName("implemented_metric_names")] IReadOnlyList<string> ImplementedMetricNames,
+    [property: JsonPropertyName("pending_metric_names")] IReadOnlyList<string> PendingMetricNames,
     [property: JsonPropertyName("compute_window_metrics_allowed")] IReadOnlyList<string> ComputeWindowMetricsAllowed,
     [property: JsonPropertyName("summarize_window_aggregates_allowed_sources")] IReadOnlyList<string> SummarizeWindowAggregatesAllowedSources,
     [property: JsonPropertyName("association_allowed_indicators")] IReadOnlyList<string> AssociationAllowedIndicators);
@@ -548,7 +549,10 @@ public sealed class V0Tools
         var implementedMetricNames = MetricAvailabilityCatalog.GetImplementedMetricNames()
             .OrderBy(static metric => metric, StringComparer.Ordinal)
             .ToArray();
-        var computeWindowAllowed = MetricAvailabilityCatalog.GetComputeWindowMetricsAllowedMetrics()
+        var pendingMetricNames = MetricAvailabilityCatalog.GetPendingMetricNames()
+            .OrderBy(static metric => metric, StringComparer.Ordinal)
+            .ToArray();
+        var computeWindowAllowed = MetricAvailabilityCatalog.GetComputeWindowMetricsAllowedMetrics(allowPending: false)
             .OrderBy(static metric => metric, StringComparer.Ordinal)
             .ToArray();
         var summarizeAllowedSources = MetricAvailabilityCatalog.GetSummarizeWindowAggregatesAllowedSources()
@@ -597,6 +601,7 @@ public sealed class V0Tools
                     SupportedParameters: new Dictionary<string, IReadOnlyList<string>>
                     {
                         ["window_modes"] = ["window_size+end_contest_id", "start_contest_id+end_contest_id"],
+                        ["allow_pending"] = ["false", "true"],
                         ["metric_names"] = computeWindowAllowed
                     },
                     Capabilities: "Computes cataloged metrics allowed in this build for a resolved window."),
@@ -688,6 +693,7 @@ public sealed class V0Tools
             ],
             Metrics: new MetricsCapabilitiesEnvelope(
                 ImplementedMetricNames: implementedMetricNames,
+                PendingMetricNames: pendingMetricNames,
                 ComputeWindowMetricsAllowed: computeWindowAllowed,
                 SummarizeWindowAggregatesAllowedSources: summarizeAllowedSources,
                 AssociationAllowedIndicators: associationAllowedIndicators),

@@ -27,6 +27,7 @@ public sealed class Phase23DiscoverCapabilitiesContractTests
         Assert.Contains(payloadA.Tools, tool => tool.Name is "generate_candidate_games");
 
         Assert.Contains(payloadA.Metrics.ImplementedMetricNames, name => name is "frequencia_por_dezena");
+        Assert.Contains(payloadA.Metrics.PendingMetricNames, name => name is "repeticao_concurso_anterior");
         Assert.Contains(payloadA.Metrics.ComputeWindowMetricsAllowed, name => name is "frequencia_por_dezena");
         Assert.DoesNotContain(payloadA.Metrics.ComputeWindowMetricsAllowed, name => name is "repeticao_concurso_anterior");
         Assert.Contains(payloadA.Metrics.SummarizeWindowAggregatesAllowedSources, name => name is "repeticao_concurso_anterior");

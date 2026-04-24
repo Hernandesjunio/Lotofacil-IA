@@ -116,6 +116,15 @@ public sealed class V0CrossFieldValidator
                     "requested metric is known in the catalog but unavailable in this compute_window_metrics build.",
                     MetricAvailabilityCatalog.GetComputeWindowMetricsAllowedMetrics());
             }
+
+            if (MetricAvailabilityCatalog.IsPendingMetric(metric.Name) && !input.AllowPending)
+            {
+                throw CreateUnknownMetricForRoute(
+                    metric.Name,
+                    "requested metric is pending and requires allow_pending opt-in.",
+                    MetricAvailabilityCatalog.GetComputeWindowMetricsAllowedMetrics(allowPending: false),
+                    reason: "pending_requires_opt_in");
+            }
         }
     }
 
@@ -917,7 +926,8 @@ public sealed class V0CrossFieldValidator
     private static ApplicationValidationException CreateUnknownMetricForRoute(
         string metricName,
         string message,
-        IReadOnlyList<string>? allowedMetrics = null)
+        IReadOnlyList<string>? allowedMetrics = null,
+        string? reason = null)
     {
         var details = new Dictionary<string, object?>
         {
@@ -927,6 +937,11 @@ public sealed class V0CrossFieldValidator
         if (allowedMetrics is not null)
         {
             details["allowed_metrics"] = allowedMetrics.ToArray();
+        }
+
+        if (!string.IsNullOrWhiteSpace(reason))
+        {
+            details["reason"] = reason;
         }
 
         return new ApplicationValidationException(

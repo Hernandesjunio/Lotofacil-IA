@@ -82,10 +82,30 @@ public sealed class V0Phase6ContractTests
         var error = Assert.IsType<ContractErrorEnvelope>(response).Error;
         Assert.Equal("UNKNOWN_METRIC", error.Code);
         Assert.Equal("repeticao_concurso_anterior", error.Details["metric_name"]);
+        Assert.Equal("pending_requires_opt_in", error.Details["reason"]);
 
         var allowedMetrics = Assert.IsType<string[]>(error.Details["allowed_metrics"]);
         Assert.Contains("frequencia_por_dezena", allowedMetrics);
         Assert.DoesNotContain("repeticao_concurso_anterior", allowedMetrics);
+    }
+
+    [Fact]
+    public void ComputeWindowMetrics_WithPendingMetricAndAllowPendingTrue_ReturnsMetricValue()
+    {
+        var sut = new V0Tools();
+        var request = new ComputeWindowMetricsRequest(
+            WindowSize: 3,
+            EndContestId: 1003,
+            Metrics: [new MetricRequest("repeticao_concurso_anterior")],
+            AllowPending: true);
+
+        var response = sut.ComputeWindowMetrics(request);
+
+        var payload = Assert.IsType<ComputeWindowMetricsResponse>(response);
+        var metric = Assert.Single(payload.Metrics);
+        Assert.Equal("repeticao_concurso_anterior", metric.MetricName);
+        Assert.Equal("series", metric.Scope);
+        Assert.Equal("series", metric.Shape);
     }
 
     [Fact]
