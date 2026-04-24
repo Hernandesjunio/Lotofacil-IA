@@ -53,7 +53,7 @@ Os documentos centrais dessa metodologia são:
 - [docs/vertical-slice.md](docs/vertical-slice.md) — primeira fatia obrigatória
 - [docs/contract-test-plan.md](docs/contract-test-plan.md) — ordem inicial de execução
 - [docs/spec-driven-execution-guide.md](docs/spec-driven-execution-guide.md) — passo a passo operacional
-- [docs/fases-execucao-templates.md](docs/fases-execucao-templates.md) — pedidos atômicos por fase (inclui extensões após a numeração 0–20 do guia, ex. ADR 0006)
+- [docs/fases-execucao-templates.md](docs/fases-execucao-templates.md) — pedidos atômicos por fase (inclui extensões após a numeração 0–20 do guia, ex. ADR 0006, ADR 0007, [ADR 0008](docs/adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md))
 
 ## Como executar no host MCP (stdio)
 

@@ -38,6 +38,7 @@ Referências normativas:
 - [ADR 0005](adrs/0005-transporte-mcp-e-superficie-tools-v1.md)
 - [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md)
 - [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md)
+- [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md)
 
 ## Regra operacional principal
 
@@ -564,9 +565,44 @@ Critério mínimo de aceite:
 - implementação passa nos testes da fase 22 sem defaults ocultos;
 - paridade MCP/HTTP e evidências de fixture/golden estão registradas.
 
+### Fase 23: Descoberta híbrida, janela por extremos e mapeamento legado Top 10 (ADR 0008) em sequência spec-first
+
+Objetivo: cumprir [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) — *superfície de instância* (allowlist, erros com `details`) *vs.* *norma* (catálogo em `docs/`, resources MCP opcionais), equivalência **concurso inicial / final (inclusivos)** ↔ `window_size` + `end_contest_id`, e mapeamento normativo do export `HistoricoTop10MaisSorteados` → `top10_mais_sorteados@1.0.0` **só** sobre a janela declarada, **sem** reproduzir «últimos N» fixos de UI legada (D4).
+
+Sequência obrigatória (não pular etapas):
+
+1. **23.1 — Fechamento e revisão coordenada de documentação (antes de ampliar código)**
+   - Garantir que [mcp-tool-contract.md](mcp-tool-contract.md) (entidade `Window`, secção *Prompts e Resources*, invariantes de janela), [metric-catalog.md](metric-catalog.md) (secções *Janela por extremos*, *HistoricoTop10MaisSorteados*, *QtdFrequencia*) e [metric-glossary.md](metric-glossary.md) estão alinhados ao ADR e entre si.
+   - Atualizar [contract-test-plan.md](contract-test-plan.md) com a **Fase B.2** (matriz mínima para janela, ambiguidade e `top10_mais_sorteados`).
+   - Religar às [templates — Fase 21](fases-execucao-templates.md) (secção *Fase 21 - ADR 0006*) e ao [ADR 0006 D1](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) onde a descoberta exigir `allowed_metrics` ou pistas em erros — **não** usar o [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md) para substituir decisões de descoberta ou Top 10 (o 0007 permanece agregados).
+2. **23.2 — Testes de contrato vermelhos (janela, rejeição, ranking)**
+   - Escrever testes que falhem até a implementação existir: equivalência numérica entre as duas formas de janela quando o protocolo as suportar; combinação **ambígua** → `INVALID_REQUEST` (ou código fechado no contrato); `top10_mais_sorteados@1.0.0` reprodutível e alinhado à Tabela 2 do catálogo (p.ex. fixture `tie_heavy.json` para empates).
+3. **23.3 — Implementação mínima alinhada ao recorte**
+   - Resolver a janela no pedido de forma **única** e auditável: aceitar só `window_size` + `end_contest_id` **ou** estender o JSON com `start_contest_id` / `end_contest_id` se o contrato o permitir, desde que a equivalência de D2 seja a mesma.
+   - Garantir `compute_window_metrics` (e tools com janela) coerentes com a resolução; manter a proibição de defaults temporais ocultos.
+4. **23.4 — Evidências e superfície opcional**
+   - Paridade MCP ↔ HTTP para sucesso e erro nos casos do 23.2, quando a tool estiver exposta em ambos.
+   - *Opcional* nesta fatia: expor **MCP Resources** (ou manter injeção de `docs/` no cliente) sem duplicar allowlist; o nome exato de uma tool dedicada a listar superfície **não** é exigido pelo ADR enquanto a semântica de D1 for respeitada e o [mcp-tool-contract.md](mcp-tool-contract.md) for atualizado em conjunto (ver *Não decisão* no ADR 0008).
+
+Referências obrigatórias:
+
+- [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md)
+- [mcp-tool-contract.md](mcp-tool-contract.md)
+- [metric-catalog.md](metric-catalog.md)
+- [metric-glossary.md](metric-glossary.md)
+- [contract-test-plan.md](contract-test-plan.md) (Fase B.2)
+- [test-plan.md](test-plan.md)
+- [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) (cruzamento com `details` / allowlist)
+- [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md) (apenas para **não** confundir agregados com descoberta/Top 10)
+
+Critério mínimo de aceite:
+
+- testes da Fase B.2 passam quando a build implementa o recorte; nenhum documento normativo contradiz D1–D6 do ADR 0008;
+- janela e `top10_mais_sorteados` são rastreáveis ao recorte que o **chamador** declara; paridade de transporte documentada para os casos de evidência.
+
 Nota operacional: template para pedidos atômicos
 
-- Catálogo completo de **pedidos atômicos por fase** (0–20 do guia e **extensões** posteriores, ex.: Fase 21 alinhada ao [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) e Fase 22 alinhada ao [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md)): [fases-execucao-templates.md](fases-execucao-templates.md). O nome do ficheiro **não** fixa a quantidade de fases; novas entregas normativas podem acrescentar secções no mesmo padrão.
+- Catálogo completo de **pedidos atômicos por fase** (0–20 do guia e **extensões** posteriores, ex.: Fase 21 alinhada ao [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md), Fase 22 ao [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md) e **Fase 23** ao [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md)): [fases-execucao-templates.md](fases-execucao-templates.md). O nome do ficheiro **não** fixa a quantidade de fases; novas entregas normativas podem acrescentar secções no mesmo padrão.
 - O template abaixo pode (e deve) ser usado para gerar “pedidos atômicos” para implementação, mantendo o fluxo spec-driven:
 
 ```md
@@ -669,6 +705,8 @@ Mudanças que introduzam ou alterem **agregados canônicos** (histogramas, padr�
 - testes de contrato (incl. determinismo e ordenação canônica) antes da implementação;
 - fixtures/goldens para agregados quando o payload for estável e auditável.
 
+Mudanças em **descoberta para consumidores** (norma *vs.* allowlist por build), **janela por concurso inicial e final (inclusivos)**, mapeamento **`HistoricoTop10MaisSorteados` → `top10_mais_sorteados`**, ou **rótulos de export legado** (`QtdFrequencia`, *etc.*) devem seguir o [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) em conjunto com [mcp-tool-contract.md](mcp-tool-contract.md), [metric-catalog.md](metric-catalog.md), [metric-glossary.md](metric-glossary.md) e [contract-test-plan.md](contract-test-plan.md) (Fase B.2), e cruzar [ADR 0006 D1](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) quando a entrega tocar em `details.allowed_metrics` ou erros ricos. Executar a Fase 23 (secção homónima neste documento e as [templates — Fase 23](fases-execucao-templates.md#fase-23-adr-0008-descoberta-janela-por-extremos-e-mapeamento-legado) em *fases-execucao-templates*) na mesma lógica spec → teste → código.
+
 Se durante esse ciclo surgir desalinhamento explícito entre spec e implementação, interromper a fatia atual e executar a [Fase 12](#fase-12-correção-de-drift-desalinhamento-spec--implementação) antes de seguir.
 
 Além dessa ordem operacional, a progressão de conteúdo deve ir do mais simples para o mais complexo:
@@ -721,6 +759,7 @@ Criar novo documento apenas quando houver pergunta concreta que os atuais não r
 - Arquitetura congelada no [ADR 0004](adrs/0004-estrutura-arquitetural-inicial-mcp-dotnet10.md)
 - Superfície MCP + rollout de tools conforme [ADR 0005](adrs/0005-transporte-mcp-e-superficie-tools-v1.md) (quando pós-V0)
 - Inter-tool, disponibilidade, pipeline, GAPS: [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) quando a entrega mexe nesses temas
+- Descoberta (instância *vs.* norma), janela por extremos, mapeamento legado Top 10 / export: [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) e a Fase 23 (guia + [templates](fases-execucao-templates.md#fase-23-adr-0008-descoberta-janela-por-extremos-e-mapeamento-legado)) quando a entrega mexe nesses temas
 - V0 confirmada em [vertical-slice.md](vertical-slice.md)
 - Ordem de teste confirmada em [contract-test-plan.md](contract-test-plan.md)
 - Métrica inicial confirmada em [metric-catalog.md](metric-catalog.md)

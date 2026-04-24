@@ -2,7 +2,7 @@
 
 **Navegação:** [← Brief (índice)](brief.md) · [README](../README.md)
 
-Fonte de verdade semântica das métricas da V1 ampliada. Alinha-se a [mcp-tool-contract.md](mcp-tool-contract.md), [generation-strategies.md](generation-strategies.md) e aos ADRs [0001](adrs/0001-fechamento-semantico-e-determinismo-v1.md), [0002](adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md) e [0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) (disponibilidade por rota, pipeline, correlação pares–entropia canónica em testes).
+Fonte de verdade semântica das métricas da V1 ampliada. Alinha-se a [mcp-tool-contract.md](mcp-tool-contract.md), [generation-strategies.md](generation-strategies.md) e aos ADRs [0001](adrs/0001-fechamento-semantico-e-determinismo-v1.md), [0002](adrs/0002-composicao-analitica-e-filtros-estruturais-v1.md), [0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) (disponibilidade por rota, pipeline, correlação pares–entropia canónica em testes) e [0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) (janela por extremos, descoberta, mapeamento legado Top 10).
 
 Para **interpretação em linguagem simples**, **o que cada métrica observa** e **exemplos de uso** por nome, ver [metric-glossary.md](metric-glossary.md) (complemento pedagógico; fórmulas e versões permanecem aqui).
 
@@ -110,10 +110,38 @@ Os campos da Tabela 1 e seus valores controlados estão definidos na seção **L
 | "Persistência" significa regularidade observada na janela ou no histórico declarado; não implica previsão. | Alinha linguagem do projeto ao escopo não preditivo do [brief](brief.md). |
 | Séries temporais obtidas a partir dos concursos continuam com `scope = "series"`; o catálogo não reintroduz `scope = "draw"`. | Consistência com o contrato MCP até existir métrica canônica com escopo `draw` (ADR 0001 D13). |
 
+## Janela por extremos (equivalência normativa)
+
+Quando o consumidor expressa o recorte como **concurso inicial e final** (inclusivos e contíguos no dataset canónico), a resolução do comprimento e do ancoramento segue [ADR 0008 D2](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md):
+
+- `end_contest_id` = extremo **mais recente** do recorte;
+- `window_size` = `end_contest_id - start_contest_id + 1`.
+
+O *request* do contrato pode expor apenas `window_size` + `end_contest_id` ou estender o JSON com `start_contest_id` / `end_contest_id` desde que a janela resultante seja a mesma e o servidor rejeite combinações ambíguas com o código apropriado (ver [mcp-tool-contract.md](mcp-tool-contract.md), entidade `Window` e validações).
+
+## Rótulo de export legado `HistoricoTop10MaisSorteados`
+
+*Exports* de sistemas de UI anteriores podem usar rótulos que sugerem “histórico” e regras temporais múltiplas. **No domínio canónico deste repositório,** a substituição do conceito “dez dezenas mais sorteadas **no intervalo de concursos que o utilizador declara**” é a métrica `top10_mais_sorteados@1.0.0` (Tabelas 1 e 2), calculada **só** sobre a janela resolvida acima. Séries com lookback móvel, top-K *rolling* ou outras regras **não** reutilizam este rótulo; exigem nova entrada no catálogo com `Nome`, `params` e `Versão` próprios. Ver [ADR 0008 D3](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md).
+
+## Rótulo de export legado `QtdFrequencia` (vector 1..25 em gráfico)
+
+O *export* `QtdFrequencia` (p.ex. em `indicadores.json` referência do repositório) contém, por posição 1..25, **contagens de ocorrência** da dezena na janela de análise (valores inteiros não negativos pequenos, soma plausível = `15 × window_size` quando a métrica é frequência de presença por sorteio). **A substituição canónica no MCP é** `frequencia_por_dezena@1.0.0` (`scope=window`, `shape=vector_by_dezena`) com a janela explícita ([ADR 0008 D2](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md)).
+
+- **Não** confundir com a métrica `atraso_por_dezena` (também `vector_by_dezena`, mas a unidade semântica é *concursos desde a última ocorrência*, não contagens de saída na janela). Para **atraso**, o pedido deve usar `atraso_por_dezena@1.0.0` com a política de *Janela* e `params` descritas na Tabela 2, não `frequencia_por_dezena`.
+
+## Subcampos de `PadroesLinha` (legado) sem linha na Tabela 1
+
+O bloco `PadroesLinha` de *exports* antigos pode incluir:
+
+- **`Dados`**, **`Ultimos200PadroesSorteados`**: alimentados por `distribuicao_linha_por_concurso` e, quando aplicável, agregados canónicos ([ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md));
+- **`PercentualExistente`**: regra e unidade **não** fechadas nesta versão do catálogo; **não** há métrica canónica com esse nome. Qualquer reimplementação exige proposta (nome, fórmula, `version`, testes) ou fica **fora do escopo** do MCP até decisão;
+- **`ListaComparacaoHistorica`**: vector booleano *ad hoc* **sem** definição normativa no catálogo; **não** é mapeamento 1:1 a uma métrica canónica. Até existir definição fechada, tratar como dado de UI/legado, não como `MetricValue`.
+
 ## Disponibilidade normativa (catálogo × `compute_window_metrics`)
 
 - **O catálogo (Tabelas 1 e 2)** indica o que a métrica *é*; a tool `compute_window_metrics` indica o que uma **build** *expõe* em JSON, para uma janela explícita. A matriz e o padrão de *promoção* estão em [ADR 0006 D1](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md).  
 - **Agregados canônicos de janela:** estruturas derivadas como histogramas, top-k de padrões e matrizes auxiliares **não** são “métricas novas” do catálogo; elas são produzidas por `summarize_window_aggregates` (ver [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md) e [mcp-tool-contract.md](mcp-tool-contract.md)). A mesma lógica de disponibilidade por build/rota se aplica: se a métrica fonte necessária não estiver disponível na build, a tool de agregados deve falhar de forma rastreável (ver ADR 0006 D1).
+- **Descoberta e rótulos de export (UI legado):** ver [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) (janela por extremos, `HistoricoTop10MaisSorteados` → `top10_mais_sorteados`).
 - **Recorte mínimo (V0 documental):** a [vertical-slice.md](vertical-slice.md) exige, para a primeira fatia, **sucesso** apenas de `frequencia_por_dezena@1.0.0` por `compute_window_metrics`. Nomes canónicos adicionais nessa tabela, quando pedidos antes de serem ligados a esta rota na build, justificam resposta de erro de contrato documentada (`UNKNOWN_METRIC` com `details`), não ambiguidade.  
 - **V1 alvo (contrato expandido):** `compute_window_metrics` aplica a todas as métricas cujo `Janela` e `Scope` forem coerentes com a Tabela 1, com paridade ao [mcp-tool-contract.md](mcp-tool-contract.md).  
 - **Coesão:** métricas consumidas em [generation-strategies.md](generation-strategies.md) ou explicadas em `explain_candidate_games` devem confluir, ao longo dos incrementos, com a mesma disponibilidade canónica; até lá, o plano de testes reforça testes de GAPS (ver [test-plan.md](test-plan.md) e [contract-test-plan.md](contract-test-plan.md)).

@@ -33,7 +33,7 @@ Validam o cálculo matemático puro em janelas sintéticas pequenas, com valores
 
 ### 2. Testes de contrato
 
-Validam schema de input/output, `shape`, `scope`, `unit`, `version`, erros e determinismo do payload.
+Validam schema de input/output, `shape`, `scope`, `unit`, `version`, erros e determinismo do payload. A ordem de entrega e as matrizes **Fase B.1** (agregados) e **Fase B.2** (janela por extremos, `top10` e legado de export, [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md)) estão em [contract-test-plan.md](contract-test-plan.md).
 
 ### 3. Testes de integração
 

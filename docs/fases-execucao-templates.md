@@ -2,7 +2,7 @@
 
 **Navegação:** [← Brief (índice)](brief.md) · [spec-driven-execution-guide.md](spec-driven-execution-guide.md)
 
-Este documento transforma as fases do [spec-driven-execution-guide.md](spec-driven-execution-guide.md) (numeradas 0 a 20 no guia) em **pedidos atômicos** prontos para uso com IA, preservando o formato normativo de template. A **contagem de fases no guia não é teto** — secções adicionais (a partir da *Fase 21* abaixo) estendem o roteiro quando surgem entregas normativas (ex.: [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) e [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md)) sem reabrir a numeração fechada do guia; novas fases seguem o **mesmo padrão** (bloco `Implemente apenas…`, referências, arquivos, regras, critério de pronto).
+Este documento transforma as fases do [spec-driven-execution-guide.md](spec-driven-execution-guide.md) (numeradas 0 a 20 no guia) em **pedidos atômicos** prontos para uso com IA, preservando o formato normativo de template. A **contagem de fases no guia não é teto** — secções adicionais (a partir da *Fase 21* abaixo) estendem o roteiro quando surgem entregas normativas (ex.: [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md), [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md) e [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md), incluindo a [Fase 23](#fase-23-adr-0008-descoberta-janela-por-extremos-e-mapeamento-legado) para o 0008) sem reabrir a numeração fechada do guia; novas fases seguem o **mesmo padrão** (bloco `Implemente apenas…`, referências, arquivos, regras, critério de pronto). A Fase 23 do [guia de execução](spec-driven-execution-guide.md) (secção *Fase 23: Descoberta híbrida…*) e esta secção cobrem a mesma entrega normativa.
 
 ## Fase 0 - Congelar a base
 
@@ -1155,3 +1155,112 @@ Critério de pronto:
 - determinismo (`deterministic_hash`) permanece estável para requests repetidos;
 - fixtures/goldens de agregados ficam rastreáveis e coerentes com o contrato.
 ```
+
+## Fase 23 - ADR 0008: descoberta, janela por extremos e mapeamento legado
+
+*Extensão pós–Fase 20. Norma: [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md). Alinha [mcp-tool-contract.md](mcp-tool-contract.md), [metric-catalog.md](metric-catalog.md), [metric-glossary.md](metric-glossary.md), [contract-test-plan.md](contract-test-plan.md) (Fase B.2) e, onde couber, [ADR 0006 D1](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) (erros com `details` / allowlist) na mesma entrega lógica quando a implementação acompanhar. Não confundir com o [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md) (agregados canônicos). Espelha a [Fase 23 do guia](spec-driven-execution-guide.md).*
+
+### Template 23.1 - Revisão de docs e plano de testes (Fase B.2) sem implementação nova
+
+```md
+Implemente apenas a coordenação de documentação: confirmar alinhamento entre [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md), [mcp-tool-contract.md](mcp-tool-contract.md) (entidade `Window`, *Prompts e Resources*), [metric-catalog.md](metric-catalog.md) (janela por extremos, `HistoricoTop10MaisSorteados`, `QtdFrequencia`) e [metric-glossary.md](metric-glossary.md); acrescentar ou ajustar a matriz **Fase B.2** em [contract-test-plan.md](contract-test-plan.md) para janela, ambiguidade e `top10_mais_sorteados`. Não codar resolução de janela nem tool de listagem além do que o ADR e o contrato fecharem.
+
+Referências obrigatórias:
+- docs/adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md
+- docs/mcp-tool-contract.md
+- docs/metric-catalog.md
+- docs/metric-glossary.md
+- docs/contract-test-plan.md (Fase B.2)
+- docs/adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md (D1, se tocar em `allowed_metrics`)
+
+Arquivos esperados:
+- docs/mcp-tool-contract.md (se necessário, alinhamento fino)
+- docs/contract-test-plan.md
+- docs/metric-catalog.md / metric-glossary.md (apenas se fechar lacuna em relação ao 0008)
+
+Regras:
+- não exigir nome concreto de tool `list_mcp_surface` (ou similar) se o ADR 0008 ainda não tiver fechado isso no contrato — apenas semântica D1;
+- não reutilizar o [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md) como fonte de descoberta ou mapeamento Top 10;
+- proibir N mágico de UI legada no servidor (D4 do ADR 0008).
+
+Critério de pronto:
+- documentos normativos sem contradição com D1–D6 do ADR 0008;
+- Fase B.2 descrita no *contract-test-plan* com casos mínimos reprodutíveis;
+- referências cruzadas entre contrato, catálogo e ADR 0008 coerentes.
+```
+
+### Template 23.2 - Testes de contrato vermelhos: janela, ambiguidade e `top10_mais_sorteados`
+
+```md
+Implemente apenas testes (vermelhos primeiro) para: equivalência de recorte `start_contest_id` / `end_contest_id` (inclusivos) com `window_size` + `end_contest_id` quando o protocolo suportar ambas as formas; rejeição com código fechado (`INVALID_REQUEST` ou equivalente documentado) quando a combinação for ambígua; e `top10_mais_sorteados@1.0.0` alinhado à Tabela 2 do [metric-catalog.md](metric-catalog.md) (usar p.ex. `tie_heavy.json` para stress de empate).
+
+Referências obrigatórias:
+- docs/contract-test-plan.md (Fase B.2)
+- docs/mcp-tool-contract.md (entidade `Window`, tools com janela, tabela de erros)
+- docs/metric-catalog.md
+- docs/adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md
+- tests/fixtures/ (fixtures existentes e convenção de golden)
+
+Arquivos esperados:
+- tests/LotofacilMcp.ContractTests/
+- tests/fixtures/ e/ou tests/fixtures/golden/
+
+Regras:
+- não ampliar semântica além do ADR 0008 e do contrato;
+- manter paridade de asserção entre HTTP e MCP quando a tool for exposta em ambos;
+- golden só atualizado em PR que altere semântica de métrica ou contrato, com revisão.
+
+Critério de pronto:
+- testes falham ou passam pelos motivos corretos antes/depois da implementação mínima;
+- critério 3 (e correlatos) dos *Critérios de verificação* do ADR 0008 endereçado na suíte.
+```
+
+### Template 23.3 - Implementação mínima: resolução de janela e `compute_window_metrics` coerente
+
+```md
+Implemente apenas a resolução única e auditável da janela nos requests das tools alvo (p.ex. `get_draw_window`, `compute_window_metrics`) e o alinhamento de `top10_mais_sorteados@1.0.0` ao catálogo, até os testes da fase 23.2 passarem, sem introduzir defaults temporais ocultos (D4).
+
+Referências obrigatórias:
+- docs/mcp-tool-contract.md
+- docs/metric-catalog.md
+- docs/adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md
+- docs/adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md (se a rota preencher `details`)
+
+Arquivos esperados:
+- src/LotofacilMcp.Application/ (resolução de janela)
+- src/LotofacilMcp.Server/ (se necessário)
+- tests/LotofacilMcp.ContractTests/ (verde)
+
+Regras:
+- não replicar regras ad hoc de gráfico legado *rolling* sob o rótulo `top10_mais_sorteados` (D3);
+- `UNKNOWN_METRIC` e `details` coerentes com a política do projeto (ADR 0006 D1) quando a métrica for conhecida no catálogo mas fora da allowlist;
+- manter `deterministic_hash` e envelope conforme contrato.
+
+Critério de pronto:
+- testes da 23.2 passam;
+- nenhum «últimos N» de UI legada embutido no servidor sem equivalente explícito no request.
+```
+
+### Template 23.4 - (Opcional) Paridade de transporte e, se aplicável, Resources MCP
+
+```md
+Implemente apenas evidência de paridade MCP ↔ HTTP para sucesso/erro nos casos de janela e `top10` da fase 23, **ou** a exposição mínima de **MCP Resources** alinhada ao D1 (glossário/catálogo) sem duplicar a allowlist de métricas, conforme *Prompts e Resources* em [mcp-tool-contract.md](mcp-tool-contract.md) e o ADR 0008. Se resources não forem entregues nesta fatia, o cliente pode continuar a injetar `docs/` — documentar a escolha.
+
+Referências obrigatórias:
+- docs/adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md
+- docs/mcp-tool-contract.md
+- docs/contract-test-plan.md
+- tests/LotofacilMcp.ContractTests/ (padrão de paridade existente)
+
+Arquivos esperados:
+- src/LotofacilMcp.Server/ (resources ou apenas testes de paridade)
+- tests/LotofacilMcp.ContractTests/
+
+Regras:
+- resources **read-only**; cálculo permanece nas tools;
+- não conflitar norma (catálogo) com instância (build): allowlist continua sinalizável em tool/erro.
+
+Critério de pronto:
+- paridade comprovada nos caminhos suportados, **ou** resources publicados com URIs e conteúdo rastreável às fontes do repositório.
+```
+

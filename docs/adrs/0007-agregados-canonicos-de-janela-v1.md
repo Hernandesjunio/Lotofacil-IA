@@ -1,6 +1,6 @@
 # ADR 0007 — Agregados canônicos de janela (histogramas, padrões e matrizes) como tool MCP (V1)
 
-**Navegação:** [← Brief (índice)](../brief.md) · [ADR 0006](0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) · [Contrato MCP](../mcp-tool-contract.md)
+**Navegação:** [← Brief (índice)](../brief.md) · [ADR 0006](0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) · [ADR 0008](0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) · [Contrato MCP](../mcp-tool-contract.md)
 
 ## Status
 
@@ -93,3 +93,4 @@ Criar uma tool MCP (com endpoint HTTP espelhado) chamada `summarize_window_aggre
 - [mcp-tool-contract.md](../mcp-tool-contract.md)
 - [metric-catalog.md](../metric-catalog.md)
 - [ADR 0006](0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md)
+- [ADR 0008](0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) (descoberta, janela por extremos e mapeamento Top 10; **não** substitui D1–D3 desta ADR)

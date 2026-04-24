@@ -21,6 +21,14 @@ Complementa [test-plan.md](test-plan.md) com **ordem de implementação**, **lay
    - validação de parâmetros obrigatórios por tipo, sem defaults semânticos ocultos;
    - validação de ordenação canônica e desempates determinísticos por tipo.
 
+**Extensão planejada (ADR 0008):**
+
+6. **Fase B.2 — Janela por extremos, mapeamento `top10` e coerência com legado de export** (ver [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) e a [Fase 23 do guia](spec-driven-execution-guide.md)):
+   - equivalência numérica entre o recorte expresso com `start_contest_id` e `end_contest_id` (inclusivos) e a forma `window_size` + `end_contest_id` na mesma fixture, para pelo menos uma métrica de referência (p.ex. `frequencia_por_dezena` ou `top10_mais_sorteados`) quando o protocolo aceitar ambas;
+   - request com combinação **ambígua** ou conflituosa de parâmetros de janela → erro documentado (p.ex. `INVALID_REQUEST`) com mensagem canónica;
+   - golden de `top10_mais_sorteados@1.0.0` (Tabela 2 de [metric-catalog.md](metric-catalog.md)), com desempate e ordem alinhados ao catálogo — usar a fixture `tie_heavy.json` (secção *Layout de fixtures* abaixo) ou equivalente quando o foco forem empates;
+   - quando o fluxo tocar em **descoberta** (allowlist *vs.* norma), asserções alinhadas a [ADR 0006 D1](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) e D1 do ADR 0008 (p.ex. `details.allowed_metrics` em `UNKNOWN_METRIC` onde o contrato o exigir).
+
 ## Layout de fixtures (convênio)
 
 Armazenar sob `tests/fixtures/` (ou equivalente na linguagem escolhida):
@@ -76,6 +84,19 @@ Documentação de referência: [mcp-tool-contract.md](mcp-tool-contract.md).
 | Request com múltiplos agregados | Resposta preserva a ordem de `aggregates[]` do request. |
 
 **Observação de contrato:** os testes da Fase B.1 devem sempre explicitar bucketização (`bucket_values` ou `min/max/width`) e dimensões de matriz (`value_min/value_max`) no request; ausência não pode ser compensada por default semântico no servidor.
+
+### Matriz mínima — Fase B.2 (janela por extremos, `top10` e legado de export, ADR 0008)
+
+Bateria a acrescentar **quando a implementação** acompanhar o [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) e o [mcp-tool-contract.md](mcp-tool-contract.md) (entidade `Window`).
+
+| Caso | Esperado |
+|------|----------|
+| Dois requests com a **mesma** janela canónica, um com `start`+`end` (inclusivos) e outro com `window_size`+`end_contest_id` resolvido por D2, mesma fixture | Mesmos valores de métrica (p.ex. `frequencia_por_dezena` ou `top10_mais_sorteados`) dentro do redutor de comparação do teste. |
+| Parâmetros de janela em conflito ou combinação não interpretável de forma única | Erro `INVALID_REQUEST` (ou código fechado no contrato) **sem** escolher recorte silencioso. |
+| `top10_mais_sorteados@1.0.0` com empates fortes | Lista `dezena_list[10]` e desempates conforme Tabela 2 do [metric-catalog.md](metric-catalog.md); golden versionado. |
+| `HistoricoTop10MaisSorteados` (legado) *vs.* pergunta canónica | Semântica de substituição = `top10_mais_sorteados` **só** na janela declarada; não testar *rolling* implícito sob o mesmo `metric_name` (D3). |
+
+**Observação de contrato:** a Fase B.2 **não** substitui a bateria A–E do ADR 0006; cruza com D1 do ADR 0008 quando a asserção for *allowlist* ou `details` em erros.
 
 ## Matriz — Fase C (métrica × tipo de teste)
 

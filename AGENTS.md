@@ -22,7 +22,7 @@ Sistema **educacional** para engenharia de IA aplicada à **Lotofácil**: indica
 | 2 | [docs/vertical-slice.md](docs/vertical-slice.md) | **V0:** primeira fatia obrigatória (dados → modelo canônico → uma métrica → tools). |
 | 3 | [docs/mcp-tool-contract.md](docs/mcp-tool-contract.md) | Contrato das ferramentas MCP, erros, envelopes e invariantes. |
 | 4 | [docs/metric-catalog.md](docs/metric-catalog.md) | Nomes, versões, fórmulas e `MetricValue` (incl. `scope`). |
-| 5 | [docs/contract-test-plan.md](docs/contract-test-plan.md) | Fixtures douradas, ordem de testes de contrato, GAPS (ADR 0006). |
+| 5 | [docs/contract-test-plan.md](docs/contract-test-plan.md) | Fixtures douradas, ordem de testes de contrato, GAPS (ADR 0006), Fase B.2 (janela / legado, [ADR 0008](docs/adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md)). |
 | 6 | [docs/spec-driven-execution-guide.md](docs/spec-driven-execution-guide.md) | Passos atómicos e ordem prática spec → teste → código. |
 
 Complementos frequentes: [docs/generation-strategies.md](docs/generation-strategies.md), [docs/test-plan.md](docs/test-plan.md), [docs/project-guide.md](docs/project-guide.md), [docs/prompt-catalog.md](docs/prompt-catalog.md), [docs/fases-execucao-templates.md](docs/fases-execucao-templates.md) (templates atômicos por fase, incluindo extensões).
@@ -35,6 +35,8 @@ Complementos frequentes: [docs/generation-strategies.md](docs/generation-strateg
 - [docs/adrs/0004-estrutura-arquitetural-inicial-mcp-dotnet10.md](docs/adrs/0004-estrutura-arquitetural-inicial-mcp-dotnet10.md)
 - [docs/adrs/0005-transporte-mcp-e-superficie-tools-v1.md](docs/adrs/0005-transporte-mcp-e-superficie-tools-v1.md)
 - [docs/adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md](docs/adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) — inter-tool, disponibilidade de métricas em rota, pipeline, fluidez, GAPS e cenário pares–entropia
+- [docs/adrs/0007-agregados-canonicos-de-janela-v1.md](docs/adrs/0007-agregados-canonicos-de-janela-v1.md) — agregados canônicos via `summarize_window_aggregates`
+- [docs/adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md](docs/adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) — descoberta (tools vs resources), janela por extremos, mapeamento legado Top 10
 
 ---
 
@@ -77,6 +79,7 @@ A documentação descreve camadas alvo (`LotofacilMcp.Domain`, `Application`, `I
 | Implementar ou alterar uma métrica | [metric-catalog.md](docs/metric-catalog.md), [mcp-tool-contract.md](docs/mcp-tool-contract.md), [test-plan.md](docs/test-plan.md) |
 | Nova tool ou mudança de payload MCP | [mcp-tool-contract.md](docs/mcp-tool-contract.md), [contract-test-plan.md](docs/contract-test-plan.md) |
 | Disponibilidade por rota, pipeline, GAPS, pares–entropia | [adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md](docs/adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md), [metric-catalog.md](docs/metric-catalog.md), [test-plan.md](docs/test-plan.md) |
+| Descoberta (instância *vs.* norma), janela por extremos, export legado Top 10 / `QtdFrequencia` | [adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md](docs/adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md), [spec-driven-execution-guide.md](docs/spec-driven-execution-guide.md) (Fase 23), [fases-execucao-templates.md](docs/fases-execucao-templates.md) (Fase 23), [contract-test-plan.md](docs/contract-test-plan.md) (Fase B.2) |
 | Geração de jogos / filtros | [generation-strategies.md](docs/generation-strategies.md), [metric-catalog.md](docs/metric-catalog.md) |
 | Ordem de implementação / “o que fazer a seguir” | [spec-driven-execution-guide.md](docs/spec-driven-execution-guide.md), [vertical-slice.md](docs/vertical-slice.md) |
 | Prompts para validação manual ou automática | [prompt-catalog.md](docs/prompt-catalog.md) |

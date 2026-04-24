@@ -15,14 +15,16 @@ Documento pedagógico complementar ao catálogo técnico em [metric-catalog.md](
 - **Definição:** contagem de quantas vezes cada dezena (1–25) apareceu nos sorteios de uma janela temporal declarada.
 - **O que observa:** popularidade bruta de cada número naquele recorte — quais saíram mais vezes.
 - **Exemplo de uso:** “Nas últimas 50 edições, quais dezenas acumularam mais ocorrências para montar um ranking de frequência?”
+- **Mapeamento do gráfico `QtdFrequencia` (export `indicadores.json` de referência):** o vector 1..25 nesse ficheiro é **frequência na janela** e corresponde a `frequencia_por_dezena`, não a `atraso_por_dezena` (ver secção homónima no [metric-catalog.md](metric-catalog.md)). A documentação antiga do *controller* podia chamar o endpoint de “atraso” com exemplos numéricos ambíguos; a **norma de substituição MCP** para esse export é frequência.
 
 ---
 
 ## `top10_mais_sorteados`
 
-- **Definição:** as dez dezenas com maior `frequencia_por_dezena` na janela, com regra de desempate explícita no catálogo.
+- **Definição:** as dez dezenas com maior `frequencia_por_dezena` na janela, com regra de desempate explícita no catálogo. O recorte temporal é **sempre o que o pedido declara** (p.ex. equivalência `start`/`fim` ↔ `window_size`+`end_contest_id` em [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) D2).
 - **O que observa:** o “top quente” do período — subconjunto compacto das mais frequentes.
 - **Exemplo de uso:** “Liste o top 10 de dezenas nos últimos 100 concursos para comparar com o jogo que estou avaliando.”
+- **Não confundir com *exports* de UI legado** cujo rótulo sugere “histórico” com janela *rolling* implícita: esse comportamento **não** é `top10_mais_sorteados` até existir outra métrica no [metric-catalog.md](metric-catalog.md). Para o caso “top 10 **no intervalo de concursos que escolhi**”, use esta métrica (ver [ADR 0008 D3](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md)).
 
 ---
 
@@ -55,6 +57,7 @@ Documento pedagógico complementar ao catálogo técnico em [metric-catalog.md](
 - **Definição:** para cada dezena, quantos concursos se passaram desde a última aparição (com política de saturação se nunca saiu, conforme documentação).
 - **O que observa:** “frio” ou tempo sem sair por número — atraso actual ou na janela definida.
 - **Exemplo de uso:** “Quais dezenas estão há mais edições sem ser sorteadas no histórico considerado?”
+- **Não confundir com o rótulo de gráfico `QtdFrequencia` do export** `indicadores.json` de referência: esse bloco normativo mapeia para `frequencia_por_dezena` (contagens), não para atraso.
 
 ---
 

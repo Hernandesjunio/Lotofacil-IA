@@ -29,6 +29,7 @@ O contrato está organizado em camadas. Para validar uma implementação ou um P
 
 7. **Lacunas de parâmetro em linguagem natural** — quando um pedido do usuário não puder ser mapeado sem ambiguidade para o JSON da tool, o fluxo deve obter dados faltantes por **perguntas específicas** (seção *Integração com agentes: lacunas de parâmetros e esclarecimento*, abaixo), nunca por inferência oculta no servidor.
 8. **Inter-tool, disponibilidade e pipeline** — recorte de métricas por rota, padrão de cadeia de tools (fluidez), `stability_check` em associações e códigos de erro associados estão normatizados em [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md). O catálogo de métricas e a tabela *Disponibilidade normativa* em [metric-catalog.md](metric-catalog.md) desambiguam “nome canónico” vs. “aceite nesta tool nesta build”.
+9. **Descoberta para consumidores e janela por extremos** — o modelo híbrido *superfície de instância* (tool ou erros com allowlist) vs *norma* (resources / `docs/`), a equivalência entre janela expressa por `start_contest_id`/`end_contest_id` e `window_size`+`end_contest_id`, e o mapeamento do rótulo de export `HistoricoTop10MaisSorteados` para a métrica canónica `top10_mais_sorteados`, estão em [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md).
 
 ## Disponibilidade de métricas, pipeline mínimo e performance do fluxo
 
@@ -84,6 +85,8 @@ Esta seção **não** substitui as tools: o cálculo determinístico continua em
 | **Prompts** (`prompts/list`, `prompts/get`) | Templates com argumentos nomeados; mensagens estruturadas para o LLM ([especificação](https://modelcontextprotocol.io/specification/2025-06-18/server/prompts)). | Fluxos recorrentes (ex.: “estabilidade na janela N”, “composição com pesos declarados”) onde os **argumentos do template espelham campos do schema** da tool, reduzindo omissão de parâmetros sem violar a proibição de pesos implícitos. |
 | **Resources** (`resources/read`, templates) | Dados identificados por URI, fornecendo contexto à aplicação/modelo ([especificação](https://modelcontextprotocol.io/specification/2025-06-18/server/resources)). | Trechos versionados do glossário, definições de métricas ou metadados de `dataset_version` — conteúdo **read-only** e referenciável em análises sem duplicar lógica nas tools. |
 
+**Descoberta “o que posso pedir a esta instância”:** o catálogo em `docs/` descreve a *norma semântica*; a *allowlist* concreta desta build (métricas expostas, enums de agregados) deve ser obtida por respostas de **tool** ou `details` em erros, sem conflitar com a norma. O modelo híbrido (tools + resources) está fechado em [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) D1.
+
 **Disambiguação:** “Prompt” no protocolo MCP ≠ “prompt do usuário” no chat cotidiano. O primeiro é recurso **servidor** com descoberta e parâmetros; o segundo é entrada livre, sujeita às regras de esclarecimento desta seção.
 
 ### Fundamentação para uso (evidências)
@@ -138,6 +141,8 @@ Recorte contínuo de concursos usado como referência temporal para métricas e 
 - `draws` — lista de `Draw` em ordem crescente de concurso.
 
 **Validação:** `len(draws) == size` (salvo `INSUFFICIENT_HISTORY`); extremos coerentes com o pedido (`end_contest_id` ancorado quando omitido no request).
+
+**Resolução de janela no *request* (equivalência):** quando o cliente declara `start_contest_id` e `end_contest_id` **inclusivos** e a janela for contígua no dataset canónico, a resolução é equivalente a `end_contest_id` (extremo mais recente) e `window_size = end_contest_id - start_contest_id + 1`, conforme [ADR 0008 D2](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md). A implementação pode aceitar só `window_size` + `end_contest_id` no protocolo, desde que esta equivalência fique documentada e testada.
 
 #### `MetricRequest`
 

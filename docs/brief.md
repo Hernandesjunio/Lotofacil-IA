@@ -94,7 +94,7 @@ Exemplos adicionais de prompts de teste ficam em [prompt-catalog.md](prompt-cata
 - O sistema deve permitir comparar estratégias e composições dinâmicas sem reescrever o cálculo canônico.
 - O contrato MCP deve ser claro o suficiente para automação por IA sem ambiguidade semântica.
 - O catálogo de prompts e o plano de testes devem cobrir 100% das famílias de cálculo do domínio documentado.
-- A **disponibilidade** de cada métrica em cada rota, o **pipeline mínimo** de tools (fluidez sem defaults ocultos) e a semântica de respostas parciais/erros (ex. estabilidade de associação) seguem [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md), em conjunto com o contrato MCP e o [metric-catalog.md](metric-catalog.md).
+- A **disponibilidade** de cada métrica em cada rota, o **pipeline mínimo** de tools (fluidez sem defaults ocultos) e a semântica de respostas parciais/erros (ex. estabilidade de associação) seguem [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md), em conjunto com o contrato MCP e o [metric-catalog.md](metric-catalog.md). A **descoberta** do que uma instância expõe (vs. norma do catálogo), **resources** vs **tools**, e a **janela por concurso inicial/final** seguem [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md).
 
 ## Referências
 
@@ -105,7 +105,7 @@ Exemplos adicionais de prompts de teste ficam em [prompt-catalog.md](prompt-cata
 - [prompt-catalog.md](prompt-catalog.md) — prompts cobertos pelo MCP para testes
 - [test-plan.md](test-plan.md) — matriz de cobertura de testes do domínio
 - [spec-driven-execution-guide.md](spec-driven-execution-guide.md) — ordem prática de execução, passos atômicos e uso dos specs na implementação
-- [fases-execucao-templates.md](fases-execucao-templates.md) — pedidos atômicos por fase (0–20 do guia e extensões, ex. Fase 21 / ADR 0006)
+- [fases-execucao-templates.md](fases-execucao-templates.md) — pedidos atômicos por fase (0–20 do guia e extensões, ex. Fases 21–22 / ADR 0006 e 0007, Fase 23 / [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md))
 - [live-openai-integration-pipeline.md](live-openai-integration-pipeline.md) — integração real com API OpenAI, suíte mínima L1–L5 e esteira GitHub dedicada
 - [vertical-slice.md](vertical-slice.md) — primeira fatia de implementação (dados → métrica única → MCP)
 - [contract-test-plan.md](contract-test-plan.md) — ordem de execução, fixtures douradas e matriz de testes de contrato
@@ -116,3 +116,4 @@ Exemplos adicionais de prompts de teste ficam em [prompt-catalog.md](prompt-cata
 - [adrs/0005-transporte-mcp-e-superficie-tools-v1.md](adrs/0005-transporte-mcp-e-superficie-tools-v1.md) — transporte MCP, convivência com HTTP, rollout de tools
 - [adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) — inter-tool, disponibilidade de métricas, pipeline, fluidez, testes de GAPS e pares–entropia
 - [adrs/0007-agregados-canonicos-de-janela-v1.md](adrs/0007-agregados-canonicos-de-janela-v1.md) — agregados canônicos (histogramas, padrões e matrizes) via `summarize_window_aggregates`
+- [adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) — descoberta para consumidores (tools vs resources), janela por extremos, mapeamento `HistoricoTop10MaisSorteados` → `top10_mais_sorteados`
