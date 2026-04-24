@@ -179,10 +179,11 @@ public sealed class V0McpTools
         [Description("Concurso inicial inclusivo (alternativa a window_size+end, ADR 0008 D2).")]
         int? start_contest_id = null,
         [Description("Concurso final inclusivo.")] int? end_contest_id = null,
-        [Description("Seed obrigatoria para metodos sampled ou greedy_topk.")] ulong? seed = null,
+        [Description("Semente para replay canónico; omitir em estratégia estocástica => replay_guaranteed false.")] ulong? seed = null,
         [Description("Plano declarativo por estrategia com criteria/weights/filters.")] IReadOnlyList<GenerateCandidatePlanItemRequest>? plan = null,
         [Description("Restricoes globais de unicidade e ordenacao.")] GenerateGlobalConstraintsRequest? global_constraints = null,
-        [Description("Exclusoes estruturais globais para filtragem dos candidatos.")] GenerateStructuralExclusionsRequest? structural_exclusions = null)
+        [Description("Exclusoes estruturais globais para filtragem dos candidatos.")] GenerateStructuralExclusionsRequest? structural_exclusions = null,
+        [Description("Modo normativo: random_unrestricted | behavior_filtered (omitir = legado com defaults conservadores).")] string? generation_mode = null)
     {
         var payload = tools.GenerateCandidateGames(new GenerateCandidateGamesRequest(
             WindowSize: window_size,
@@ -191,7 +192,8 @@ public sealed class V0McpTools
             Seed: seed,
             Plan: plan,
             GlobalConstraints: global_constraints,
-            StructuralExclusions: structural_exclusions));
+            StructuralExclusions: structural_exclusions,
+            GenerationMode: generation_mode));
 
         return ToToolResult(payload, payload is ContractErrorEnvelope);
     }

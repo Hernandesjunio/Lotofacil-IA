@@ -1,5 +1,6 @@
 using LotofacilMcp.Application.Composition;
 using LotofacilMcp.Application.UseCases;
+using LotofacilMcp.Domain.Generation;
 using System.Text.Json;
 
 namespace LotofacilMcp.Application.Validation;
@@ -666,6 +667,23 @@ public sealed class V0CrossFieldValidator
 
     public void ValidateGenerateCandidateGames(GenerateCandidateGamesInput input)
     {
+        if (!string.IsNullOrWhiteSpace(input.GenerationMode))
+        {
+            var trimmed = input.GenerationMode.Trim();
+            if (!string.Equals(trimmed, GenerationModes.RandomUnrestricted, StringComparison.Ordinal) &&
+                !string.Equals(trimmed, GenerationModes.BehaviorFiltered, StringComparison.Ordinal))
+            {
+                throw new ApplicationValidationException(
+                    code: "INVALID_REQUEST",
+                    message: "generation_mode must be random_unrestricted or behavior_filtered.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["field"] = "generation_mode",
+                        ["value"] = input.GenerationMode
+                    });
+            }
+        }
+
         if (input.WindowSize <= 0)
         {
             throw new ApplicationValidationException(
@@ -778,20 +796,6 @@ public sealed class V0CrossFieldValidator
                     message: "search_method is not supported.",
                     details: new Dictionary<string, object?>
                     {
-                        ["search_method"] = effectiveSearchMethod
-                    });
-            }
-
-            if ((string.Equals(effectiveSearchMethod, "sampled", StringComparison.Ordinal) ||
-                 string.Equals(effectiveSearchMethod, "greedy_topk", StringComparison.Ordinal)) &&
-                !input.Seed.HasValue)
-            {
-                throw new ApplicationValidationException(
-                    code: "NON_DETERMINISTIC_CONFIGURATION",
-                    message: "seed is required when search_method is sampled or greedy_topk.",
-                    details: new Dictionary<string, object?>
-                    {
-                        ["missing_field"] = "seed",
                         ["search_method"] = effectiveSearchMethod
                     });
             }

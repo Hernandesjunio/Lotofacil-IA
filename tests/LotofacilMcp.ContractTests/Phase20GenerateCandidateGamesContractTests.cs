@@ -38,7 +38,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
             MaxOutlierScore: 1.0));
 
     [Fact]
-    public void GenerateCandidateGames_MissingSeedForGreedyTopK_ReturnsNonDeterministicConfiguration()
+    public void GenerateCandidateGames_WithoutSeed_Stochastic_EmitsReplayNotGuaranteed_AndStableDeterministicHash()
     {
         var sut = new V0Tools();
         var request = new GenerateCandidateGamesRequest(
@@ -53,9 +53,12 @@ public sealed class Phase20GenerateCandidateGamesContractTests
                     SearchMethod: null)
             ]);
 
-        var response = sut.GenerateCandidateGames(request);
-        var error = Assert.IsType<ContractErrorEnvelope>(response).Error;
-        Assert.Equal("NON_DETERMINISTIC_CONFIGURATION", error.Code);
+        var a = Assert.IsType<GenerateCandidateGamesResponse>(sut.GenerateCandidateGames(request));
+        var b = Assert.IsType<GenerateCandidateGamesResponse>(sut.GenerateCandidateGames(request));
+
+        Assert.False(a.ReplayGuaranteed);
+        Assert.False(b.ReplayGuaranteed);
+        Assert.Equal(a.DeterministicHash, b.DeterministicHash);
     }
 
     [Fact]
@@ -69,6 +72,8 @@ public sealed class Phase20GenerateCandidateGamesContractTests
         var payloadB = Assert.IsType<GenerateCandidateGamesResponse>(second);
 
         Assert.Equal(payloadA.DeterministicHash, payloadB.DeterministicHash);
+        Assert.True(payloadA.ReplayGuaranteed);
+        Assert.True(payloadB.ReplayGuaranteed);
         Assert.Equal("1.0.0", payloadA.ToolVersion);
         Assert.Equal(5, payloadA.Window.Size);
         Assert.Equal(1001, payloadA.Window.StartContestId);
@@ -88,6 +93,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
         Assert.True(root.TryGetProperty("dataset_version", out _));
         Assert.True(root.TryGetProperty("tool_version", out _));
         Assert.True(root.TryGetProperty("deterministic_hash", out _));
+        Assert.True(root.TryGetProperty("replay_guaranteed", out var replayProp) && replayProp.GetBoolean());
         Assert.True(root.TryGetProperty("window", out _));
         Assert.True(root.TryGetProperty("candidate_games", out var games));
         Assert.Equal(JsonValueKind.Array, games.ValueKind);
@@ -196,6 +202,8 @@ public sealed class Phase20GenerateCandidateGamesContractTests
         var payloadB = Assert.IsType<GenerateCandidateGamesResponse>(responseB);
 
         Assert.NotEqual(payloadA.DeterministicHash, payloadB.DeterministicHash);
+        Assert.True(payloadA.ReplayGuaranteed);
+        Assert.True(payloadB.ReplayGuaranteed);
     }
 
     [Fact]

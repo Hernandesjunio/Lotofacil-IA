@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text.Json.Serialization;
 using LotofacilMcp.Application.Mapping;
 using LotofacilMcp.Application.Validation;
 using LotofacilMcp.Domain.Generation;
@@ -93,16 +95,21 @@ public sealed record GenerateCandidateGamesInput(
     GenerateGlobalConstraintsInput? GlobalConstraints,
     GenerateStructuralExclusionsInput? StructuralExclusions,
     GenerateGenerationBudgetInput? GenerationBudget,
+    /// <summary>Nulo = legado (defaults conservadores de exclusões estruturais). Ver <see cref="GenerationModes"/>.</summary>
+    string? GenerationMode = null,
     string FixturePath = "");
 
 public sealed record GenerateCandidateGamesDeterministicHashInput(
     int WindowSize,
     int? EndContestId,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     ulong? Seed,
     IReadOnlyList<GenerateCandidatePlanItemInput> Plan,
     GenerateGlobalConstraintsInput GlobalConstraints,
     GenerateStructuralExclusionsInput StructuralExclusions,
-    GenerateGenerationBudgetInput GenerationBudget);
+    GenerateGenerationBudgetInput GenerationBudget,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    string? GenerationMode = null);
 
 public sealed record AppliedConfigurationView(
     IReadOnlyList<GenerateCandidateCriteriaInput> Criteria,
@@ -122,6 +129,7 @@ public sealed record CandidateGameView(
 public sealed record GenerateCandidateGamesResult(
     string DatasetVersion,
     string ToolVersion,
+    bool ReplayGuaranteed,
     GenerateCandidateGamesDeterministicHashInput DeterministicHashInput,
     WindowDescriptor Window,
     IReadOnlyList<CandidateGameView> CandidateGames);
@@ -184,8 +192,24 @@ public sealed class GenerateCandidateGamesUseCase
             var rankedNumbers = BuildFrequencyRanking(frequencyMetric.Value);
             var context = BuildGenerationContext(window, frequencyMetric.Value, top10Metric.Value, repetitionMetric.Value);
             var resolvedGlobalConstraints = ResolveGlobalConstraints(input.GlobalConstraints);
-            var resolvedStructuralExclusions = ResolveStructuralExclusions(input.StructuralExclusions);
+            var globalGenerationResolved = new Dictionary<string, object?>(StringComparer.Ordinal);
+            var resolvedStructuralExclusions = ResolveStructuralExclusions(
+                input.StructuralExclusions,
+                input.GenerationMode,
+                globalGenerationResolved);
             var resolvedGenerationBudget = ResolveGenerationBudget(input.GenerationBudget);
+            var legacyImplicitStructuralDefaults = string.IsNullOrWhiteSpace(input.GenerationMode);
+            var hasStochasticPlan = input.Plan.Any(PlanItemUsesStochasticMethod);
+            var replayGuaranteed = !hasStochasticPlan || input.Seed.HasValue;
+            var ephemeralStochasticBase = 0UL;
+            if (hasStochasticPlan && !input.Seed.HasValue)
+            {
+                Span<byte> rnd = stackalloc byte[8];
+                RandomNumberGenerator.Fill(rnd);
+                ephemeralStochasticBase = BitConverter.ToUInt64(rnd);
+            }
+
+            var hashSeed = replayGuaranteed && input.Seed.HasValue ? input.Seed : null;
             var candidates = BuildCandidates(
                 input,
                 window,
@@ -193,19 +217,24 @@ public sealed class GenerateCandidateGamesUseCase
                 context,
                 resolvedGlobalConstraints,
                 resolvedStructuralExclusions,
-                resolvedGenerationBudget);
+                resolvedGenerationBudget,
+                globalGenerationResolved,
+                legacyImplicitStructuralDefaults,
+                ephemeralStochasticBase);
 
             return new GenerateCandidateGamesResult(
                 DatasetVersion: _datasetVersionService.CreateFromSnapshot(snapshot),
                 ToolVersion: ToolVersion,
+                ReplayGuaranteed: replayGuaranteed,
                 DeterministicHashInput: new GenerateCandidateGamesDeterministicHashInput(
                     input.WindowSize,
                     input.EndContestId,
-                    input.Seed,
+                    hashSeed,
                     input.Plan.ToArray(),
                     resolvedGlobalConstraints,
                     resolvedStructuralExclusions,
-                    resolvedGenerationBudget),
+                    resolvedGenerationBudget,
+                    GenerationMode: legacyImplicitStructuralDefaults ? null : input.GenerationMode!.Trim()),
                 Window: windowView,
                 CandidateGames: candidates);
         }
@@ -222,7 +251,10 @@ public sealed class GenerateCandidateGamesUseCase
         GenerationContext context,
         GenerateGlobalConstraintsInput globalConstraints,
         GenerateStructuralExclusionsInput structuralExclusions,
-        GenerateGenerationBudgetInput generationBudget)
+        GenerateGenerationBudgetInput generationBudget,
+        IReadOnlyDictionary<string, object?> globalGenerationResolved,
+        bool legacyImplicitStructuralDefaults,
+        ulong ephemeralStochasticBase)
     {
         var candidates = new List<CandidateGameView>();
         var usedGameKeys = new HashSet<string>(StringComparer.Ordinal);
@@ -231,7 +263,14 @@ public sealed class GenerateCandidateGamesUseCase
         for (var planIndex = 0; planIndex < input.Plan.Count; planIndex++)
         {
             var planItem = input.Plan[planIndex];
-            var execution = ResolveExecutionPlan(planItem, planIndex, input.Seed, structuralExclusions, window);
+            var execution = ResolveExecutionPlan(
+                planItem,
+                planIndex,
+                input.Seed,
+                structuralExclusions,
+                window,
+                globalGenerationResolved,
+                legacyImplicitStructuralDefaults);
             var poolSize = ResolvePoolSize(execution.SearchMethod);
             var resolvedBudget = _generationBudgetResolver.Resolve(
                 new GenerationBudgetSpec(generationBudget.MaxAttempts, generationBudget.PoolMultiplier),
@@ -248,7 +287,7 @@ public sealed class GenerateCandidateGamesUseCase
             for (var poolIndex = 0; poolIndex < resolvedBudget.MaxAttempts; poolIndex++)
             {
                 attemptsUsed++;
-                var effectiveSeed = execution.SeedUsed ?? 0UL;
+                var effectiveSeed = StochasticBaseForBuild(execution.SearchMethod, input.Seed, ephemeralStochasticBase);
                 var numbers = BuildCandidateNumbers(rankedNumbers, effectiveSeed, sequenceSeed + poolIndex);
                 var key = string.Join(",", numbers);
                 if (globalConstraints.UniqueGames is true &&
@@ -429,22 +468,35 @@ public sealed class GenerateCandidateGamesUseCase
         int planIndex,
         ulong? inputSeed,
         GenerateStructuralExclusionsInput structuralExclusions,
-        DrawWindow window)
+        DrawWindow window,
+        IReadOnlyDictionary<string, object?> globalGenerationResolved,
+        bool legacyImplicitStructuralDefaults)
     {
         var resolvedDefaults = new Dictionary<string, object?>(StringComparer.Ordinal);
+        foreach (var pair in globalGenerationResolved)
+        {
+            resolvedDefaults[pair.Key] = pair.Value;
+        }
+
         var strategyVersion = ResolveStrategyVersion(item, planIndex, resolvedDefaults);
         var searchMethod = ResolveSearchMethod(item, planIndex, resolvedDefaults);
         var tieBreakRule = ResolveTieBreakRule(item, planIndex, resolvedDefaults);
         var criteria = ResolveCriteria(item, planIndex, resolvedDefaults, window);
         var weights = ResolveWeights(item, planIndex, resolvedDefaults);
-        var filters = ResolveFilters(item, planIndex, structuralExclusions, resolvedDefaults, window);
+        var filters = ResolveFilters(
+            item,
+            planIndex,
+            structuralExclusions,
+            resolvedDefaults,
+            window,
+            legacyImplicitStructuralDefaults);
 
         return new ExecutionPlan(
             StrategyName: item.StrategyName,
             StrategyVersion: strategyVersion,
             SearchMethod: searchMethod,
             TieBreakRule: tieBreakRule,
-            SeedUsed: RequiresSeed(searchMethod) ? inputSeed : null,
+            SeedUsed: RequiresSeed(searchMethod) && inputSeed.HasValue ? inputSeed : null,
             Criteria: criteria,
             Weights: weights,
             Filters: filters,
@@ -596,31 +648,11 @@ public sealed class GenerateCandidateGamesUseCase
         int planIndex,
         GenerateStructuralExclusionsInput structuralExclusions,
         IDictionary<string, object?> defaults,
-        DrawWindow window)
+        DrawWindow window,
+        bool legacyImplicitStructuralDefaults)
     {
-        var fromStructural = new Dictionary<string, GenerateCandidateFilterInput>(StringComparer.Ordinal)
-        {
-            ["max_consecutive_run"] = new GenerateCandidateFilterInput("max_consecutive_run", structuralExclusions.MaxConsecutiveRun, null, null, null, null, null, "hard", "1.0.0"),
-            ["max_neighbor_count"] = new GenerateCandidateFilterInput("max_neighbor_count", structuralExclusions.MaxNeighborCount, null, null, null, null, null, "hard", "1.0.0"),
-            ["min_row_entropy_norm"] = new GenerateCandidateFilterInput("min_row_entropy_norm", structuralExclusions.MinRowEntropyNorm, null, null, null, null, null, "hard", "1.0.0"),
-            ["max_hhi_linha"] = new GenerateCandidateFilterInput("max_hhi_linha", structuralExclusions.MaxHhiLinha, null, null, null, null, null, "hard", "1.0.0"),
-            ["min_slot_alignment"] = new GenerateCandidateFilterInput("min_slot_alignment", structuralExclusions.MinSlotAlignment, null, null, null, null, null, "hard", "1.0.0"),
-            ["max_outlier_score"] = new GenerateCandidateFilterInput("max_outlier_score", structuralExclusions.MaxOutlierScore, null, null, null, null, null, "hard", "1.0.0")
-        };
-
-        if (structuralExclusions.RepeatRange is not null)
-        {
-            fromStructural["repeat_range"] = new GenerateCandidateFilterInput(
-                "repeat_range",
-                null,
-                structuralExclusions.RepeatRange.Min,
-                structuralExclusions.RepeatRange.Max,
-                null,
-                null,
-                null,
-                "hard",
-                "1.0.0");
-        }
+        var fromStructural = new Dictionary<string, GenerateCandidateFilterInput>(StringComparer.Ordinal);
+        AddStructuralExclusionFilters(fromStructural, structuralExclusions, legacyImplicitStructuralDefaults);
 
         if (item.Filters is { Count: > 0 })
         {
@@ -799,7 +831,30 @@ public sealed class GenerateCandidateGamesUseCase
             SortedNumbers: input?.SortedNumbers ?? true);
     }
 
-    private static GenerateStructuralExclusionsInput ResolveStructuralExclusions(GenerateStructuralExclusionsInput? input)
+    private GenerateStructuralExclusionsInput ResolveStructuralExclusions(
+        GenerateStructuralExclusionsInput? input,
+        string? generationMode,
+        IDictionary<string, object?> globalResolvedDefaults)
+    {
+        if (string.IsNullOrWhiteSpace(generationMode))
+        {
+            globalResolvedDefaults["generation_mode"] = "legacy_implicit_structural_defaults";
+            globalResolvedDefaults["structural_exclusions.policy"] = "legacy_conservative_defaults_fill";
+            var resolved = ResolveStructuralExclusionsLegacy(input);
+            globalResolvedDefaults["structural_exclusions.resolved_effective"] = BuildStructuralExclusionsResolvedEffectiveEcho(resolved);
+            return resolved;
+        }
+
+        var normalized = generationMode.Trim();
+        globalResolvedDefaults["generation_mode"] = normalized;
+        globalResolvedDefaults["structural_exclusions.policy"] = "explicit_opt_in_only";
+        var explicitResolved = ResolveStructuralExclusionsExplicitOnly(input);
+        globalResolvedDefaults["structural_exclusions.resolved_effective"] = BuildStructuralExclusionsResolvedEffectiveEcho(explicitResolved);
+        globalResolvedDefaults["structural_exclusions.active_constraint_keys"] = ListActiveStructuralConstraintKeys(explicitResolved);
+        return explicitResolved;
+    }
+
+    private static GenerateStructuralExclusionsInput ResolveStructuralExclusionsLegacy(GenerateStructuralExclusionsInput? input)
     {
         return new GenerateStructuralExclusionsInput(
             MaxConsecutiveRun: input?.MaxConsecutiveRun ?? 8d,
@@ -811,6 +866,168 @@ public sealed class GenerateCandidateGamesUseCase
             RepeatRange: input?.RepeatRange ?? new GenerateRepeatRangeInput(0, 15),
             MinSlotAlignment: input?.MinSlotAlignment ?? 0.08d,
             MaxOutlierScore: input?.MaxOutlierScore ?? 1d);
+    }
+
+    private static GenerateStructuralExclusionsInput ResolveStructuralExclusionsExplicitOnly(GenerateStructuralExclusionsInput? input)
+    {
+        if (input is null)
+        {
+            return new GenerateStructuralExclusionsInput(
+                MaxConsecutiveRun: null,
+                MaxNeighborCount: null,
+                MinRowEntropyNorm: null,
+                MinColumnEntropyNorm: null,
+                MaxHhiLinha: null,
+                MaxHhiColuna: null,
+                RepeatRange: null,
+                MinSlotAlignment: null,
+                MaxOutlierScore: null);
+        }
+
+        return new GenerateStructuralExclusionsInput(
+            MaxConsecutiveRun: input.MaxConsecutiveRun,
+            MaxNeighborCount: input.MaxNeighborCount,
+            MinRowEntropyNorm: input.MinRowEntropyNorm,
+            MinColumnEntropyNorm: input.MinColumnEntropyNorm,
+            MaxHhiLinha: input.MaxHhiLinha,
+            MaxHhiColuna: input.MaxHhiColuna,
+            RepeatRange: input.RepeatRange,
+            MinSlotAlignment: input.MinSlotAlignment,
+            MaxOutlierScore: input.MaxOutlierScore);
+    }
+
+    private static void AddStructuralExclusionFilters(
+        IDictionary<string, GenerateCandidateFilterInput> target,
+        GenerateStructuralExclusionsInput structural,
+        bool legacyImplicitStructuralDefaults)
+    {
+        if (legacyImplicitStructuralDefaults)
+        {
+            target["max_consecutive_run"] = new GenerateCandidateFilterInput("max_consecutive_run", structural.MaxConsecutiveRun, null, null, null, null, null, "hard", "1.0.0");
+            target["max_neighbor_count"] = new GenerateCandidateFilterInput("max_neighbor_count", structural.MaxNeighborCount, null, null, null, null, null, "hard", "1.0.0");
+            target["min_row_entropy_norm"] = new GenerateCandidateFilterInput("min_row_entropy_norm", structural.MinRowEntropyNorm, null, null, null, null, null, "hard", "1.0.0");
+            target["max_hhi_linha"] = new GenerateCandidateFilterInput("max_hhi_linha", structural.MaxHhiLinha, null, null, null, null, null, "hard", "1.0.0");
+            target["min_slot_alignment"] = new GenerateCandidateFilterInput("min_slot_alignment", structural.MinSlotAlignment, null, null, null, null, null, "hard", "1.0.0");
+            target["max_outlier_score"] = new GenerateCandidateFilterInput("max_outlier_score", structural.MaxOutlierScore, null, null, null, null, null, "hard", "1.0.0");
+            if (structural.RepeatRange is not null)
+            {
+                target["repeat_range"] = new GenerateCandidateFilterInput(
+                    "repeat_range",
+                    null,
+                    structural.RepeatRange.Min,
+                    structural.RepeatRange.Max,
+                    null,
+                    null,
+                    null,
+                    "hard",
+                    "1.0.0");
+            }
+
+            return;
+        }
+
+        if (structural.MaxConsecutiveRun.HasValue)
+        {
+            target["max_consecutive_run"] = new GenerateCandidateFilterInput("max_consecutive_run", structural.MaxConsecutiveRun, null, null, null, null, null, "hard", "1.0.0");
+        }
+
+        if (structural.MaxNeighborCount.HasValue)
+        {
+            target["max_neighbor_count"] = new GenerateCandidateFilterInput("max_neighbor_count", structural.MaxNeighborCount, null, null, null, null, null, "hard", "1.0.0");
+        }
+
+        if (structural.MinRowEntropyNorm.HasValue)
+        {
+            target["min_row_entropy_norm"] = new GenerateCandidateFilterInput("min_row_entropy_norm", structural.MinRowEntropyNorm, null, null, null, null, null, "hard", "1.0.0");
+        }
+
+        if (structural.MaxHhiLinha.HasValue)
+        {
+            target["max_hhi_linha"] = new GenerateCandidateFilterInput("max_hhi_linha", structural.MaxHhiLinha, null, null, null, null, null, "hard", "1.0.0");
+        }
+
+        if (structural.MinSlotAlignment.HasValue)
+        {
+            target["min_slot_alignment"] = new GenerateCandidateFilterInput("min_slot_alignment", structural.MinSlotAlignment, null, null, null, null, null, "hard", "1.0.0");
+        }
+
+        if (structural.MaxOutlierScore.HasValue)
+        {
+            target["max_outlier_score"] = new GenerateCandidateFilterInput("max_outlier_score", structural.MaxOutlierScore, null, null, null, null, null, "hard", "1.0.0");
+        }
+
+        if (structural.RepeatRange is { Min: not null, Max: not null })
+        {
+            target["repeat_range"] = new GenerateCandidateFilterInput(
+                "repeat_range",
+                null,
+                structural.RepeatRange.Min,
+                structural.RepeatRange.Max,
+                null,
+                null,
+                null,
+                "hard",
+                "1.0.0");
+        }
+    }
+
+    private static object BuildStructuralExclusionsResolvedEffectiveEcho(GenerateStructuralExclusionsInput s)
+    {
+        return new
+        {
+            max_consecutive_run = s.MaxConsecutiveRun,
+            max_neighbor_count = s.MaxNeighborCount,
+            min_row_entropy_norm = s.MinRowEntropyNorm,
+            min_column_entropy_norm = s.MinColumnEntropyNorm,
+            max_hhi_linha = s.MaxHhiLinha,
+            max_hhi_coluna = s.MaxHhiColuna,
+            repeat_range = s.RepeatRange is null
+                ? null
+                : new { min = s.RepeatRange.Min, max = s.RepeatRange.Max },
+            min_slot_alignment = s.MinSlotAlignment,
+            max_outlier_score = s.MaxOutlierScore
+        };
+    }
+
+    private static string[] ListActiveStructuralConstraintKeys(GenerateStructuralExclusionsInput s)
+    {
+        var keys = new List<string>();
+        if (s.MaxConsecutiveRun.HasValue)
+        {
+            keys.Add("max_consecutive_run");
+        }
+
+        if (s.MaxNeighborCount.HasValue)
+        {
+            keys.Add("max_neighbor_count");
+        }
+
+        if (s.MinRowEntropyNorm.HasValue)
+        {
+            keys.Add("min_row_entropy_norm");
+        }
+
+        if (s.MaxHhiLinha.HasValue)
+        {
+            keys.Add("max_hhi_linha");
+        }
+
+        if (s.MinSlotAlignment.HasValue)
+        {
+            keys.Add("min_slot_alignment");
+        }
+
+        if (s.MaxOutlierScore.HasValue)
+        {
+            keys.Add("max_outlier_score");
+        }
+
+        if (s.RepeatRange is { Min: not null, Max: not null })
+        {
+            keys.Add("repeat_range");
+        }
+
+        return keys.ToArray();
     }
 
     private static GenerateGenerationBudgetInput ResolveGenerationBudget(GenerateGenerationBudgetInput? input)
@@ -1147,6 +1364,29 @@ public sealed class GenerateCandidateGamesUseCase
     {
         return string.Equals(searchMethod, "sampled", StringComparison.Ordinal) ||
                string.Equals(searchMethod, "greedy_topk", StringComparison.Ordinal);
+    }
+
+    private static bool PlanItemUsesStochasticMethod(GenerateCandidatePlanItemInput item)
+    {
+        var method = string.IsNullOrWhiteSpace(item.SearchMethod)
+            ? (string.Equals(item.StrategyName, DeclaredCompositeProfileStrategy, StringComparison.Ordinal)
+                ? "sampled"
+                : "greedy_topk")
+            : item.SearchMethod;
+        return RequiresSeed(method);
+    }
+
+    private static ulong StochasticBaseForBuild(
+        string searchMethod,
+        ulong? requestSeed,
+        ulong ephemeralStochasticBase)
+    {
+        if (!RequiresSeed(searchMethod))
+        {
+            return 0UL;
+        }
+
+        return requestSeed ?? ephemeralStochasticBase;
     }
 
     private static double Median(IReadOnlyList<double> values)

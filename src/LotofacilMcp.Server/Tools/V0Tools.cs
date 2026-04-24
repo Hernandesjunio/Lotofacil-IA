@@ -412,7 +412,8 @@ public sealed record GenerateCandidateGamesRequest(
     [property: JsonPropertyName("plan")] IReadOnlyList<GenerateCandidatePlanItemRequest>? Plan = null,
     [property: JsonPropertyName("global_constraints")] GenerateGlobalConstraintsRequest? GlobalConstraints = null,
     [property: JsonPropertyName("structural_exclusions")] GenerateStructuralExclusionsRequest? StructuralExclusions = null,
-    [property: JsonPropertyName("generation_budget")] GenerateGenerationBudgetRequest? GenerationBudget = null);
+    [property: JsonPropertyName("generation_budget")] GenerateGenerationBudgetRequest? GenerationBudget = null,
+    [property: JsonPropertyName("generation_mode")] string? GenerationMode = null);
 
 public sealed record AppliedConfigurationEnvelope(
     [property: JsonPropertyName("criteria")] IReadOnlyList<GenerateCandidateCriterionRequest> Criteria,
@@ -433,6 +434,7 @@ public sealed record GenerateCandidateGamesResponse(
     [property: JsonPropertyName("dataset_version")] string DatasetVersion,
     [property: JsonPropertyName("tool_version")] string ToolVersion,
     [property: JsonPropertyName("deterministic_hash")] string DeterministicHash,
+    [property: JsonPropertyName("replay_guaranteed")] bool ReplayGuaranteed,
     [property: JsonPropertyName("window")] WindowEnvelope Window,
     [property: JsonPropertyName("candidate_games")] IReadOnlyList<CandidateGameEnvelope> CandidateGames);
 
@@ -1404,6 +1406,7 @@ public sealed class V0Tools
                     : new GenerateGenerationBudgetInput(
                         request.GenerationBudget.MaxAttempts,
                         request.GenerationBudget.PoolMultiplier),
+                GenerationMode: request.GenerationMode,
                 FixturePath: _fixturePath));
 
             var deterministicHash = _deterministicHashService.Compute(
@@ -1415,6 +1418,7 @@ public sealed class V0Tools
                 DatasetVersion: result.DatasetVersion,
                 ToolVersion: result.ToolVersion,
                 DeterministicHash: deterministicHash,
+                ReplayGuaranteed: result.ReplayGuaranteed,
                 Window: new WindowEnvelope(
                     result.Window.Size,
                     result.Window.StartContestId,

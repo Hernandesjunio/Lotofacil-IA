@@ -667,14 +667,7 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         {
             ["window_size"] = 5,
             ["end_contest_id"] = 1005,
-            ["plan"] = new object[]
-            {
-                new Dictionary<string, object?>
-                {
-                    ["strategy_name"] = "common_repetition_frequency",
-                    ["count"] = 1
-                }
-            }
+            ["plan"] = Array.Empty<object>()
         };
 
         var httpGenerateErr = await _httpClient.PostAsJsonAsync("/tools/generate_candidate_games", invalidGenerateRequest);
