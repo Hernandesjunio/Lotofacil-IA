@@ -198,7 +198,7 @@ public sealed class V0McpTools
         return ToToolResult(payload, payload is ContractErrorEnvelope);
     }
 
-    [McpServerTool(Name = "explain_candidate_games"), Description("Explica jogos candidatos com ranking deterministico de estrategias e breakdown rastreavel.")]
+    [McpServerTool(Name = "explain_candidate_games"), Description("Explica jogos candidatos com ranking deterministico de estrategias, breakdown rastreavel e auditoria opcional de modo/seed/restricoes (ADR 0020).")]
     public CallToolResult ExplainCandidateGames(
         V0Tools tools,
         [Description("Tamanho da janela.")] int? window_size = null,
@@ -207,7 +207,10 @@ public sealed class V0McpTools
         [Description("Concurso final inclusivo.")] int? end_contest_id = null,
         [Description("Lista de jogos candidatos para explicacao.")] IReadOnlyList<IReadOnlyList<int>>? games = null,
         [Description("Inclui detalhamento por metrica e contribuicao.")] bool include_metric_breakdown = true,
-        [Description("Inclui detalhamento de exclusoes estruturais avaliadas.")] bool include_exclusion_breakdown = true)
+        [Description("Inclui detalhamento de exclusoes estruturais avaliadas.")] bool include_exclusion_breakdown = true,
+        [Description("Echo opcional: generation_mode alinhado a generate_candidate_games.")] string? generation_mode = null,
+        [Description("Echo opcional: seed usada em geracao para auditar replay.")] ulong? seed = null,
+        [Description("Echo opcional: replay_guaranteed devolvido na ultima geracao.")] bool? replay_guaranteed = null)
     {
         var payload = tools.ExplainCandidateGames(new ExplainCandidateGamesRequest(
             WindowSize: window_size,
@@ -215,7 +218,10 @@ public sealed class V0McpTools
             EndContestId: end_contest_id,
             Games: games,
             IncludeMetricBreakdown: include_metric_breakdown,
-            IncludeExclusionBreakdown: include_exclusion_breakdown));
+            IncludeExclusionBreakdown: include_exclusion_breakdown,
+            GenerationMode: generation_mode,
+            Seed: seed,
+            ReplayGuaranteed: replay_guaranteed));
 
         return ToToolResult(payload, payload is ContractErrorEnvelope);
     }

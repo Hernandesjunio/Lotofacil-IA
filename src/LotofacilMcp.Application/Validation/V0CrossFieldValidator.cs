@@ -1255,6 +1255,23 @@ public sealed class V0CrossFieldValidator
                 });
         }
 
+        if (!string.IsNullOrWhiteSpace(input.GenerationMode))
+        {
+            var trimmed = input.GenerationMode.Trim();
+            if (!string.Equals(trimmed, GenerationModes.RandomUnrestricted, StringComparison.Ordinal) &&
+                !string.Equals(trimmed, GenerationModes.BehaviorFiltered, StringComparison.Ordinal))
+            {
+                throw new ApplicationValidationException(
+                    code: "INVALID_REQUEST",
+                    message: "generation_mode must be random_unrestricted or behavior_filtered when provided.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["field"] = "generation_mode",
+                        ["value"] = input.GenerationMode
+                    });
+            }
+        }
+
         if (input.Games is null || input.Games.Count == 0)
         {
             throw new ApplicationValidationException(

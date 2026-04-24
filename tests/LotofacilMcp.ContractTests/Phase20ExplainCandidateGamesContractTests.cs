@@ -1,4 +1,5 @@
 using System.Text.Json;
+using LotofacilMcp.Domain.Generation;
 using LotofacilMcp.Server.Tools;
 
 namespace LotofacilMcp.ContractTests;
@@ -42,7 +43,11 @@ public sealed class Phase20ExplainCandidateGamesContractTests
         var payloadB = Assert.IsType<ExplainCandidateGamesResponse>(second);
 
         Assert.Equal(payloadA.DeterministicHash, payloadB.DeterministicHash);
-        Assert.Equal("1.1.0", payloadA.ToolVersion);
+        Assert.Equal("1.2.0", payloadA.ToolVersion);
+        Assert.NotNull(payloadA.CandidateGenerationAudit);
+        Assert.Equal("unspecified", payloadA.CandidateGenerationAudit.EffectiveGenerationMode);
+        Assert.False(payloadA.CandidateGenerationAudit.ContextSupplied);
+        Assert.Contains("interseccao", payloadA.CandidateGenerationAudit.IntersectionAndRestrictions, StringComparison.OrdinalIgnoreCase);
         var gameExplanation = Assert.Single(payloadA.Explanations);
         Assert.Equal(15, gameExplanation.Game.Count);
         Assert.NotEmpty(gameExplanation.CandidateStrategies);
@@ -68,6 +73,11 @@ public sealed class Phase20ExplainCandidateGamesContractTests
         Assert.True(root.TryGetProperty("tool_version", out _));
         Assert.True(root.TryGetProperty("deterministic_hash", out _));
         Assert.True(root.TryGetProperty("window", out _));
+        Assert.True(root.TryGetProperty("candidate_generation_audit", out var genAudit));
+        Assert.Equal(JsonValueKind.Object, genAudit.ValueKind);
+        Assert.True(genAudit.TryGetProperty("effective_generation_mode", out _));
+        Assert.True(genAudit.TryGetProperty("intersection_and_restrictions", out _));
+        Assert.True(genAudit.TryGetProperty("replay_and_seed_policy", out _));
         Assert.True(root.TryGetProperty("explanations", out var explanations));
         Assert.Equal(JsonValueKind.Array, explanations.ValueKind);
 
@@ -95,5 +105,60 @@ public sealed class Phase20ExplainCandidateGamesContractTests
         Assert.Equal(JsonValueKind.Object, result.ValueKind);
         Assert.True(result.TryGetProperty("passed", out _));
         Assert.True(result.TryGetProperty("penalty", out _));
+    }
+
+    [Fact]
+    public void ExplainCandidateGames_InvalidGenerationMode_ReturnsInvalidRequest()
+    {
+        var sut = new V0Tools();
+        var request = new ExplainCandidateGamesRequest(
+            WindowSize: 5,
+            EndContestId: 1005,
+            Games: [[1, 3, 4, 5, 7, 8, 10, 11, 13, 15, 17, 18, 20, 22, 24]],
+            GenerationMode: "not_a_mode");
+
+        var response = sut.ExplainCandidateGames(request);
+        var error = Assert.IsType<ContractErrorEnvelope>(response).Error;
+        Assert.Equal("INVALID_REQUEST", error.Code);
+    }
+
+    [Fact]
+    public void ExplainCandidateGames_BehaviorFilteredNonReplay_AuditsIntersectionAndNonReplayableEpisode()
+    {
+        var sut = new V0Tools();
+        var request = new ExplainCandidateGamesRequest(
+            WindowSize: 5,
+            EndContestId: 1005,
+            Games: [[1, 3, 4, 5, 7, 8, 10, 11, 13, 15, 17, 18, 20, 22, 24]],
+            GenerationMode: GenerationModes.BehaviorFiltered,
+            ReplayGuaranteed: false);
+
+        var response = Assert.IsType<ExplainCandidateGamesResponse>(sut.ExplainCandidateGames(request));
+        var audit = response.CandidateGenerationAudit;
+        Assert.Equal(GenerationModes.BehaviorFiltered, audit.EffectiveGenerationMode);
+        Assert.True(audit.ContextSupplied);
+        Assert.Contains("interseccao", audit.IntersectionAndRestrictions, StringComparison.OrdinalIgnoreCase);
+        Assert.False(audit.ReplayGuaranteed);
+        Assert.Contains("nao e replayavel", audit.ReplayAndSeedPolicy, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ExplainCandidateGames_WithSeedAndReplayGuaranteed_AuditsReplayPolicy()
+    {
+        var sut = new V0Tools();
+        const ulong seed = 42u;
+        var request = new ExplainCandidateGamesRequest(
+            WindowSize: 5,
+            EndContestId: 1005,
+            Games: [[1, 3, 4, 5, 7, 8, 10, 11, 13, 15, 17, 18, 20, 22, 24]],
+            GenerationMode: GenerationModes.RandomUnrestricted,
+            Seed: seed,
+            ReplayGuaranteed: true);
+
+        var response = Assert.IsType<ExplainCandidateGamesResponse>(sut.ExplainCandidateGames(request));
+        var audit = response.CandidateGenerationAudit;
+        Assert.Equal(GenerationModes.RandomUnrestricted, audit.EffectiveGenerationMode);
+        Assert.True(audit.SeedDeclared);
+        Assert.Contains("reprodut", audit.ReplayAndSeedPolicy, StringComparison.OrdinalIgnoreCase);
     }
 }

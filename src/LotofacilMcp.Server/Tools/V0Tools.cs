@@ -454,7 +454,13 @@ public sealed record ExplainCandidateGamesRequest(
     [property: JsonPropertyName("end_contest_id")] int? EndContestId = null,
     [property: JsonPropertyName("games")] IReadOnlyList<IReadOnlyList<int>>? Games = null,
     [property: JsonPropertyName("include_metric_breakdown")] bool IncludeMetricBreakdown = true,
-    [property: JsonPropertyName("include_exclusion_breakdown")] bool IncludeExclusionBreakdown = true);
+    [property: JsonPropertyName("include_exclusion_breakdown")] bool IncludeExclusionBreakdown = true,
+    [property: JsonPropertyName("generation_mode"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    string? GenerationMode = null,
+    [property: JsonPropertyName("seed"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    ulong? Seed = null,
+    [property: JsonPropertyName("replay_guaranteed"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    bool? ReplayGuaranteed = null);
 
 public sealed record MetricBreakdownEntryEnvelope(
     [property: JsonPropertyName("metric_name")] string MetricName,
@@ -520,11 +526,24 @@ public sealed record GameExplanationEnvelope(
     [property: JsonPropertyName("game")] IReadOnlyList<int> Game,
     [property: JsonPropertyName("candidate_strategies")] IReadOnlyList<CandidateStrategyExplanationEnvelope> CandidateStrategies);
 
+public sealed record CandidateGenerationAuditEnvelope(
+    [property: JsonPropertyName("requested_generation_mode"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    string? RequestedGenerationMode,
+    [property: JsonPropertyName("effective_generation_mode")] string EffectiveGenerationMode,
+    [property: JsonPropertyName("context_supplied")] bool ContextSupplied,
+    [property: JsonPropertyName("seed_declared"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    bool? SeedDeclared,
+    [property: JsonPropertyName("replay_guaranteed"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    bool? ReplayGuaranteed,
+    [property: JsonPropertyName("intersection_and_restrictions")] string IntersectionAndRestrictions,
+    [property: JsonPropertyName("replay_and_seed_policy")] string ReplayAndSeedPolicy);
+
 public sealed record ExplainCandidateGamesResponse(
     [property: JsonPropertyName("dataset_version")] string DatasetVersion,
     [property: JsonPropertyName("tool_version")] string ToolVersion,
     [property: JsonPropertyName("deterministic_hash")] string DeterministicHash,
     [property: JsonPropertyName("window")] WindowEnvelope Window,
+    [property: JsonPropertyName("candidate_generation_audit")] CandidateGenerationAuditEnvelope CandidateGenerationAudit,
     [property: JsonPropertyName("explanations")] IReadOnlyList<GameExplanationEnvelope> Explanations);
 
 public sealed class V0Tools
@@ -851,9 +870,11 @@ public sealed class V0Tools
                     ToolVersion: ExplainCandidateGamesUseCase.ToolVersion,
                     SupportedParameters: new Dictionary<string, IReadOnlyList<string>>
                     {
-                        ["flags"] = ["include_metric_breakdown", "include_exclusion_breakdown"]
+                        ["flags"] = ["include_metric_breakdown", "include_exclusion_breakdown"],
+                        ["generation_mode"] = [GenerationModes.RandomUnrestricted, GenerationModes.BehaviorFiltered],
+                        ["context_echo"] = ["seed", "replay_guaranteed"]
                     },
-                    Capabilities: "Explains candidate strategies and exclusion breakdowns for provided games."),
+                    Capabilities: "Explains candidate strategies, exclusion/constraint breakdowns, and auditable echo of generation mode, effective restriction composition (intersection when applicable), and seed/replay policy."),
                 new ToolCapabilityEnvelope(
                     Name: "help",
                     ToolVersion: HelpToolVersion,
@@ -1544,6 +1565,9 @@ public sealed class V0Tools
                 Games: request.Games ?? Array.Empty<IReadOnlyList<int>>(),
                 IncludeMetricBreakdown: request.IncludeMetricBreakdown,
                 IncludeExclusionBreakdown: request.IncludeExclusionBreakdown,
+                GenerationMode: request.GenerationMode,
+                Seed: request.Seed,
+                ReplayGuaranteed: request.ReplayGuaranteed,
                 FixturePath: _fixturePath));
 
             var deterministicHash = _deterministicHashService.Compute(
@@ -1551,6 +1575,7 @@ public sealed class V0Tools
                 result.DatasetVersion,
                 result.ToolVersion);
 
+            var generationAudit = result.GenerationAudit;
             return new ExplainCandidateGamesResponse(
                 DatasetVersion: result.DatasetVersion,
                 ToolVersion: result.ToolVersion,
@@ -1559,6 +1584,14 @@ public sealed class V0Tools
                     result.Window.Size,
                     result.Window.StartContestId,
                     result.Window.EndContestId),
+                CandidateGenerationAudit: new CandidateGenerationAuditEnvelope(
+                    generationAudit.RequestedGenerationMode,
+                    generationAudit.EffectiveGenerationMode,
+                    generationAudit.ContextSupplied,
+                    generationAudit.SeedDeclared,
+                    generationAudit.ReplayGuaranteed,
+                    generationAudit.IntersectionAndRestrictions,
+                    generationAudit.ReplayAndSeedPolicy),
                 Explanations: result.Explanations
                     .Select(game => new GameExplanationEnvelope(
                         Game: game.Game.ToArray(),

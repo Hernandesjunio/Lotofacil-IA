@@ -1,5 +1,6 @@
 using LotofacilMcp.Application.Mapping;
 using LotofacilMcp.Application.Validation;
+using LotofacilMcp.Domain.Generation;
 using LotofacilMcp.Domain.Metrics;
 using LotofacilMcp.Domain.Models;
 using LotofacilMcp.Domain.Windows;
@@ -14,6 +15,12 @@ public sealed record ExplainCandidateGamesInput(
     IReadOnlyList<IReadOnlyList<int>> Games,
     bool IncludeMetricBreakdown,
     bool IncludeExclusionBreakdown,
+    /// <summary>Echo opcional alinhado a <c>generate_candidate_games</c> (ADR 0020).</summary>
+    string? GenerationMode = null,
+    /// <summary>Echo opcional da semente quando se pretende auditar replay.</summary>
+    ulong? Seed = null,
+    /// <summary>Echo opcional de <c>replay_guaranteed</c> na resposta de geracao.</summary>
+    bool? ReplayGuaranteed = null,
     string FixturePath = "");
 
 public sealed record ExplainCandidateGamesDeterministicHashInput(
@@ -21,7 +28,10 @@ public sealed record ExplainCandidateGamesDeterministicHashInput(
     int? EndContestId,
     IReadOnlyList<IReadOnlyList<int>> Games,
     bool IncludeMetricBreakdown,
-    bool IncludeExclusionBreakdown);
+    bool IncludeExclusionBreakdown,
+    string? GenerationMode,
+    ulong? Seed,
+    bool? ReplayGuaranteed);
 
 public sealed record MetricBreakdownEntryView(
     string MetricName,
@@ -86,16 +96,26 @@ public sealed record GameExplanationView(
     IReadOnlyList<int> Game,
     IReadOnlyList<CandidateStrategyExplanationView> CandidateStrategies);
 
+public sealed record CandidateGenerationAuditView(
+    string? RequestedGenerationMode,
+    string EffectiveGenerationMode,
+    bool ContextSupplied,
+    bool? SeedDeclared,
+    bool? ReplayGuaranteed,
+    string IntersectionAndRestrictions,
+    string ReplayAndSeedPolicy);
+
 public sealed record ExplainCandidateGamesResult(
     string DatasetVersion,
     string ToolVersion,
     ExplainCandidateGamesDeterministicHashInput DeterministicHashInput,
     WindowDescriptor Window,
+    CandidateGenerationAuditView GenerationAudit,
     IReadOnlyList<GameExplanationView> Explanations);
 
 public sealed class ExplainCandidateGamesUseCase
 {
-    public const string ToolVersion = "1.1.0";
+    public const string ToolVersion = "1.2.0";
     private const string StrategyVersion = "1.0.0";
     private const string ExclusionVersion = "1.0.0";
     private const string TypicalRangeMethodVersion = "1.0.0";
@@ -143,6 +163,8 @@ public sealed class ExplainCandidateGamesUseCase
             var repeatStats = QuantileStats(repeatMetric.Value);
             var repetitionMedian = repeatStats.Median;
 
+            var generationAudit = BuildGenerationAudit(input);
+
             var explanations = input.Games
                 .Select(game => BuildGameExplanation(
                     game,
@@ -166,14 +188,109 @@ public sealed class ExplainCandidateGamesUseCase
                     input.EndContestId,
                     input.Games.Select(game => (IReadOnlyList<int>)game.ToArray()).ToArray(),
                     input.IncludeMetricBreakdown,
-                    input.IncludeExclusionBreakdown),
+                    input.IncludeExclusionBreakdown,
+                    string.IsNullOrWhiteSpace(input.GenerationMode) ? null : input.GenerationMode.Trim(),
+                    input.Seed,
+                    input.ReplayGuaranteed),
                 Window: windowView,
+                GenerationAudit: generationAudit,
                 Explanations: explanations);
         }
         catch (DomainInvariantViolationException ex)
         {
             throw MapDomainError(ex);
         }
+    }
+
+    private static CandidateGenerationAuditView BuildGenerationAudit(ExplainCandidateGamesInput input)
+    {
+        var modeTrimmed = string.IsNullOrWhiteSpace(input.GenerationMode) ? null : input.GenerationMode.Trim();
+        var contextSupplied = modeTrimmed is not null || input.Seed.HasValue || input.ReplayGuaranteed is not null;
+        var effective = modeTrimmed ?? "unspecified";
+        if (string.Equals(effective, GenerationModes.RandomUnrestricted, StringComparison.Ordinal))
+        {
+            effective = GenerationModes.RandomUnrestricted;
+        }
+        else if (string.Equals(effective, GenerationModes.BehaviorFiltered, StringComparison.Ordinal))
+        {
+            effective = GenerationModes.BehaviorFiltered;
+        }
+        // else: remain "unspecified" or invalid (validator should reject)
+
+        var seedDeclared = !contextSupplied && !input.Seed.HasValue
+            ? (bool?)null
+            : input.Seed.HasValue;
+
+        return new CandidateGenerationAuditView(
+            RequestedGenerationMode: modeTrimmed,
+            EffectiveGenerationMode: effective,
+            ContextSupplied: contextSupplied,
+            SeedDeclared: seedDeclared,
+            ReplayGuaranteed: input.ReplayGuaranteed,
+            IntersectionAndRestrictions: BuildIntersectionText(effective),
+            ReplayAndSeedPolicy: BuildReplayText(input, contextSupplied, seedDeclared));
+    }
+
+    private static string BuildIntersectionText(string effectiveGenerationMode)
+    {
+        if (string.Equals(effectiveGenerationMode, GenerationModes.BehaviorFiltered, StringComparison.Ordinal))
+        {
+            return "Restricoes efetivas: o conjunto admissivel e a interseccao (conjunçao) de cada restricao declarada no pedido " +
+                "de geracao (criterios por faixa, filtros, exclusoes estruturais e plano de estrategias), salvo semantica " +
+                "alternativa documentada. O jogo e avaliado adiante em relacao a varias perspectivas de aderencia descritiva; " +
+                "isso nao implica maior chance no sorteio oficial e continua condicionado a janela.";
+        }
+
+        if (string.Equals(effectiveGenerationMode, GenerationModes.RandomUnrestricted, StringComparison.Ordinal))
+        {
+            return "No modo random_unrestricted, a politica alvo nao aplica por defeito exclusoes estruturais nem criterios de " +
+                "aderencia nao declarados. O candidato valido continua a ser 15 dezenas distintas (ordenacao canonica). A " +
+                "metrica e o breakdown abaixo caracterizam o jogo perante a janela, sem reintroduzir como filtro obrigatorio " +
+                "guardrails nao pedidos nesse modo.";
+        }
+
+        return "Sem `generation_mode` alinhado ao `generate_candidate_games`, a geracao nao e auditada aqui. " +
+            "Inclua `generation_mode` e, se for util, `seed` e `replay_guaranteed` coerentes com a resposta de geracao. " +
+            "Com `behavior_filtered`, o conjunto admissivel e tipicamente a interseccao das restricoes declaradas. " +
+            "Com `random_unrestricted`, nao se exigem por defeito filtro de comportamento nao declarado (ADR 0020).";
+    }
+
+    private static string BuildReplayText(
+        ExplainCandidateGamesInput input,
+        bool contextSupplied,
+        bool? seedDeclared)
+    {
+        if (input.ReplayGuaranteed is null)
+        {
+            if (!contextSupplied)
+            {
+                return "Episodio: contexto de replay nao fornecido; faltam `seed` e/ou `replay_guaranteed` " +
+                    "se quiser justificar a reprodutibilidade de pedidos alinhados a `generate_candidate_games`.";
+            }
+
+            return "Episodio: `replay_guaranteed` nao foi reenviado nesta explicacao; a auditoria de " +
+                "reprodutibilidade fica parcial (fornecha o echo da resposta de geracao quando possivel).";
+        }
+
+        if (input.ReplayGuaranteed is false)
+        {
+            return "O episodio nao e replayavel quanto a lista concreta de candidatos: com estocastica e sem semente, " +
+                "uma nova invocacao com o mesmo JSON (salvo a politica de `deterministic_hash` para inputs nao " +
+                "aleatorios) pode devolver outro lote; os indicadores abaixo permanecem condicionados a janela.";
+        }
+
+        // replay_guaranteed is true
+        if (seedDeclared is not true)
+        {
+            return "A resposta de geracao indica `replay_guaranteed` verdadeiro; ainda assim, semente nao reenviada " +
+                "aqui, pelo que a cadeia canónica nao fica plenamente audivel nesta explicacao. Com `seed` e mesmos " +
+                "inputs, a porcao estocastica reproduz a sequencia de candidatos declarada, sujeita a `unique_games` e regras.";
+        }
+
+        return "Com a mesma `seed`, o mesmo `dataset_version` e o mesmo request canónico, a porcao estocastica " +
+            "e reprodutivel (sequencia de candidatos ordenada, com `unique_games` e restricoes declaradas). " +
+            "A ausencia de promessa fora desse vinculo permanece vinculada a planos nao estocasticos e a politica de " +
+            "`random_unrestricted` / `behavior_filtered` indicada no modo de geracao (sem implicar resultado futuro do sorteio).";
     }
 
     private static GameExplanationView BuildGameExplanation(
