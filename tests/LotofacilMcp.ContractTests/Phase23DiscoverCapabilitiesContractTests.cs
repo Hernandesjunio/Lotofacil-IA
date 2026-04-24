@@ -33,9 +33,11 @@ public sealed class Phase23DiscoverCapabilitiesContractTests
         Assert.Contains(payloadA.Metrics.SummarizeWindowAggregatesAllowedSources, name => name is "repeticao_concurso_anterior");
         Assert.Contains(payloadA.Metrics.AssociationAllowedIndicators, name => name is "entropia_linha_por_concurso");
 
-        Assert.Single(payloadA.Generation.Strategies);
-        Assert.Equal("common_repetition_frequency", payloadA.Generation.Strategies[0].Name);
+        Assert.True(payloadA.Generation.Strategies.Count >= 2);
+        Assert.Contains(payloadA.Generation.Strategies, strategy => strategy.Name is "common_repetition_frequency");
+        Assert.Contains(payloadA.Generation.Strategies, strategy => strategy.Name is "declared_composite_profile");
         Assert.Contains("greedy_topk", payloadA.Generation.SearchMethods);
+        Assert.Contains("max_neighbor_count", payloadA.Generation.SupportedFilters);
 
         using var json = JsonSerializer.SerializeToDocument(payloadA);
         var root = json.RootElement;

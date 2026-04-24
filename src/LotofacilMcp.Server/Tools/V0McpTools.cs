@@ -172,7 +172,7 @@ public sealed class V0McpTools
         return ToToolResult(payload, payload is ContractErrorEnvelope);
     }
 
-    [McpServerTool(Name = "generate_candidate_games"), Description("Gera jogos candidatos por estrategia nominal simples com orcamento e determinismo.")]
+    [McpServerTool(Name = "generate_candidate_games"), Description("Gera candidatos de forma declarativa com criterios/pesos/filtros auditaveis e estrategias publicas.")]
     public CallToolResult GenerateCandidateGames(
         V0Tools tools,
         [Description("Tamanho da janela.")] int? window_size = null,
@@ -180,14 +180,18 @@ public sealed class V0McpTools
         int? start_contest_id = null,
         [Description("Concurso final inclusivo.")] int? end_contest_id = null,
         [Description("Seed obrigatoria para metodos sampled ou greedy_topk.")] ulong? seed = null,
-        [Description("Plano de geracao por estrategia nominal.")] IReadOnlyList<GenerateCandidatePlanItemRequest>? plan = null)
+        [Description("Plano declarativo por estrategia com criteria/weights/filters.")] IReadOnlyList<GenerateCandidatePlanItemRequest>? plan = null,
+        [Description("Restricoes globais de unicidade e ordenacao.")] GenerateGlobalConstraintsRequest? global_constraints = null,
+        [Description("Exclusoes estruturais globais para filtragem dos candidatos.")] GenerateStructuralExclusionsRequest? structural_exclusions = null)
     {
         var payload = tools.GenerateCandidateGames(new GenerateCandidateGamesRequest(
             WindowSize: window_size,
             StartContestId: start_contest_id,
             EndContestId: end_contest_id,
             Seed: seed,
-            Plan: plan));
+            Plan: plan,
+            GlobalConstraints: global_constraints,
+            StructuralExclusions: structural_exclusions));
 
         return ToToolResult(payload, payload is ContractErrorEnvelope);
     }

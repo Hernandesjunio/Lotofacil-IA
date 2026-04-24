@@ -331,14 +331,61 @@ public sealed record DiscoverCapabilitiesResponse(
 public sealed record GenerateCandidatePlanItemRequest(
     [property: JsonPropertyName("strategy_name")] string StrategyName,
     [property: JsonPropertyName("count")] int Count,
-    [property: JsonPropertyName("search_method")] string? SearchMethod);
+    [property: JsonPropertyName("strategy_version")] string? StrategyVersion = null,
+    [property: JsonPropertyName("search_method")] string? SearchMethod = null,
+    [property: JsonPropertyName("tie_break_rule")] string? TieBreakRule = null,
+    [property: JsonPropertyName("criteria")] IReadOnlyList<GenerateCandidateCriterionRequest>? Criteria = null,
+    [property: JsonPropertyName("weights")] IReadOnlyList<GenerateCandidateWeightRequest>? Weights = null,
+    [property: JsonPropertyName("filters")] IReadOnlyList<GenerateCandidateFilterRequest>? Filters = null);
+
+public sealed record GenerateCandidateCriterionRequest(
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("value")] double Value);
+
+public sealed record GenerateCandidateWeightRequest(
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("weight")] double Weight);
+
+public sealed record GenerateCandidateFilterRequest(
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("value")] double? Value = null,
+    [property: JsonPropertyName("min")] double? Min = null,
+    [property: JsonPropertyName("max")] double? Max = null,
+    [property: JsonPropertyName("version")] string? Version = null);
+
+public sealed record GenerateGlobalConstraintsRequest(
+    [property: JsonPropertyName("unique_games")] bool? UniqueGames = null,
+    [property: JsonPropertyName("sorted_numbers")] bool? SortedNumbers = null);
+
+public sealed record GenerateRepeatRangeRequest(
+    [property: JsonPropertyName("min")] int? Min = null,
+    [property: JsonPropertyName("max")] int? Max = null);
+
+public sealed record GenerateStructuralExclusionsRequest(
+    [property: JsonPropertyName("max_consecutive_run")] double? MaxConsecutiveRun = null,
+    [property: JsonPropertyName("max_neighbor_count")] double? MaxNeighborCount = null,
+    [property: JsonPropertyName("min_row_entropy_norm")] double? MinRowEntropyNorm = null,
+    [property: JsonPropertyName("min_column_entropy_norm")] double? MinColumnEntropyNorm = null,
+    [property: JsonPropertyName("max_hhi_linha")] double? MaxHhiLinha = null,
+    [property: JsonPropertyName("max_hhi_coluna")] double? MaxHhiColuna = null,
+    [property: JsonPropertyName("repeat_range")] GenerateRepeatRangeRequest? RepeatRange = null,
+    [property: JsonPropertyName("min_slot_alignment")] double? MinSlotAlignment = null,
+    [property: JsonPropertyName("max_outlier_score")] double? MaxOutlierScore = null);
 
 public sealed record GenerateCandidateGamesRequest(
     [property: JsonPropertyName("window_size")] int? WindowSize = null,
     [property: JsonPropertyName("start_contest_id")] int? StartContestId = null,
     [property: JsonPropertyName("end_contest_id")] int? EndContestId = null,
     [property: JsonPropertyName("seed")] ulong? Seed = null,
-    [property: JsonPropertyName("plan")] IReadOnlyList<GenerateCandidatePlanItemRequest>? Plan = null);
+    [property: JsonPropertyName("plan")] IReadOnlyList<GenerateCandidatePlanItemRequest>? Plan = null,
+    [property: JsonPropertyName("global_constraints")] GenerateGlobalConstraintsRequest? GlobalConstraints = null,
+    [property: JsonPropertyName("structural_exclusions")] GenerateStructuralExclusionsRequest? StructuralExclusions = null);
+
+public sealed record AppliedConfigurationEnvelope(
+    [property: JsonPropertyName("criteria")] IReadOnlyList<GenerateCandidateCriterionRequest> Criteria,
+    [property: JsonPropertyName("weights")] IReadOnlyList<GenerateCandidateWeightRequest> Weights,
+    [property: JsonPropertyName("filters")] IReadOnlyList<GenerateCandidateFilterRequest> Filters,
+    [property: JsonPropertyName("resolved_defaults")] IReadOnlyDictionary<string, object?> ResolvedDefaults);
 
 public sealed record CandidateGameEnvelope(
     [property: JsonPropertyName("numbers")] IReadOnlyList<int> Numbers,
@@ -346,7 +393,8 @@ public sealed record CandidateGameEnvelope(
     [property: JsonPropertyName("strategy_version")] string StrategyVersion,
     [property: JsonPropertyName("search_method")] string SearchMethod,
     [property: JsonPropertyName("tie_break_rule")] string TieBreakRule,
-    [property: JsonPropertyName("seed_used"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ulong? SeedUsed);
+    [property: JsonPropertyName("seed_used"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ulong? SeedUsed,
+    [property: JsonPropertyName("applied_configuration")] AppliedConfigurationEnvelope AppliedConfiguration);
 
 public sealed record GenerateCandidateGamesResponse(
     [property: JsonPropertyName("dataset_version")] string DatasetVersion,
@@ -704,8 +752,11 @@ public sealed class V0Tools
                     ToolVersion: GenerateCandidateGamesUseCase.ToolVersion,
                     SupportedParameters: new Dictionary<string, IReadOnlyList<string>>
                     {
-                        ["strategy_name"] = ["common_repetition_frequency"],
-                        ["search_method"] = ["exhaustive", "sampled", "greedy_topk"]
+                        ["strategy_name"] = ["common_repetition_frequency", "declared_composite_profile"],
+                        ["search_method"] = ["exhaustive", "sampled", "greedy_topk"],
+                        ["plan.criteria"] = ["name", "value"],
+                        ["plan.weights"] = ["name", "weight"],
+                        ["plan.filters"] = ["name", "value|min|max", "version"]
                     },
                     Capabilities: "Generates deterministic candidate games from supported strategy plans."),
                 new ToolCapabilityEnvelope(
@@ -731,10 +782,20 @@ public sealed class V0Tools
             Generation: new GenerationCapabilitiesEnvelope(
                 Strategies:
                 [
-                    new GenerationStrategyEnvelope("common_repetition_frequency", "1.0.0")
+                    new GenerationStrategyEnvelope("common_repetition_frequency", "1.0.0"),
+                    new GenerationStrategyEnvelope("declared_composite_profile", "1.0.0")
                 ],
                 SearchMethods: ["exhaustive", "sampled", "greedy_topk"],
-                SupportedFilters: Array.Empty<string>()));
+                SupportedFilters:
+                [
+                    "max_consecutive_run",
+                    "max_neighbor_count",
+                    "min_row_entropy_norm",
+                    "max_hhi_linha",
+                    "repeat_range",
+                    "min_slot_alignment",
+                    "max_outlier_score"
+                ]));
 
         var deterministicHash = _deterministicHashService.Compute(
             new
@@ -1175,8 +1236,49 @@ public sealed class V0Tools
                     .Select(planItem => new GenerateCandidatePlanItemInput(
                         planItem.StrategyName,
                         planItem.Count,
-                        planItem.SearchMethod))
+                        planItem.StrategyVersion,
+                        planItem.SearchMethod,
+                        planItem.TieBreakRule,
+                        planItem.Criteria?
+                            .Select(criterion => new GenerateCandidateCriteriaInput(
+                                criterion.Name,
+                                criterion.Value))
+                            .ToArray(),
+                        planItem.Weights?
+                            .Select(weight => new GenerateCandidateWeightInput(
+                                weight.Name,
+                                weight.Weight))
+                            .ToArray(),
+                        planItem.Filters?
+                            .Select(filter => new GenerateCandidateFilterInput(
+                                filter.Name,
+                                filter.Value,
+                                filter.Min,
+                                filter.Max,
+                                filter.Version))
+                            .ToArray()))
                     .ToArray(),
+                GlobalConstraints: request.GlobalConstraints is null
+                    ? null
+                    : new GenerateGlobalConstraintsInput(
+                        request.GlobalConstraints.UniqueGames,
+                        request.GlobalConstraints.SortedNumbers),
+                StructuralExclusions: request.StructuralExclusions is null
+                    ? null
+                    : new GenerateStructuralExclusionsInput(
+                        request.StructuralExclusions.MaxConsecutiveRun,
+                        request.StructuralExclusions.MaxNeighborCount,
+                        request.StructuralExclusions.MinRowEntropyNorm,
+                        request.StructuralExclusions.MinColumnEntropyNorm,
+                        request.StructuralExclusions.MaxHhiLinha,
+                        request.StructuralExclusions.MaxHhiColuna,
+                        request.StructuralExclusions.RepeatRange is null
+                            ? null
+                            : new GenerateRepeatRangeInput(
+                                request.StructuralExclusions.RepeatRange.Min,
+                                request.StructuralExclusions.RepeatRange.Max),
+                        request.StructuralExclusions.MinSlotAlignment,
+                        request.StructuralExclusions.MaxOutlierScore),
                 FixturePath: _fixturePath));
 
             var deterministicHash = _deterministicHashService.Compute(
@@ -1199,7 +1301,27 @@ public sealed class V0Tools
                         game.StrategyVersion,
                         game.SearchMethod,
                         game.TieBreakRule,
-                        game.SeedUsed))
+                        game.SeedUsed,
+                        new AppliedConfigurationEnvelope(
+                            Criteria: game.AppliedConfiguration.Criteria
+                                .Select(criterion => new GenerateCandidateCriterionRequest(
+                                    criterion.Name,
+                                    criterion.Value))
+                                .ToArray(),
+                            Weights: game.AppliedConfiguration.Weights
+                                .Select(weight => new GenerateCandidateWeightRequest(
+                                    weight.Name,
+                                    weight.Weight))
+                                .ToArray(),
+                            Filters: game.AppliedConfiguration.Filters
+                                .Select(filter => new GenerateCandidateFilterRequest(
+                                    filter.Name,
+                                    filter.Value,
+                                    filter.Min,
+                                    filter.Max,
+                                    filter.Version))
+                                .ToArray(),
+                            ResolvedDefaults: game.AppliedConfiguration.ResolvedDefaults)))
                     .ToArray());
         }
         catch (ApplicationValidationException ex)

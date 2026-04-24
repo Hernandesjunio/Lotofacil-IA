@@ -41,7 +41,8 @@ public sealed class V0CrossFieldValidator
 
     private static readonly HashSet<string> SupportedGenerationStrategies =
     [
-        "common_repetition_frequency"
+        "common_repetition_frequency",
+        "declared_composite_profile"
     ];
 
     private static readonly HashSet<string> SupportedSearchMethods =
@@ -49,6 +50,17 @@ public sealed class V0CrossFieldValidator
         "exhaustive",
         "sampled",
         "greedy_topk"
+    ];
+
+    private static readonly HashSet<string> SupportedGenerationFilters =
+    [
+        "max_consecutive_run",
+        "max_neighbor_count",
+        "min_row_entropy_norm",
+        "max_hhi_linha",
+        "repeat_range",
+        "min_slot_alignment",
+        "max_outlier_score"
     ];
 
     private static readonly HashSet<string> SupportedAggregateTypes =
@@ -658,6 +670,21 @@ public sealed class V0CrossFieldValidator
                 });
         }
 
+        if (input.StructuralExclusions?.RepeatRange is not null)
+        {
+            var repeatRange = input.StructuralExclusions.RepeatRange;
+            if (!repeatRange.Min.HasValue || !repeatRange.Max.HasValue || repeatRange.Min.Value > repeatRange.Max.Value)
+            {
+                throw new ApplicationValidationException(
+                    code: "INVALID_REQUEST",
+                    message: "structural_exclusions.repeat_range must define min and max with min <= max.",
+                    details: new Dictionary<string, object?>
+                    {
+                        ["field"] = "structural_exclusions.repeat_range"
+                    });
+            }
+        }
+
         var totalCount = 0;
         foreach (var planItem in input.Plan)
         {
@@ -696,9 +723,7 @@ public sealed class V0CrossFieldValidator
             }
 
             totalCount += planItem.Count;
-            var effectiveSearchMethod = string.IsNullOrWhiteSpace(planItem.SearchMethod)
-                ? "greedy_topk"
-                : planItem.SearchMethod;
+            var effectiveSearchMethod = ResolveDefaultSearchMethod(planItem.StrategyName, planItem.SearchMethod);
 
             if (!SupportedSearchMethods.Contains(effectiveSearchMethod))
             {
@@ -724,6 +749,107 @@ public sealed class V0CrossFieldValidator
                         ["search_method"] = effectiveSearchMethod
                     });
             }
+
+            if (planItem.Criteria is { Count: > 0 })
+            {
+                foreach (var criterion in planItem.Criteria)
+                {
+                    if (criterion is null || string.IsNullOrWhiteSpace(criterion.Name))
+                    {
+                        throw new ApplicationValidationException(
+                            code: "INVALID_REQUEST",
+                            message: "criteria entries must define name.",
+                            details: new Dictionary<string, object?>
+                            {
+                                ["field"] = "plan[].criteria[].name"
+                            });
+                    }
+                }
+            }
+
+            if (planItem.Weights is { Count: > 0 })
+            {
+                double weightSum = 0d;
+                foreach (var weight in planItem.Weights)
+                {
+                    if (weight is null || string.IsNullOrWhiteSpace(weight.Name))
+                    {
+                        throw new ApplicationValidationException(
+                            code: "INVALID_REQUEST",
+                            message: "weights entries must define name.",
+                            details: new Dictionary<string, object?>
+                            {
+                                ["field"] = "plan[].weights[].name"
+                            });
+                    }
+
+                    weightSum += weight.Weight;
+                }
+
+                if (Math.Abs(weightSum - 1.0d) > IndicatorTransformFunctions.WeightSumTolerance)
+                {
+                    throw new ApplicationValidationException(
+                        code: "INCOMPATIBLE_COMPOSITION",
+                        message: "weights must sum to 1.0 within tolerance 1e-9.",
+                        details: new Dictionary<string, object?>
+                        {
+                            ["weight_sum"] = weightSum
+                        });
+                }
+            }
+
+            if (planItem.Filters is { Count: > 0 })
+            {
+                foreach (var filter in planItem.Filters)
+                {
+                    if (filter is null || string.IsNullOrWhiteSpace(filter.Name))
+                    {
+                        throw new ApplicationValidationException(
+                            code: "INVALID_REQUEST",
+                            message: "filters entries must define name.",
+                            details: new Dictionary<string, object?>
+                            {
+                                ["field"] = "plan[].filters[].name"
+                            });
+                    }
+
+                    if (!SupportedGenerationFilters.Contains(filter.Name))
+                    {
+                        throw new ApplicationValidationException(
+                            code: "INVALID_REQUEST",
+                            message: "filter name is not supported in this build.",
+                            details: new Dictionary<string, object?>
+                            {
+                                ["filter_name"] = filter.Name
+                            });
+                    }
+
+                    if (string.Equals(filter.Name, "repeat_range", StringComparison.Ordinal))
+                    {
+                        if (!filter.Min.HasValue || !filter.Max.HasValue || filter.Min.Value > filter.Max.Value)
+                        {
+                            throw new ApplicationValidationException(
+                                code: "INVALID_REQUEST",
+                                message: "repeat_range requires min and max with min <= max.",
+                                details: new Dictionary<string, object?>
+                                {
+                                    ["field"] = "plan[].filters[].repeat_range"
+                                });
+                        }
+                    }
+                    else if (!filter.Value.HasValue)
+                    {
+                        throw new ApplicationValidationException(
+                            code: "INVALID_REQUEST",
+                            message: "numeric filters require value.",
+                            details: new Dictionary<string, object?>
+                            {
+                                ["field"] = "plan[].filters[].value",
+                                ["filter_name"] = filter.Name
+                            });
+                    }
+                }
+            }
         }
 
         if (totalCount > 250)
@@ -736,6 +862,18 @@ public sealed class V0CrossFieldValidator
                     ["total_count"] = totalCount
                 });
         }
+    }
+
+    private static string ResolveDefaultSearchMethod(string strategyName, string? requested)
+    {
+        if (!string.IsNullOrWhiteSpace(requested))
+        {
+            return requested;
+        }
+
+        return string.Equals(strategyName, "declared_composite_profile", StringComparison.Ordinal)
+            ? "sampled"
+            : "greedy_topk";
     }
 
     public void ValidateExplainCandidateGames(ExplainCandidateGamesInput input)
