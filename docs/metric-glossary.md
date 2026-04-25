@@ -1,12 +1,77 @@
 # Glossário de métricas (definição, interpretação e exemplos)
 
-**Navegação:** [← Brief (índice)](brief.md) · [README](../README.md)
+**Navegação:** [← Brief (índice)](brief.md) · [README](../README.md) · [Textos de resumo para tabelas (ADR 0021)](#textos-de-resumo-para-tabelas-adr-0021)
+
+**Sumário:** [Textos de resumo para tabelas (ADR 0021)](#textos-de-resumo-para-tabelas-adr-0021) (norma de apresentação humana, tabelas A e B, D2, D5, alinhado a [adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md)).
 
 Documento pedagógico complementar ao catálogo técnico em [metric-catalog.md](metric-catalog.md). Aqui cada métrica tem **definição**, **o que observa** (interpretação em linguagem simples) e **exemplo de uso**. Fórmulas detalhadas, tipagem, versões e **léxico das colunas da Tabela 1** (Categoria, Status, Shape etc.) permanecem no catálogo.
 
 **Nota sobre predição:** todas descrevem padrões no histórico ou estrutura de um jogo; nenhuma implica acerto futuro.
 
 **Interação entre métricas (ex. pares e entropia de linha no mesmo recorte):** o co-movimento estatístico (Spearman/Pearson) entre séries alinhadas por concurso — p.ex. `pares_no_concurso` e `entropia_linha_por_concurso` — descreve-se com `analyze_indicator_associations` conforme [test-plan.md](test-plan.md) e [ADR 0006 D5](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md). Isto **não** implica que “mais pares causam” mais ou menos entropia; a janela é descritiva.
+
+---
+
+## Textos de resumo para tabelas (ADR 0021)
+
+Norma de **redação curta** para tabelas voltadas a leitores humanos quando se resume saída de `compute_window_metrics` (e equivalente), sem alterar o **contrato** JSON do MCP. Fonte de semântica e fórmulas: [metric-catalog.md](metric-catalog.md); vinculação a templates: [ADR 0021 — apresentação de resumos de janela](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) (D1–D3, Apêndice, D5).
+
+**Não** substituem as seções *Definição* e *O que observa* por métrica abaixo: fundem ou condensam o mesmo conteúdo para a coluna certa, **ajustando** à janela (p.ex. “nestes *N* concursos”) quando fizer sentido, **sem** prometer acerto ou resultado futuro.
+
+### Templates D1: coluna de texto a preencher
+
+| Tipo | Onde se usa | Coluna de redação acessível | O que se omite neste *modo* (quem precisa, usa JSON ou o catálogo) |
+|------|-------------|----------------------------|-------------------------------------------------------------------|
+| **A** — escalares, vetores pequenos, listas 10 | Painéis de um valor ou listas curtas (ex. top 10) | **Descrição** (comportamento ou o que o número *mede* no recorte) | `shape` / unidade *no texto da tabela*; não misturar semântica com a coluna **Valor** |
+| **B** — séries (um valor por concurso) | Tabelas min. / máx. (ou resumo) ao longo da janela | **O que esta série indica** (linguagem acessível; 1–2 frases) | Coluna vaga do tipo “(nota)” sem substância: deve ser trocada por esta coluna (D1 da ADR 0021) |
+
+**Requisitos (catálogo + D1):** para `estabilidade_ranking` e outro escalar *opaco*, a coluna A **Descrição** declara, no mínimo, a **comparação de rankings de frequência entre sub-janelas consecutivas** e o intervalo \([0,1]\), alinhado ao bloco *O que observa* e à *Nota normativa — `estabilidade_ranking`* em [metric-catalog.md](metric-catalog.md). Na coluna B, a última explica o que **varia de concurso a concurso** em concreto (p.ex. “como a sorte se reparte pelas linhas do volante”); a unidade técnica, se útil, **depois** (entre parênteses).
+
+### D2 — Vocabulário acessível mínimo (séries da Tabela B)
+
+Obrigatório quando a métrica for uma das séries listadas em **Tabela B** (ou irmã no catálogo, com o mesmo *paper* de significado). Redação: primeiro o comportamento em português claro, depois o rótulo técnico se preciso.
+
+- **`entropia_*_por_concurso` (linha e coluna):** grau de **mistura** das 15 dezenas entre as 5 **linhas** (ou 5 **colunas**) do volante. Mais **alto** ≈ mais **espalhado**; mais **baixo** ≈ mais **concentrado** em poucas linhas (ou colunas). Unidade: bits de Shannon (pode constar após a frase).
+- **`hhi_*_por_concurso`:** **concentração** da distribuição. HHI mais **alto** ≈ mais dezenas nas **mesmas** linhas (ou colunas); mais **baixo** ≈ repartição mais **uniforme**. A sigla *HHI* (Herfindahl-Hirschman) pode seguir a frase.
+- **`pares_no_concurso`:** quantas das 15 dezenas sorteadas são **números pares** (2, 4, 6, …) naquele concurso.
+- **`quantidade_vizinhos_por_concurso` / `sequencia_maxima_vizinhos_por_concurso`:** pares de dezenas **consecutivas** (diferença 1) no sorteio ordenado; a segunda dá o **comprimento do maior** bloco desses vizinhos.
+
+*Outras séries do [metric-catalog.md](metric-catalog.md):* reutilize ou condense a linha **O que observa** homónima neste glossário; mantenha coerência com a coluna B acima.
+
+### Tabela A — textos reutilizáveis (coluna **Descrição**)
+
+Texto padrão para o **modo resumo** ([ADR 0021 D5](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md)); pode ajustar-se a “N concursos” / “este recorte”.
+
+| Métrica | Texto de tabela (coluna **Descrição**) |
+|--------|----------------------------------------|
+| `estabilidade_ranking` | Mede, entre **sub-janelas consecutivas** do recorte, se a **ordem** das 25 dezenas por **frequência** tende a manter-se parecida: 0 muito instável, 1 muito estável (intervalo \([0,1]\)). Não indica “confiança” de resultado futuro; descreve **persistência de ranking** no histórico (ver *O que observa* e catálogo). |
+| `frequencia_por_dezena` | Conta quantas vezes cada dezena 1 a 25 **saiu** nos concursos **desta janela** (cada concurso conta no máximo uma vez por dezena). Aproxima a ideia de “popularidade” bruta no período, sem leitura preditiva. |
+| `atraso_por_dezena` | Número de **concursos desde a última ocorrência** de cada dezena no referencial de janela ou política declarada no catálogo; 0 = saiu no **último** sorteio do recorte considerado. Não implica previsão de saída futura. |
+| `top10_mais_sorteados` | Lista compacta das 10 dezenas com **mais** ocorrências de saída na janela declarada (frequência bruta, como no catálogo). |
+| `top10_menos_sorteados` | Lista compacta das 10 dezenas com **menos** ocorrências de saída na mesma janela (frequência bruta). |
+
+### Tabela B — textos reutilizáveis (**O que esta série indica**)
+
+| Métrica | O que a série indica (linguagem acessível) |
+|--------|-------------------------------------------|
+| `entropia_linha_por_concurso` | Quanto o sorteio **mistura** dezenas pelas **5 linhas** do volante: quanto **mais alto**, mais “espalhado”; **mais baixo**, mais **concentrado** em poucas linhas. (Unidade técnica: bits de Shannon, conforme [metric-catalog.md](metric-catalog.md).) |
+| `entropia_coluna_por_concurso` | Mesma ideia da entropia de **linha**, para as **5 colunas** do volante. |
+| `hhi_linha_por_concurso` | **Concentração** espacial: se o sorteio pesa nas **mesmas** linhas. HHI **mais alto** = mais concentrado; **mais baixo** = repartição mais **uniforme** entre linhas. |
+| `hhi_coluna_por_concurso` | O **mesmo** que o HHI de **linha**, para as **5 colunas** do volante. |
+| `repeticao_concurso_anterior` | **Quantas dezenas coincidem** com o concurso **imediatamente anterior** na janela (não com um sorteio afastado). |
+| `pares_no_concurso` | Quantas das 15 dezenas sorteadas são **números pares** (2, 4, 6, …) naquele concurso. |
+| `quantidade_vizinhos_por_concurso` | Pares de dezenas com **diferença 1** no sorteio **ordenado** (p.ex. 7 e 8) — a “colagem” numérica ao longo do tempo. |
+| `sequencia_maxima_vizinhos_por_concurso` | Comprimento do **maior** bloco contíguo de dezenas consecutivas (diferença 1) **naquele** sorteio. |
+| `distribuicao_linha_por_concurso` / `distribuicao_coluna_por_concurso` | **Cinco** inteiros que somam 15: **quantas** dezenas caem em cada **linha** (ou coluna) do volante, concurso a concurso. |
+
+### D5 (profundidade) — resumo padrão *vs.* interpretação longa
+
+| Modo | Papel desta subsecção |
+|------|------------------------|
+| **Resumo padrão** | Estas tabelas e o bloco *O que observa* (por métrica) fornecem o **piso** de fidelidade à semântica; preferir 1–2 frases, sem redefinir o contrato. |
+| **Interpretação explícita a pedido** (mais *tokens*) | Pode alargar-se com min/máx, comparação entre séries, leitura **descritiva** do que ocorreu **na** janela, desde que **ancorada** no catálogo + glossário e nos **valores reais** devolvidos; ainda proibido prometer resultado futuro ou afirmar função inexistente no [metric-catalog.md](metric-catalog.md). |
+
+*Última intenção desta subsecção:* cumprir D3 e o Apêndice (frases PT) de [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) no repositório; alterações de fórmula exigem alinhamento com o catálogo e revisão destes textos se a interpretação mudar.
 
 ---
 
