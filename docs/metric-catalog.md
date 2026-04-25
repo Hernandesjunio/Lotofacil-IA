@@ -173,6 +173,9 @@ Esta secção regula **nomes** (ergonomia e migração), não altera o contrato 
 
 - **Motivo:** nomes autoexplicativos reduzem ambiguidade (“contagem total na janela” vs “sequência atual com reinício”).
 - **Coexistência (janela de migração):** um nome novo pode ser introduzido como sinônimo semântico de um nome antigo para permitir comparação/rollback.
+- **Mapeamento normativo (nesta fase; sem renomear):**
+  - `frequencia_por_dezena@1.0.0` → **substituição recomendada**: `total_de_presencas_na_janela_por_dezena@1.0.0` (**equivalentes** na mesma janela; ver Tabela 2).
+  - `top10_mais_sorteados@1.0.0` / `top10_menos_sorteados@1.0.0` → alternativa autoexplicativa (mesma ideia de top-10 por contagem em janela): `top10_maiores_totais_de_presencas_na_janela@1.0.0` / `top10_menores_totais_de_presencas_na_janela@1.0.0` (derivadas de `total_de_presencas_na_janela_por_dezena`; ver Tabela 2).
 - **Sunset (prazo máximo):** métricas marcadas como *deprecated* permanecem disponíveis até **2026-05-25** (inclusive). Após esta data, builds podem passar a rejeitar o nome deprecated com `UNKNOWN_METRIC`, incluindo em `details`:
   - `deprecated_metric_name`
   - `replacement_metric_name`
