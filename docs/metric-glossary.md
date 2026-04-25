@@ -1,8 +1,8 @@
 # Glossário de métricas (definição, interpretação e exemplos)
 
-**Navegação:** [← Brief (índice)](brief.md) · [README](../README.md) · [Textos de resumo para tabelas (ADR 0021)](#textos-de-resumo-para-tabelas-adr-0021)
+**Navegação:** [← Brief (índice)](brief.md) · [README](../README.md) · [Vocabulário: «ausência» (ADR)](#vocab-ausencia-adr-0021) · [Textos de resumo para tabelas (ADR 0021)](#textos-de-resumo-para-tabelas-adr-0021)
 
-**Sumário:** [Textos de resumo para tabelas (ADR 0021)](#textos-de-resumo-para-tabelas-adr-0021) (norma de apresentação humana, tabelas A e B, D2, D5, alinhado a [adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md)).
+**Sumário:** [Vocabulário: «ausência» × ADR 0021](#vocab-ausencia-adr-0021) · [Textos de resumo para tabelas (ADR 0021)](#textos-de-resumo-para-tabelas-adr-0021) (norma de apresentação humana, tabelas A e B, D2, D5, alinhado a [adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md)).
 
 Documento pedagógico complementar ao catálogo técnico em [metric-catalog.md](metric-catalog.md). Aqui cada métrica tem **definição**, **o que observa** (interpretação em linguagem simples) e **exemplo de uso**. Fórmulas detalhadas, tipagem, versões e **léxico das colunas da Tabela 1** (Categoria, Status, Shape etc.) permanecem no catálogo.
 
@@ -10,16 +10,18 @@ Documento pedagógico complementar ao catálogo técnico em [metric-catalog.md](
 
 **Interação entre métricas (ex. pares e entropia de linha no mesmo recorte):** o co-movimento estatístico (Spearman/Pearson) entre séries alinhadas por concurso — p.ex. `pares_no_concurso` e `entropia_linha_por_concurso` — descreve-se com `analyze_indicator_associations` conforme [test-plan.md](test-plan.md) e [ADR 0006 D5](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md). Isto **não** implica que “mais pares causam” mais ou menos entropia; a janela é descritiva.
 
-## Vocabulário: «ausência» × frequência × atraso × `ausencia_blocos`
+<h2 id="vocab-ausencia-adr-0021">Vocabulário: «ausência» × frequência × atraso × <code>ausencia_blocos</code></h2>
 
-<span id="vocab-ausencia-adr-0021"></span>
+*Quatro **papéis** (o último é o modo como estes três *tipos* de medida são separados no texto, sem renomear métrica):* **(1)** *frequência na janela*; **(2)** *atraso* e *estado* (leitura *agora*); **(3)** *`ausencia_blocos`* (e, por simetria, `frequencia_blocos`); **(4)** *distinção explícita* nesta tabela (e tabela A / nota *Ausência* no [Apêndice, ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md#apendice-frases-modelo-pt-adr-0021) — ponte alinhada a [Ponte *— quatro papéis* (catálogo, *QtdFrequencia*)](metric-catalog.md#export-legado-qtdfrequencia)). *Definições e fórmulas fechadas* permanecem no catálogo ([Tabela 1](metric-catalog.md#tabela-1-identificacao-e-tipagem), [Tabela 2](metric-catalog.md#tabela-2-semantica)); *não* reabrem-se aqui além de remeter.
 
-Quatro ideias distintas entram com **vector 1..25** ou listas longas; o alinhamento com [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) (tabelas A, nota *Ausência*) e com a [Tabela 2](metric-catalog.md#tabela-2--semântica) do catálogo evita trocar rótulos.
+O quadro alinha *intenção* de leitor com **vector 1..25** ou `count_list_by_dezena` conforme o [catálogo](metric-catalog.md); com [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) (tabelas A, nota *Ausência* à [âncora `nota-ausencia-adr-0021`](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md#nota-ausencia-adr-0021)) evita trocar rótulos.
 
 | O que a pessoa quis dizer (exemplo de intenção) | Métrica canónica | Forma / lembrete |
 |-----------------------------------------------|------------------|------------------|
 | “Saiu quantas vezes nesta janela?” (popularidade *bruta*) | `frequencia_por_dezena` | `vector_by_dezena`, contagens; **soma** dos 25 = `15 × N` (N = concursos da janela). |
+| “Qual é o total de vezes que saiu nesta janela?” (nome autoexplicativo; contagem total) | `total_de_presencas_na_janela_por_dezena` | `vector_by_dezena`, contagens; **equivalente** a `frequencia_por_dezena` no mesmo recorte; soma dos 25 = `15 × N`. |
 | “Faz *N* concursos que *não* saiu / está *ausente* desde a última?” (frio) | `atraso_por_dezena` (e, no fim do recorte, muito do que se lê com `estado_atual_dezena`) | `vector_by_dezena`, valores 0…N; **não** soma `15×N`. O *look* de vector com muitos 0, 1, 2, … alinha a **atraso**, não a soma de `frequencia_por_dezena`. |
+| “Está saindo em sequência? há quantos concursos vem saindo sem falhar?” (streak; reinicia ao ausente) | `sequencia_atual_de_presencas_por_dezena` | `vector_by_dezena`, valores 0…N; **reinicia** quando a dezena não sai. Não é contagem total na janela. |
 | “Quais foram os **tamanhos** dos períodos **seguidos** *sem* a dezena?” (estrutura de blocos) | `ausencia_blocos` | `count_list_by_dezena` (codificação por dezena: dezena, nº de blocos, comprimentos…), **não** um simples vector[25] de inteiros. |
 | (Análogo à linha de cima, para blocos de **presença**) | `frequencia_blocos` | `count_list_by_dezena`. |
 
@@ -61,10 +63,14 @@ Texto padrão para o **modo resumo** ([ADR 0021 D5](adrs/0021-apresentacao-resum
 |--------|----------------------------------------|
 | `estabilidade_ranking` | Mede, entre **sub-janelas consecutivas** do recorte, se a **ordem** das 25 dezenas por **frequência** tende a manter-se parecida: 0 muito instável, 1 muito estável (intervalo \([0,1]\)). Não indica “confiança” de resultado futuro; descreve **persistência de ranking** no histórico (ver *O que observa* e catálogo). |
 | `frequencia_por_dezena` | Conta quantas vezes cada dezena 1 a 25 **saiu** nos concursos **desta janela** (cada concurso conta no máximo uma vez por dezena). Soma global dos 25 = `15×N`. *Não* descreve «há *N* concursos *sem* sair»; ver a tabela *Vocabulário* [acima](#vocab-ausencia-adr-0021) e a linha de `atraso_por_dezena`. |
+| `total_de_presencas_na_janela_por_dezena` | Total de vezes que cada dezena 1 a 25 **saiu** nos concursos **desta janela** (mesma contagem da frequência total; nome autoexplicativo). Soma global dos 25 = `15×N`. |
+| `sequencia_atual_de_presencas_por_dezena` | Quantos concursos **seguidos** (no fim desta janela) a dezena vem **saindo sem interrupção**: quando a dezena não sai em um concurso, a sequência **reinicia** (volta a 0). |
 | `atraso_por_dezena` | Número de **concursos desde a última ocorrência**; 0 = saiu no **último** sorteio do recorte. Em prosa, «ausente há *N* edições» alinha aqui, **não** a `frequencia_por_dezena` (ver [ADR 0021, apêndice tabela A](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md)). |
 | `estado_atual_dezena` | `0` se a dezena saiu no último concurso do recorte; senão, atraso corrente. Mesma família de *look* de vector que o atraso, para a leitura «agora» (Tabela 2 do catálogo). |
 | `top10_mais_sorteados` | Lista compacta das 10 dezenas com **mais** ocorrências de saída na janela declarada (frequência bruta, como no catálogo). |
 | `top10_menos_sorteados` | Lista compacta das 10 dezenas com **menos** ocorrências de saída na mesma janela (frequência bruta). |
+| `top10_maiores_totais_de_presencas_na_janela` | Lista compacta das 10 dezenas com maior **total de presenças na janela**, derivada de `total_de_presencas_na_janela_por_dezena` (desempate por dezena asc). |
+| `top10_menores_totais_de_presencas_na_janela` | Lista compacta das 10 dezenas com menor **total de presenças na janela**, derivada de `total_de_presencas_na_janela_por_dezena` (desempate por dezena asc). |
 
 ### Tabela B — textos reutilizáveis (**O que esta série indica**)
 
@@ -101,6 +107,21 @@ Texto padrão para o **modo resumo** ([ADR 0021 D5](adrs/0021-apresentacao-resum
 
 ---
 
+## `total_de_presencas_na_janela_por_dezena`
+
+- **Definição:** total de vezes que cada dezena (1–25) apareceu nos sorteios da janela declarada.
+- **O que observa:** a mesma “popularidade bruta” do recorte, com um nome que deixa explícito que é **total na janela**.
+- **Exemplo de uso:** “Qual foi o total de presenças por dezena nesta janela?” (equivalente a `frequencia_por_dezena`).
+- **Equivalência normativa:** para a mesma janela, o vetor deve ser idêntico a `frequencia_por_dezena@1.0.0` (ver [metric-catalog.md](metric-catalog.md)).
+
+---
+
+## `sequencia_atual_de_presencas_por_dezena`
+
+- **Definição:** para cada dezena, quantos concursos **seguidos** (no final da janela) ela vem saindo sem interrupção.
+- **O que observa:** “streak atual” de presença; quando a dezena não sai em um concurso, o contador **reinicia** para 0.
+- **Exemplo de uso:** “Quais dezenas estão em sequência de saída agora (no fim da janela)?”.
+
 ## `top10_mais_sorteados`
 
 - **Definição:** as dez dezenas com maior `frequencia_por_dezena` na janela, com regra de desempate explícita no catálogo. O recorte temporal é **sempre o que o pedido declara** (p.ex. equivalência `start`/`fim` ↔ `window_size`+`end_contest_id` em [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) D2).
@@ -110,6 +131,8 @@ Texto padrão para o **modo resumo** ([ADR 0021 D5](adrs/0021-apresentacao-resum
   - `top10_overlap_count(game) = |game ∩ top10_mais_sorteados|` (0..10)
   - `top10_overlap_ratio(game) = top10_overlap_count / 10`
   Essas features podem ser usadas como `range` ou `allowed_values` para evitar “valor fixo”.
+- **Preferência (nome novo):** quando a build expuser `top10_maiores_totais_de_presencas_na_janela`, prefira derivar as mesmas features a partir dele (mesma ideia; nome deixa explícito “total na janela”):
+  - `top10_overlap_count(game) = |game ∩ top10_maiores_totais_de_presencas_na_janela|` (0..10)
 - **Não confundir com *exports* de UI legado** cujo rótulo sugere “histórico” com janela *rolling* implícita: esse comportamento **não** é `top10_mais_sorteados` até existir outra métrica no [metric-catalog.md](metric-catalog.md). Para o caso “top 10 **no intervalo de concursos que escolhi**”, use esta métrica (ver [ADR 0008 D3](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md)).
 - **D4 (sem N mágico de ecrã antigo):** o tamanho da janela **não** vem de constantes de interface legada (“últimos 10 concursos” no gráfico); o consumidor passa a janela explícita no request MCP ([ADR 0008 D4](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md)).
 
@@ -122,6 +145,20 @@ Texto padrão para o **modo resumo** ([ADR 0021 D5](adrs/0021-apresentacao-resum
 - **Exemplo de uso:** “Quais dezenas apareceram menos nos últimos 30 sorteios?”
 
 ---
+
+## `top10_maiores_totais_de_presencas_na_janela`
+
+- **Definição:** as 10 dezenas com maior `total_de_presencas_na_janela_por_dezena` na janela (desempate por dezena asc conforme catálogo).
+- **O que observa:** “top 10” do recorte baseado explicitamente no **total na janela** (nome evita ambiguidade).
+- **Exemplo de uso:** “Liste o top 10 por total de presenças na janela para comparar com meu jogo.”.
+
+---
+
+## `top10_menores_totais_de_presencas_na_janela`
+
+- **Definição:** as 10 dezenas com menor `total_de_presencas_na_janela_por_dezena` na janela (desempate por dezena asc conforme catálogo).
+- **O que observa:** “bottom 10” do recorte baseado explicitamente no **total na janela**.
+- **Exemplo de uso:** “Quais dezenas tiveram o menor total de presenças na janela?”.
 
 ## `repeticao_concurso_anterior`
 

@@ -140,6 +140,33 @@ Passos atômicos:
 - Criar `Domain/Normalization/` com a barreira canônica de `Draw`.
 - Criar `Domain/Windows/` com a regra de resolução de janela.
 - Criar `Domain/Metrics/` com `frequencia_por_dezena@1.0.0`.
+
+### Extensão (hotfix pós-V0) — Métricas autoexplicativas: total na janela e sequência atual
+
+Objetivo: introduzir métricas com nomes **não ambíguos** para leitura humana e validação de “sequência atual reinicia ao ausente”, mantendo compatibilidade com nomes antigos durante a janela de migração (sunset).
+
+Passos atômicos (ordem recomendada):
+
+- **H1 — Fechar spec (catálogo + ADR 0021 + glossário):**
+  - Garantir que [metric-catalog.md](metric-catalog.md) lista:
+    - `total_de_presencas_na_janela_por_dezena@1.0.0` (equivalente semântico de `frequencia_por_dezena@1.0.0`);
+    - `sequencia_atual_de_presencas_por_dezena@1.0.0` (streak atual com reinício ao ausente);
+    - `top10_maiores_totais_de_presencas_na_janela@1.0.0` e `top10_menores_totais_de_presencas_na_janela@1.0.0` derivados do “total”.
+  - Garantir que [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) inclui frases modelo para as novas métricas (tabela A).
+  - Garantir que [metric-glossary.md](metric-glossary.md) possui entradas e textos de tabela para as novas métricas.
+
+- **H2 — Testes vermelhos (fórmula + equivalência):**
+  - Adicionar testes de fórmula para `sequencia_atual_de_presencas_por_dezena` provando reinício ao ausente.
+  - Adicionar teste de equivalência: `total_de_presencas_na_janela_por_dezena == frequencia_por_dezena` na mesma janela/fixture.
+  - Adicionar testes para novos top10 (ties estáveis, desempate por dezena asc), usando fixture tipo `tie_heavy.json`.
+
+- **H3 — Implementação mínima (após testes):**
+  - Implementar as duas novas métricas (total e sequência) e os dois novos top10.
+  - Manter nomes antigos funcionando durante a janela de migração.
+
+- **H4 — Contrato de migração (sunset):**
+  - Atualizar [mcp-tool-contract.md](mcp-tool-contract.md) para que `UNKNOWN_METRIC` possa carregar `details.replacement_metric_name` e `details.sunset_date` quando o nome pedido foi removido por sunset.
+  - Atualizar [contract-test-plan.md](contract-test-plan.md) com o teste negativo de sunset.
 - Criar apenas erros/invariantes semânticos que realmente pertençam ao domínio; não mover para `Domain` códigos de contrato que são responsabilidade de `Server`/`Application`.
 
 Referências:
@@ -765,16 +792,18 @@ Norma:
 
 Passos atômicos (ordem recomendada):
 
-- **27.1 — `metric-glossary`:** adicionar subsecção **“Textos de resumo para tabelas (ADR 2021)”** (ou equivalente) com as frases do Apêndice da ADR, condensando ou reutilizando o bloco *“O que observa”* existente, sem contradizer [metric-catalog.md](metric-catalog.md).
-- **27.1b (hotfix documental, *opcional* salvo *gap* aberto) — ponte *Vocabulário* («ausência» / frequência / atraso / `ausencia_blocos`):** alinhar em cadeia [metric-catalog.md](metric-catalog.md) (secção *QtdFrequencia* e, se necessário, notas colaterais), o Apêndice e o D3 da [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) e o glossário (âncora `#vocab-ausencia-adr-0021`, tabela *Vocabulário*), para a conversa *ausente *N* concursos* **não** se confundir com `frequencia_por_dezena` (somas) nem com o *shape* de `ausencia_blocos`. **Não** altera fórmulas nem o contrato MCP. Usar quando, após 27.1, ainda houver risco de ambiguidade editorial entre o catálogo, o apêndice e o glossário.
-- **27.2 — `AGENTS.md` e consumidores de texto:** confirmar que o atalho para a ADR 0021 (e, se existir, regra em *rules* do repositório) aponta para a distinção **resumo padrão** (baixo custo em tokens) *vs.* **interpretação explícita** sob pedido (mais tokens, ancorada no catálogo e nos dados do MCP), conforme D5.
-- **27.3 (opcional) — `compute_window_metrics`:** enriquecer `ExplanationFor` no *Application* apenas onde hoje cai no genérico *“Metrica de janela.”* e a ADR 0021 pede texto mínimo coerente (não duplica a coluna “descrição” de tabelas A/B, mas melhora a tool para quem lê o JSON no cliente).
-- **27.4 (opcional) — resources:** rever `resources/help/`, `resources/prompts/index@*` e modelos alinhados ao [ADR 0009](adrs/0009-help-e-catalogo-de-templates-resources-v1.md) para exemplos de tabela A/B *sem* coluna técnica `shape`/`unit` em resumos a leigo.
+- **27.1 — `metric-glossary`:** adicionar subsecção **“Textos de resumo para tabelas (ADR 0021)”** (nome alinhado às *Consequências* da ADR) com as frases do Apêndice da ADR, condensando ou reutilizando o bloco *“O que observa”* existente, sem contradizer [metric-catalog.md](metric-catalog.md). Cobrir, na redação, os requisitos D1: coluna **Descrição** (A) com, no mínimo para `estabilidade_ranking`, a leitura de *sub-janelas* e \([0,1]\) sem previsão; tabela B com última coluna *obrigatória* e vocabulário D2 (entropia, HHI, pares, vizinhos) quando a métrica for citada.
+- **27.1b (hotfix documental, *opcional* salvo *gap* aberto) — ponte *Vocabulário* («ausência» / frequência / atraso / `ausencia_blocos`):** alinhar em cadeia [metric-catalog.md](metric-catalog.md) (secção *QtdFrequencia* e ponte *quatro papéis*, âncora estável `#export-legado-qtdfrequencia`; *Tabelas 1 e 2* canónicas se só precisar de ligação normativa, sem reescrever fórmulas), o Apêndice e o D3 da [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) (âncoras estáveis, entre outras: `#vocab-ausencia-adr-0021` no glossário, `#apendice-frases-modelo-pt-adr-0021` e `#nota-ausencia-adr-0021` no apêndice) e o glossário (tabela *Vocabulário* com `#vocab-ausencia-adr-0021`), para a conversa *ausente *N* concursos* **não** se confundir com `frequencia_por_dezena` (somas) nem com o *shape* de `ausencia_blocos`. **Não** altera fórmulas nem o contrato MCP. Usar quando, após 27.1, ainda houver risco de ambiguidade editorial entre o catálogo, o apêndice e o glossário.
+- **27.2 — `AGENTS.md` e consumidores de texto:** confirmar que o atalho para a ADR 0021 (e, se existir, regra em *rules* do repositório) aponta para a distinção **resumo padrão** (baixo custo em tokens) *vs.* **interpretação explícita** sob pedido (mais tokens, ancorada no catálogo e nos dados do MCP), conforme D5; ver [ADR 0009](adrs/0009-help-e-catalogo-de-templates-resources-v1.md) (D4) se o texto for onboarding/template.
+- **27.3 (opcional) — `compute_window_metrics` e texto no `MetricValue`:** ponto de extensão em código: [ComputeWindowMetricsUseCase.cs](../src/LotofacilMcp.Application/UseCases/ComputeWindowMetricsUseCase.cs) (`ExplanationFor` → campo `explanation` por métrica, quando existir no contrato). **Estado de referência:** o `switch` já cobre as métricas canónicas conhecidas; o genérico *“Metrica de janela.”* aplica-se **só** ao ramo *default* (nomes de métrica fora do mapa / futuras extensões). 27.3: (a) alargar o mapa se novas métricas deixarem cair no default, e/ou (b) alinhar *strings* técnicas ao tom mínimo do glossário/ADR **sem** substituir a norma A/B (apresentação humana). Não muda `MetricValue.value` nem semântica.
+- **27.4 (opcional) — resources D4:** rever `resources/help/`, `resources/prompts/` (ex. `index@1.0.0.md`, prompts temáticos) e modelos alinhados ao [ADR 0009](adrs/0009-help-e-catalogo-de-templates-resources-v1.md) para exemplos de tabela A/B *sem* coluna redundante `shape`/`unit` em resumos a leigo; o [LotofacilMcp.Server.csproj](../src/LotofacilMcp.Server/LotofacilMcp.Server.csproj) copia `resources/**` para o *output* — após editar, garantir a mesma cópia/versão usada no *publish* (aberto no item *resources* da [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md)).
+
+**Superfície de ficheiros (Fase 27, exceto 27.3 *strictly* code):** `docs/metric-glossary.md`; opc. `docs/metric-catalog.md`; `AGENTS.md`; `.cursor/rules/*`; `resources/help/*.md`, `resources/prompts/*.md`; código `src/LotofacilMcp.Application/UseCases/ComputeWindowMetricsUseCase.cs` (27.3).
 
 Critério mínimo de aceite:
 
-- existe secção de suporte no glossário (ou documento claramente referenciado) com frases reutilizáveis alinhadas ao Apêndice da ADR 0021; se 27.1b for aplicada, a ponte *Vocabulário* e o *QtdFrequencia* estão coerentes entre catálogo, ADR 0021 e glossário, sem conflito de nomes;
-- a distinção D1/D5 (tabelas *vs.* interpretação; custo consciente de tokens) está explícita num documento normativo acessível a quem edita `AGENTS` / regras de host;
+- existe secção de suporte no glossário (ou documento claramente referenciado) com frases reutilizáveis alinhadas ao Apêndice da ADR 0021; se 27.1b for aplicada, a ponte *Vocabulário* e o *QtdFrequencia* estão coerentes entre catálogo, ADR 0021 e glossário, sem conflito de nomes, e as âncoras D3 (ex. `#vocab-ausencia-adr-0021`, `#export-legado-qtdfrequencia`, apêndice `#nota-ausencia-adr-0021`) resolvam-se;
+- a distinção D1/D5 (tabelas *vs.* interpretação; custo consciente de tokens) e D2 (mínimo léxico em séries) estão refletidas na documentação e, para agentes, em `AGENTS`/regras;
 - nenhuma frase de apresentação contradiz fórmulas do catálogo nem implica previsão de sorteio.
 
 Nota operacional: template para pedidos atômicos

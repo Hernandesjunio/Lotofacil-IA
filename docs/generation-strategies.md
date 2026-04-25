@@ -80,24 +80,24 @@ Esses filtros não afirmam impossibilidade matemática; apenas removem regiões 
 | `strategy_name` | `common_repetition_frequency` |
 | `strategy_version` | `1.0.0` |
 | `objetivo` | Jogos alinhados ao comportamento central recente de frequência e repetição |
-| `metricas_principais` | `frequencia_por_dezena@1.0.0`, `top10_mais_sorteados@1.0.0`, `repeticao_concurso_anterior@1.0.0` |
+| `metricas_principais` | `total_de_presencas_na_janela_por_dezena@1.0.0`, `top10_maiores_totais_de_presencas_na_janela@1.0.0`, `repeticao_concurso_anterior@1.0.0` |
 | `search_method` | `greedy_topk` |
 | `seed` | obrigatória |
 
 **Filtros:**
 - 15 dezenas únicas em `[1..25]`;
 - repetição prevista `r* ∈ [Q1, Q3]` da série `repeticao_concurso_anterior` (faixa típica; ver ADR 0019 para declaração/eco quando o cliente quiser parametrizar);
-- ao menos 6 dezenas no `top10_mais_sorteados`.
+- ao menos 6 dezenas no `top10_maiores_totais_de_presencas_na_janela`.
 
 **Nota (para flexibilidade sem ambiguidade):** quando o consumidor quiser “top10 histórico por faixa”, a restrição deve incidir sobre uma feature escalar derivada, p.ex.:
-- `top10_overlap_count(game) = |game ∩ top10_mais_sorteados|` (inteiro 0..10),
-- ou `top10_overlap_ratio(game) = |game ∩ top10_mais_sorteados| / 10`.
-Essas features podem ser usadas como `range`/`allowed_values` (ADR 0019), em vez de tentar aplicar range sobre a lista `top10_mais_sorteados` (shape incompatível).
+- `top10_overlap_count(game) = |game ∩ top10_maiores_totais_de_presencas_na_janela|` (inteiro 0..10),
+- ou `top10_overlap_ratio(game) = |game ∩ top10_maiores_totais_de_presencas_na_janela| / 10`.
+Essas features podem ser usadas como `range`/`allowed_values` (ADR 0019), em vez de tentar aplicar range sobre a lista `top10_maiores_totais_de_presencas_na_janela` (shape incompatível).
 
 **Score:**
 
 ```text
-freq_alignment = (1/15) * Σ_{d ∈ jogo} (frequencia_por_dezena[d] / max(frequencia_por_dezena))
+freq_alignment = (1/15) * Σ_{d ∈ jogo} (total_de_presencas_na_janela_por_dezena[d] / max(total_de_presencas_na_janela_por_dezena))
 repeat_alignment = 1 - |r*(jogo) - mediana(repeticao_concurso_anterior)| / 15
 score = 0.6 * freq_alignment + 0.4 * repeat_alignment
 ```
@@ -117,7 +117,7 @@ score = 0.6 * freq_alignment + 0.4 * repeat_alignment
 | `strategy_name` | `row_entropy_balance` |
 | `strategy_version` | `1.0.0` |
 | `objetivo` | Jogos com boa dispersão por linha, sem colapsar em uma forma única |
-| `metricas_principais` | `distribuicao_linha@1.0.0`, `entropia_linha@1.0.0`, `hhi_concentracao@1.0.0`, `frequencia_por_dezena@1.0.0` |
+| `metricas_principais` | `distribuicao_linha@1.0.0`, `entropia_linha@1.0.0`, `hhi_concentracao@1.0.0`, `total_de_presencas_na_janela_por_dezena@1.0.0` |
 | `search_method` | `sampled` |
 | `seed` | obrigatória |
 
@@ -229,14 +229,14 @@ score = outlier_score(jogo, janela)
 **Definições canônicas dos componentes:**
 
 ```text
-freq_alignment = (1/15) * Σ_{d ∈ jogo} (frequencia_por_dezena[d] / max(frequencia_por_dezena))
+freq_alignment = (1/15) * Σ_{d ∈ jogo} (total_de_presencas_na_janela_por_dezena[d] / max(total_de_presencas_na_janela_por_dezena))
 repeat_alignment = 1 - |repeticao_prevista(jogo) - mediana(repeticao_concurso_anterior)| / 15
 slot_alignment = analise_slot(jogo, janela)
 row_entropy_norm = entropia_linha.H_norm(jogo)
 column_entropy_norm = entropia_coluna.H_norm(jogo)
 pairs_balance_score = 1 - |pares(jogo) - mediana(pares_no_concurso)| / 15
 neighbors_balance_score = 1 - |quantidade_vizinhos(jogo) - mediana(quantidade_vizinhos_por_concurso)| / 14
-top10_overlap_ratio = |jogo ∩ top10_mais_sorteados| / 10
+top10_overlap_ratio = |jogo ∩ top10_maiores_totais_de_presencas_na_janela| / 10
 outlier_centrality = 1 / (1 + outlier_score(jogo, janela))
 ```
 

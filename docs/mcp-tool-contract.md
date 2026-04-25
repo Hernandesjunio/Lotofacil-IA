@@ -36,7 +36,12 @@ O contrato está organizado em camadas. Para validar uma implementação ou um P
 ### Catálogo vs. `compute_window_metrics`
 
 - O [metric-catalog.md](metric-catalog.md) define **nomes, fórmulas, formas e versões**; uma build pode, num recorte, implementar `compute_window_metrics` apenas para um **subconjunto** alinhado à [vertical-slice.md](vertical-slice.md) e extensões documentadas.  
-- `UNKNOWN_METRIC` com `details.metric_name` preenchido indica, neste contexto, **nome conhecido no catálogo mas ainda não utilizável nesta rota ou nesta build**; o servidor **deve** preencher `details` com pistas auditáveis (p.ex. `allowed_metrics` fechado ou mensagem canónica) e manter o `tool_version` rastreável, conforme [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) D1.  
+- `UNKNOWN_METRIC` com `details.metric_name` preenchido indica, neste contexto, **nome conhecido no catálogo mas ainda não utilizável nesta rota ou nesta build**; o servidor **deve** preencher `details` com pistas auditáveis (p.ex. `allowed_metrics` fechado ou mensagem canónica) e manter o `tool_version` rastreável, conforme [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) D1.
+- **Migração / sunset (nome deprecated):** quando a métrica existir no catálogo mas o nome foi removido por política de sunset, o servidor deve responder `UNKNOWN_METRIC` e incluir em `details` (quando aplicável):
+  - `deprecated_metric_name` (o nome pedido);
+  - `replacement_metric_name` (nome recomendado no catálogo);
+  - `sunset_date` (ISO-8601, ex. `2026-05-25`);
+  - `migration_note` (texto humano curto).
 - Isto **não** contradiu o `UNKNOWN_METRIC` para strings que não estão no catálogo: aí a correção continua a ser ajustar o request ou o catálogo, não a implementação adivinhar o nome.
 
 ### Pipeline mínimo recomendado (reprodutível, sem defaults ocultos)
@@ -460,6 +465,7 @@ Calcular métricas canônicas para uma janela.
 - A tool pode recusar uma métrica cujo **nome** está no [metric-catalog.md](metric-catalog.md) com `UNKNOWN_METRIC` quando a **implementação** da build ainda não expuser essa métrica nesta rota; nesse caso `details.metric_name` identifica o pedido e, quando possível, `details` inclui a lista de nomes **efetivamente** aceites.  
 - O recorte mínimo documentado em [vertical-slice.md](vertical-slice.md) exige, para fechamento da V0, apenas `frequencia_por_dezena@1.0.0` em sucesso; outras entradas seguem a matriz em [metric-catalog.md](metric-catalog.md) e a decisão [ADR 0006 D1](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md).  
 - **Coesão com geração/explicar:** se `explain_candidate_games` ou estratégias referem internamente `repeticao_concurso_anterior` (ou outra), mas `compute_window_metrics` a rejeita nesta build, o teste de coerência cruzada em [test-plan.md](test-plan.md) aplica-se até a métrica ser promovida (ver *GAPS*, [contract-test-plan.md](contract-test-plan.md)).
+- **Deprecação (compatibilidade temporária):** durante a janela de migração, uma build pode aceitar nomes equivalentes (ex.: `frequencia_por_dezena` e `total_de_presencas_na_janela_por_dezena`) e retornar ambos normalmente. Após o sunset definido no catálogo, a build pode recusar o nome antigo com `UNKNOWN_METRIC` e `details.replacement_metric_name` (ver “Catálogo vs. `compute_window_metrics`” acima).
 
 #### Observações
 

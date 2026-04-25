@@ -60,8 +60,12 @@ Requisitos e suíte mínima de **cinco** cenários (**L1–L5**): [live-openai-i
 | Métrica | Teste positivo obrigatório | Teste de borda / negativo |
 |---|---|---|
 | `frequencia_por_dezena` | contagem exata em janela sintética | soma dos 25 contadores = `15 × window_size` |
+| `total_de_presencas_na_janela_por_dezena` | contagem exata em janela sintética (equivalente a `frequencia_por_dezena` na mesma janela) | soma dos 25 contadores = `15 × window_size` e teste de equivalência `total_de_presencas_na_janela_por_dezena == frequencia_por_dezena` (mesmo recorte) |
+| `sequencia_atual_de_presencas_por_dezena` | sequência atual correta (reinicia ao ausente) em janela sintética curta | bordas: (a) dezena ausente no último concurso ⇒ 0; (b) janela `N=1` ⇒ 1 se saiu senão 0; (c) não possui invariante `15×N` (não testar soma) |
 | `top10_mais_sorteados` | ranking correto do top 10 | ties estáveis |
 | `top10_menos_sorteados` | ranking correto do bottom 10 | ties estáveis |
+| `top10_maiores_totais_de_presencas_na_janela` | ranking correto do top 10 derivado de `total_de_presencas_na_janela_por_dezena` | ties estáveis (desempate dezena asc) |
+| `top10_menores_totais_de_presencas_na_janela` | ranking correto do bottom 10 derivado de `total_de_presencas_na_janela_por_dezena` | ties estáveis (desempate dezena asc) |
 | `atraso_por_dezena` | atraso exato ao fim da janela | dezena nunca observada satura corretamente |
 | `frequencia_blocos` | blocos de presença corretos | janela com bloco único |
 | `ausencia_blocos` | blocos de ausência corretos | ausência contínua até o fim |

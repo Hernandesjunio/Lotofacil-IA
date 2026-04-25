@@ -1835,12 +1835,14 @@ Critério de pronto:
 
 ## Fase 27 - ADR 0021: apresentacao de resumos de janela (tabelas A-B, glossario, D5)
 
-*Extensão pós–Fase 26. Norma: [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md). Documentação e texto a humanos: **não** muda o envelope `MetricValue` do MCP. Espelha a [Fase 27 do guia](spec-driven-execution-guide.md#fase-27---apresentacao-de-resumos-de-janela-adr-0021). Cruzamento: [metric-glossary.md](metric-glossary.md), [ADR 0009](adrs/0009-help-e-catalogo-de-templates-resources-v1.md) (help/resources, quando a fatia tocar exemplos de tabela), [metric-catalog.md](metric-catalog.md) (fórmulas inalteradas salvo outro spec).*
+*Extensão pós–Fase 26. Norma: [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md). Documentação e texto a humanos: **não** muda o envelope `MetricValue` do MCP. Espelha a [Fase 27 do guia](spec-driven-execution-guide.md#fase-27---apresentacao-de-resumos-de-janela-adr-0021) (inclui lista de ficheiros-alvo e 27.3/27.4 detalhados). Cruzamento: [metric-glossary.md](metric-glossary.md), [ADR 0009](adrs/0009-help-e-catalogo-de-templates-resources-v1.md) (D4, help/resources, quando a fatia tocar exemplos de tabela), [metric-catalog.md](metric-catalog.md) — secção *QtdFrequencia* / ponte *quatro papéis* (`#export-legado-qtdfrequencia`), Tabelas 1–2 *normativas* sem reescritura. Âncoras estáveis na cadeia D3 (ver 27.1b).*
+
+**Mapa de mudança (código *vs.* documentação):** ficheiros *docs* (27.1, 27.1b) e, opcional, `AGENTS` / `.cursor/rules` (27.2), `src/.../ComputeWindowMetricsUseCase.cs` (27.3, só `ExplanationFor`), `resources/*` + `src/LotofacilMcp.Server/LotofacilMcp.Server.csproj` (27.4, cópia de *resources* no *build*). Nada disto exige *bump* de *shape* de `MetricValue`.
 
 ### Template 27.1 — `metric-glossary`: subsecção “Textos de resumo para tabelas (ADR 0021)”
 
 ```md
-Implemente apenas a subsecção normativa de **textos de resumo** alinhada ao [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) (templates A e B, D2, Apêndice) em [metric-glossary.md](metric-glossary.md): copiar, condensar ou fundir com o bloco *“O que observa”* de cada métrica citada no Apêndice, sem contradição com o [metric-catalog.md](metric-catalog.md).
+Implemente apenas a subsecção normativa de **textos de resumo** alinhada ao [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) (templates A e B, D1, D2, Apêndice) em [metric-glossary.md](metric-glossary.md), nome: **“Textos de resumo para tabelas (ADR 0021)”** (alinhado às *Consequências* da ADR): copiar, condensar ou fundir com o bloco *“O que observa”* de cada métrica citada no Apêndice, sem contradição com o [metric-catalog.md](metric-catalog.md).
 
 Referências obrigatórias:
 - docs/adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md
@@ -1852,7 +1854,7 @@ Arquivos esperados:
 
 Regras:
 - manter tom descritivo (nada de promessa de acerto futuro);
-- tabela A: exemplos de coluna **Descrição**; tabela B: o que a série *indica* com vocabulário acessível (entropia, HHI, *etc.* conforme D2);
+- cumprir D1: tabela A — coluna **Descrição**; para `estabilidade_ranking` incluir, no mínimo, *sub-janelas consecutivas*, *ordem por frequência*, \([0,1]\) e *não* previsão; tabela B — coluna *“O que esta série indica”* **obrigatória** e vocabulário D2 (entropia, HHI, pares, vizinhos, *etc.*);
 - não conflitar com a ADR 0021 D5: resumo padrão *vs.* interpretação longa *sob pedido* (a subsecção fornece o piso; o agente pode alargar quando o utilizador pedir, ancorado no catálogo + dados reais — mais tokens).
 
 Critério de pronto:
@@ -1865,7 +1867,7 @@ Critério de pronto:
 *Aplica-se quando, após 27.1, o *gap* editorial ainda puder fazer o leitor confundir: «*ausente *N* concursos*» (vector 0,1,2,…) *vs.* `frequencia_por_dezena` (somas) *vs.* `ausencia_blocos` (listas). Não altera fórmulas nem o MCP.*
 
 ```md
-Implemente apenas a **ponte de vocabulário** e referências cruzadas entre: (1) a secção *QtdFrequencia* e, se aplicável, a nota de *linguagem acessível* (ADR 0021) em [metric-catalog.md](metric-catalog.md); (2) o D3, o Apêndice (tabela A, nota *Ausência*) da [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md); (3) a secção e âncora `#vocab-ausencia-adr-0021` em [metric-glossary.md](metric-glossary.md), sem reabrir a semântica da Tabela 2 do catálogo.
+Implemente apenas a **ponte de vocabulário** e referências cruzadas entre: (1) a secção *QtdFrequencia* (ponte *quatro papéis*, âncora `#export-legado-qtdfrequencia` em [metric-catalog.md](metric-catalog.md)); (2) o D3, o Apêndice (tabela A, nota *Ausência* — âncoras no texto da ADR, ex. `#apendice-frases-modelo-pt-adr-0021`, `#nota-ausencia-adr-0021`) e ligação ao glossário; (3) a secção e âncora `#vocab-ausencia-adr-0021` em [metric-glossary.md](metric-glossary.md), sem reabrir a semântica da Tabela 2 do catálogo (definição fechada = *Tabelas* 1 e 2 do *metric-catalog*, ligação por *link* apenas).
 
 Referências obrigatórias:
 - docs/metric-catalog.md
@@ -1879,8 +1881,8 @@ Arquivos esperados (conforme *gap*):
 
 Regras:
 - nenhuma alteração a `MetricValue`, contrato MCP, nem a fórmula canónica das métricas; apenas texto, âncoras e tabelas de explicação;
-- `QtdFrequencia` continua a mapear `frequencia_por_dezena`; a ponte deixa claro o sentido *leigo* de “ausência” = atraso / `estado_atual_dezena` para leitores, não a renomear métricas;
-- a âncora e o id HTML `vocab-ausencia-adr-0021` permanecem estáveis para ligação a partir da ADR e do catálogo.
+- `QtdFrequencia` continua a mapear **só** `frequencia_por_dezena`; a ponte deixa claro o sentido *leigo* de “ausência (N concursos sem sair)” ≈ vector de atraso / `estado_atual_dezena` *vs.* contagem de *saídas* (frequência) e *vs.* `ausencia_blocos` — **não** renomear métricas;
+- os ids `vocab-ausencia-adr-0021` (e homólogos `apendice-…` / `nota-ausencia-…` no apêndice da ADR) permanecem **estáveis** para ligação a partir da ADR e do catálogo.
 
 Critério de pronto:
 - catálogo, ADR (apêndice/D3) e glossário não contradizem-se sobre os quatro *papéis* (frequência na janela; atraso/estado; `ausencia_blocos`; distinção explícita em tabela);
@@ -1910,21 +1912,23 @@ Critério de pronto:
 
 ### Template 27.3 (opcional) — `ComputeWindowMetricsUseCase` / explicações por métrica no servidor
 
+*Estado de referência: `ExplanationFor` em [ComputeWindowMetricsUseCase.cs](../src/LotofacilMcp.Application/UseCases/ComputeWindowMetricsUseCase.cs) mapeia cada métrica canónica conhecida; a string “Metrica de janela.” aplica-se **só** ao `default` (métrica desconhecida ou fora do `switch`). 27.3 cobre: novas chaves a acrescentar ao *switch*; retoques de *wording* técnico↔glossário (não confundir com tabelas A/B); ou testes *golden* de *explanation*.*
+
 ```md
-Implemente apenas o enriquecimento de `ExplanationFor` (ou mapeamento equivalente) no caso de uso de cálculo de janela, **onde** ainda existir explicação genérica “Metrica de janela.” para uma métrica cujo texto mínimo já conste no ADR 0021 / glossário, sem alterar semântica de cálculo nem `MetricValue.value`.
+Implemente apenas o enriquecimento de `ExplanationFor` (método privado) no [ComputeWindowMetricsUseCase.cs](src/LotofacilMcp.Application/UseCases/ComputeWindowMetricsUseCase.cs) — campo `explanation` que acompanha cada `MetricValue` no fluxo de `compute_window_metrics` (ver contrato), **(a)** para métricas que ainda caiam no *default* (genérico “Metrica de janela.”), e/ou **(b)** para aproximar, sem substituir o registo A/B, o texto a um piso mínimo coerente com [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) e [metric-glossary.md](metric-glossary.md). **Não** alterar `MetricValue.value` nem a semântica de cálculo.
 
 Referências obrigatórias:
 - docs/adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md
 - docs/metric-glossary.md
-- src/LotofacilMcp.Application/UseCases/ComputeWindowMetricsUseCase.cs (ou ficheiro actual)
+- src/LotofacilMcp.Application/UseCases/ComputeWindowMetricsUseCase.cs (ou ficheiro actual se o *use case* tiver migrado de pasta)
 
 Arquivos esperados:
 - src/LotofacilMcp.Application/UseCases/ComputeWindowMetricsUseCase.cs
-- (testes) tests/ — apenas se o contrato fixar comparação literal de *explanation* (cuidado: mudança de string pode exigir golden)
+- (testes) tests/ — apenas se o contrato fixar comparação literal de *explanation* (cuidado: mudança de string pode exigir golden / JSON snapshot)
 
 Regras:
-- strings curtas, alinhadas à norma, sem marketing preditivo;
-- não introduzir defaults semânticos novos;
+- strings **curtas** (consumidor de JSON, não tabela A/B com quatro colunas);
+- nada de linguagem preditiva; não introduzir defaults semânticos novos;
 
 Critério de pronto:
 - nenhum teste de fórmula/valor quebre; ajustar goldens de *explanation* de forma consciente se a suíte comparar literalmente a string.
@@ -1943,15 +1947,97 @@ Referências obrigatórias:
 
 Arquivos esperados:
 - resources/help/getting-started@1.0.0.md (e outros tocados)
-- resources/prompts/index@1.0.0.md (e outros tocados)
-- (build) recursos embebidos replicados em src/LotofacilMcp.Server se o projecto o exigir
+- resources/prompts/index@1.0.0.md, prompts analíticos (ex. `ranking-stability@1.0.0`, `frequency-vs-delay@1.0.0`, *etc.*, conforme tabelas exemplo)
+- src/LotofacilMcp.Server/LotofacilMcp.Server.csproj (confirmar *Content* que copia `../../resources/...` para o *output*; não *duplicar* norma noutro sítio)
+- (opcional) ficheiros que *embedam* o caminho a `resources/` em runtime, ex. [HelpCatalog.cs](src/LotofacilMcp.Server/Helping/HelpCatalog.cs)
 
 Regras:
 - Markdown only; *resources* read-only; não expor N mágico de janela;
-- reforçar o opt-in a “explica o comportamento” = mais detalhe (D5) quando fizer sentido.
+- reforçar o opt-in a “explica o comportamento” = mais detalhe (D5) quando fizer sentido;
+- alinhar a *Fase* aos *Abertos* da [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) (revisão voluntária *help*/*prompts*).
 
 Critério de pronto:
 - nenhum exemplo de tabela do resource contradiz a ADR 0021;
 - cópia embebida no server actualizada se o repositório duplicar *resources* no output de build.
+```
+
+## Extensão (hotfix pós-V0) — Métricas autoexplicativas + sunset (compatibilidade temporária)
+
+*Objetivo:* introduzir métricas com nomes não ambíguos para (1) **total de presenças na janela** e (2) **sequência atual com reinício ao ausente**, mantendo compatibilidade com nomes antigos por um período definido e documentando comportamento pós-sunset via `UNKNOWN_METRIC` com `details` de migração.
+
+### Template H1 — Fechar spec (catálogo + ADR 0021 + glossário) para as métricas novas
+
+```md
+Implemente apenas o fechamento coordenado de specs para as métricas autoexplicativas:
+- `total_de_presencas_na_janela_por_dezena@1.0.0`
+- `sequencia_atual_de_presencas_por_dezena@1.0.0`
+- `top10_maiores_totais_de_presencas_na_janela@1.0.0`
+- `top10_menores_totais_de_presencas_na_janela@1.0.0`
+
+Referências obrigatórias:
+- docs/metric-catalog.md (Tabelas 1 e 2; política de deprecação e sunset)
+- docs/adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md (tabela A, frases modelo)
+- docs/metric-glossary.md (definição + “O que observa” + textos de tabela)
+
+Arquivos esperados:
+- docs/metric-catalog.md
+- docs/metric-glossary.md
+- docs/adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md
+
+Regras:
+- não renomear métricas antigas nesta etapa; apenas introduzir as novas e preparar migração.
+- `total_de_presencas_na_janela_por_dezena` deve ser explicitamente equivalente a `frequencia_por_dezena` na mesma janela.
+- `sequencia_atual_de_presencas_por_dezena` deve declarar explicitamente “reinicia ao ausente”.
+
+Critério de pronto:
+- catálogo tem fórmula/regra fechada para as 4 métricas.
+- ADR 0021 e glossário têm texto humano coerente com o catálogo.
+```
+
+### Template H2 — Testes vermelhos (fórmula + equivalência + ties) para as métricas novas
+
+```md
+Implemente apenas os testes (vermelhos primeiro) para as métricas novas e suas propriedades:
+
+Referências obrigatórias:
+- docs/test-plan.md (matriz de cobertura por métrica)
+- docs/contract-test-plan.md (goldens e organização)
+- docs/metric-catalog.md (Tabelas 1 e 2)
+
+Arquivos esperados:
+- tests/LotofacilMcp.Domain.Tests/ (fórmula)
+- tests/LotofacilMcp.ContractTests/ (contrato, se exposto em `compute_window_metrics`)
+- tests/fixtures/ (fixture sintética pequena; opcional: tie_heavy)
+
+Regras:
+- `sequencia_atual_de_presencas_por_dezena` deve ter asserts que provem reinício ao ausente.
+- deve existir teste de equivalência 1:1: `total_de_presencas_na_janela_por_dezena == frequencia_por_dezena` na mesma janela/fixture.
+- novos top10 devem validar desempate por dezena asc quando houver empate.
+
+Critério de pronto:
+- testes falham antes da implementação e passam apenas quando as regras do catálogo forem satisfeitas.
+```
+
+### Template H3 — Contrato de migração (sunset): `UNKNOWN_METRIC` com `details` de substituição
+
+```md
+Implemente apenas o ajuste de contrato e testes para suportar sunset de nomes deprecated:
+
+Referências obrigatórias:
+- docs/mcp-tool-contract.md (`UNKNOWN_METRIC` e `details`)
+- docs/metric-catalog.md (política de deprecação e sunset; data)
+- docs/contract-test-plan.md (caso negativo de sunset)
+
+Arquivos esperados:
+- docs/mcp-tool-contract.md
+- docs/contract-test-plan.md
+- tests/LotofacilMcp.ContractTests/ (teste negativo)
+
+Regras:
+- após a data de sunset, nomes deprecated podem falhar com `UNKNOWN_METRIC`.
+- `details` deve incluir `replacement_metric_name` e `sunset_date` (ISO-8601) quando o erro for por sunset (não por allowlist).
+
+Critério de pronto:
+- teste negativo de sunset passa com payload determinístico de erro.
 ```
 

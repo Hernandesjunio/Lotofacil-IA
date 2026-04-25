@@ -126,10 +126,23 @@ O *request* do contrato pode expor apenas `window_size` + `end_contest_id` ou es
 
 ## Rótulo de export legado `QtdFrequencia` (vector 1..25 em gráfico)
 
+<a id="export-legado-qtdfrequencia"></a>
+
 O *export* `QtdFrequencia` (p.ex. em `indicadores.json` referência do repositório) contém, por posição 1..25, **contagens de ocorrência** da dezena na janela de análise (valores inteiros não negativos pequenos, soma plausível = `15 × window_size` quando a métrica é frequência de presença por sorteio). **A substituição canónica no MCP é** `frequencia_por_dezena@1.0.0` (`scope=window`, `shape=vector_by_dezena`) com a janela explícita ([ADR 0008 D2](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md)).
 
+**Nota editorial (usabilidade sistêmica; migração com sunset):** para reduzir ambiguidade em leitura humana, o catálogo introduz o nome autoexplicativo `total_de_presencas_na_janela_por_dezena@1.0.0`, semanticamente **equivalente** a `frequencia_por_dezena@1.0.0` (mesma contagem total por janela). Durante a janela de migração, ambas podem coexistir; após o **sunset** (ver “Política de deprecação e sunset” abaixo), builds futuras podem deixar de aceitar o nome antigo e retornar `UNKNOWN_METRIC` com `details` apontando o nome de substituição.
+
 - **Não** confundir com a métrica `atraso_por_dezena` (também `vector_by_dezena`, mas a unidade semântica é *concursos desde a última ocorrência*, não contagens de saída na janela). Para **atraso**, o pedido deve usar `atraso_por_dezena@1.0.0` com a política de *Janela* e `params` descritas na Tabela 2, não `frequencia_por_dezena`.
-- **Linguagem acessível (ADR 0021):** quando, em conversa, se diz que uma dezena «está *ausente*» no sentido *há N concursos em que a dezena ainda não voltou a sair* (vector com padrão tipicamente 0, 1, 2, …), isso corresponde à métrica **`atraso_por_dezena`** (e, no fim de janela, a `estado_atual_dezena` para a leitura *agora*), **não** à soma de ocorrências de `frequencia_por_dezena`. Isto distingue-se também de `ausencia_blocos` (comprimentos de blocos consecutivos, `count_list_by_dezena` na Tabela 1), que **não** partilha o *shape* de 25 inteiros do vector de atraso. Síntese: [secção *Vocabulário* (âncora)](metric-glossary.md#vocab-ausencia-adr-0021) e [apêndice, tabela A / nota *Ausência* (ADR 0021)](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md).
+- **Linguagem acessível (ADR 0021):** quando, em conversa, se diz que uma dezena «está *ausente*» no sentido *há N concursos em que a dezena ainda não voltou a sair* (vector com padrão tipicamente 0, 1, 2, …), isso corresponde à métrica **`atraso_por_dezena`** (e, no fim de janela, a `estado_atual_dezena` para a leitura *agora*), **não** à soma de ocorrências de `frequencia_por_dezena`. Isto distingue-se também de `ausencia_blocos` (comprimentos de blocos consecutivos, `count_list_by_dezena` na Tabela 1), que **não** partilha o *shape* de 25 inteiros do vector de atraso. Síntese: [secção *Vocabulário* (âncora estável `vocab-ausencia-adr-0021`)](metric-glossary.md#vocab-ausencia-adr-0021), [nota *Ausência* (Apêndice, ADR 0021)](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md#nota-ausencia-adr-0021) e tabela A do mesmo [Apêndice](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md#apendice-frases-modelo-pt-adr-0021).
+
+**Ponte — quatro *papéis* (nomes de métrica inalterados):** o quadro resume *intenção de leitor* e encaminhamento; **fórmulas e semântica fechadas** continuam nas Tabelas 1 e 2 abaixo, sem duplicação.
+
+| Papel (o que se quer expressar) | Mapeamento / ancoragem canónica | Lembrete curto |
+|---------------------------------|----------------------------------|----------------|
+| **(1) Frequência na janela** (quantas vezes saiu) | *Export* `QtdFrequencia` e métrica `frequencia_por_dezena` (esta secção) | Contagens; soma plausível `15 ×` tamanho da janela (presença por sorteio). Não descreve «há *N* concursos *sem* sair». |
+| **(2) Atraso e *estado*** (leitor: *ausente* há *N* edições) | `atraso_por_dezena`; `estado_atual_dezena` no fim do recorte | *Vector* 0, 1, 2, …; não confundir com a soma de `frequencia_por_dezena` nem com `QtdFrequencia`. |
+| **(3) Blocos consecutivos *sem* a dezena** | `ausencia_blocos` | *Shape* `count_list_by_dezena` (Tabela 1); não é o mesmo *layout* de vector 1..25 de atraso. |
+| **(4) Distinção em tabela (evitar trocar rótulos)** | Tabela no [glossário, âncora *Vocabulário*](metric-glossary.md#vocab-ausencia-adr-0021); tabela A + [nota *Ausência*](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md#nota-ausencia-adr-0021) (ADR 0021) | Papel *editorial* / pedagógico: mesmo vocabulário leigo alinhado aos quatro *papéis* sem renomear métricas. |
 
 ## Subcampos de `PadroesLinha` (legado) sem linha na Tabela 1
 
@@ -154,13 +167,32 @@ O bloco `PadroesLinha` de *exports* antigos pode incluir:
 | Nome canónico, rota ainda fechada na build | `UNKNOWN_METRIC` com `details.metric_name` (e, se existir, lista do subconjunto aceite). |
 | Janela curta e `min_history` em análise de estabilidade | Regra em `analyze_indicator_stability` (ver [ADR 0006 D4](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md)). |
 
+### Política de deprecação e sunset (nomes de métricas)
+
+Esta secção regula **nomes** (ergonomia e migração), não altera o contrato `MetricValue` nem reabre fórmulas fora das Tabelas 1–2.
+
+- **Motivo:** nomes autoexplicativos reduzem ambiguidade (“contagem total na janela” vs “sequência atual com reinício”).
+- **Coexistência (janela de migração):** um nome novo pode ser introduzido como sinônimo semântico de um nome antigo para permitir comparação/rollback.
+- **Sunset (prazo máximo):** métricas marcadas como *deprecated* permanecem disponíveis até **2026-05-25** (inclusive). Após esta data, builds podem passar a rejeitar o nome deprecated com `UNKNOWN_METRIC`, incluindo em `details`:
+  - `deprecated_metric_name`
+  - `replacement_metric_name`
+  - `sunset_date` (ISO-8601)
+
+**Regra:** enquanto um nome deprecated ainda for aceito, sua semântica deve permanecer **idêntica** à versão documentada; mudanças semânticas exigem nova versão (SemVer) e testes correspondentes.
+
+<a id="tabela-1-identificacao-e-tipagem"></a>
+
 ## Tabela 1 — Identificação e tipagem
 
 | Nome | Categoria | Janela | Scope | Unidade | Shape | Versão | Status |
 |------|-----------|--------|-------|---------|-------|--------|--------|
 | `frequencia_por_dezena` | base | configurável | `window` | `count` | `vector_by_dezena` | 1.0.0 | canonica |
+| `total_de_presencas_na_janela_por_dezena` | base | configurável | `window` | `count` | `vector_by_dezena` | 1.0.0 | canonica |
+| `sequencia_atual_de_presencas_por_dezena` | apoio | configurável | `window` | `count` | `vector_by_dezena` | 1.0.0 | canonica |
 | `top10_mais_sorteados` | por_transformacao | configurável | `window` | `dimensionless` | `dezena_list[10]` | 1.0.0 | canonica |
 | `top10_menos_sorteados` | por_transformacao | configurável | `window` | `dimensionless` | `dezena_list[10]` | 1.0.0 | canonica |
+| `top10_maiores_totais_de_presencas_na_janela` | por_transformacao | configurável | `window` | `dimensionless` | `dezena_list[10]` | 1.0.0 | canonica |
+| `top10_menores_totais_de_presencas_na_janela` | por_transformacao | configurável | `window` | `dimensionless` | `dezena_list[10]` | 1.0.0 | canonica |
 | `repeticao_concurso_anterior` | base | configurável | `series` | `count` | `series` | 1.0.0 | canonica |
 | `intersecoes_multiplas` | apoio | configurável | `series` | `count` | `series` | 1.0.0 | satelite |
 | `atraso_por_dezena` | base | histórico acumulado ou janela declarada | `window` | `count` | `vector_by_dezena` | 1.0.0 | canonica |
@@ -202,13 +234,19 @@ O bloco `PadroesLinha` de *exports* antigos pode incluir:
 | `estatistica_runs` | apoio | não se aplica | `candidate_game` | `count` | `count_pair` | 1.0.0 | canonica |
 | `outlier_score` | geração | configurável | `candidate_game` | `dimensionless` | `scalar` | 1.0.0 | canonica |
 
+<a id="tabela-2-semantica"></a>
+
 ## Tabela 2 — Semântica
 
 | Nome | Definição | Fórmula / regra | Fonte | Consumidor |
 |------|-----------|-----------------|-------|------------|
 | `frequencia_por_dezena` | Frequência absoluta de cada dezena na janela. | `freq[d] = contagem(d em concursos da janela)`. | Histórico | MCP / composição / geração |
+| `total_de_presencas_na_janela_por_dezena` | Total de presenças de cada dezena na janela (nome autoexplicativo; equivalente semântico de `frequencia_por_dezena`). | `total[d] = contagem(d em concursos da janela)`; soma dos 25 = `15 × window_size`. | Histórico | MCP / composição / geração |
+| `sequencia_atual_de_presencas_por_dezena` | Sequência atual (streak) de presenças por dezena ao fim da janela. | Percorrer concursos em ordem; para cada dezena `d`: se `d ∈ J_t` então `c[d] = c[d] + 1`, senão `c[d] = 0`. Retornar `c[d]` no fim do recorte. | Histórico | MCP / composição |
 | `top10_mais_sorteados` | 10 dezenas mais frequentes da janela. | Ordenar `frequencia_por_dezena` desc; empate por dezena asc; top 10. | Histórico | MCP / composição / geração |
 | `top10_menos_sorteados` | 10 dezenas menos frequentes da janela. | Ordenar `frequencia_por_dezena` asc; empate por dezena asc; top 10. | Histórico | MCP / composição |
+| `top10_maiores_totais_de_presencas_na_janela` | 10 dezenas com maior total de presenças na janela. | Ordenar `total_de_presencas_na_janela_por_dezena` desc; empate por dezena asc; top 10. | Histórico | MCP / composição / geração |
+| `top10_menores_totais_de_presencas_na_janela` | 10 dezenas com menor total de presenças na janela. | Ordenar `total_de_presencas_na_janela_por_dezena` asc; empate por dezena asc; top 10. | Histórico | MCP / composição |
 | `repeticao_concurso_anterior` | Interseção entre concursos consecutivos. | `r_t = |J_t ∩ J_{t-1}|`; comprimento `N` ou `N-1` conforme ADR 0001 D18. | Histórico | MCP / estabilidade / geração |
 | `intersecoes_multiplas` | Interseção entre concursos separados por defasagem `l`. | `|J_t ∩ J_{t-l}|`, com `l` declarado no request. | Histórico | MCP / estabilidade |
 | `atraso_por_dezena` | Distância desde a última ocorrência de cada dezena. | `atraso[d] = concursos desde último sorteio contendo d`; saturação explícita se nunca ocorreu. | Histórico | MCP / composição |
@@ -274,7 +312,7 @@ O bloco `PadroesLinha` de *exports* antigos pode incluir:
 
 ## Features do `outlier_score`
 
-1. `freq_alignment = (1/15) · Σ_{d ∈ jogo} (frequencia_por_dezena[d] / max(frequencia_por_dezena))`.
+1. `freq_alignment = (1/15) · Σ_{d ∈ jogo} (total_de_presencas_na_janela_por_dezena[d] / max(total_de_presencas_na_janela_por_dezena))` (equivalente semântico de `frequencia_por_dezena`, mas com nome autoexplicativo).
 2. `slot_alignment = analise_slot(jogo, janela)`.
 3. `row_entropy_norm = entropia_linha.H_norm(jogo)`.
 4. `pairs_ratio = pares / 15`.
