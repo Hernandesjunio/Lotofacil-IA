@@ -116,8 +116,8 @@ Esses templates **não** substituem tools nem mudam o contrato: são conteúdo d
 - [prompt-catalog.md](prompt-catalog.md) — prompts cobertos pelo MCP para testes
 - [test-plan.md](test-plan.md) — matriz de cobertura de testes do domínio
 - [brief-vs-src-gap-matrix.md](brief-vs-src-gap-matrix.md) — matriz de aderência do brief vs implementação e backlog técnico (GAPs B01–B24)
-- [spec-driven-execution-guide.md](spec-driven-execution-guide.md) — ordem prática de execução, passos atômicos e uso dos specs na implementação (inclui **Fase 25**: fechamento sistemático dos GAPs do brief)
-- [fases-execucao-templates.md](fases-execucao-templates.md) — pedidos atômicos por fase (0–20 do guia e extensões; inclui **Fase 25**: ADR 0010–0018)
+- [spec-driven-execution-guide.md](spec-driven-execution-guide.md) — ordem prática de execução, passos atômicos e uso dos specs na implementação (inclui **Fase 25**: fechamento sistemático dos GAPs do brief; **Fase 27**: [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) apresentação legível de resumos de janela)
+- [fases-execucao-templates.md](fases-execucao-templates.md) — pedidos atômicos por fase (0–20 do guia e extensões; inclui **Fase 25**: ADR 0010–0018; **Fase 27**: ADR 0021, tabelas A-B e glossário)
 - [live-openai-integration-pipeline.md](live-openai-integration-pipeline.md) — integração real com API OpenAI, suíte mínima L1–L5 e esteira GitHub dedicada
 - [vertical-slice.md](vertical-slice.md) — primeira fatia de implementação (dados → métrica única → MCP)
 - [contract-test-plan.md](contract-test-plan.md) — ordem de execução, fixtures douradas e matriz de testes de contrato
@@ -138,3 +138,4 @@ Esses templates **não** substituem tools nem mudam o contrato: são conteúdo d
 - [adrs/0016-expansao-de-resumos-de-janela-e-padroes-v1.md](adrs/0016-expansao-de-resumos-de-janela-e-padroes-v1.md) — expansão de `summarize_window_patterns`
 - [adrs/0017-geracao-declarativa-de-candidatos-filtros-e-estrategias-v1.md](adrs/0017-geracao-declarativa-de-candidatos-filtros-e-estrategias-v1.md) — geração declarativa (critérios/filtros/estratégias) e rastreabilidade
 - [adrs/0018-pacote-de-metricas-prioritarias-slots-pares-blocos-outliers-v1.md](adrs/0018-pacote-de-metricas-prioritarias-slots-pares-blocos-outliers-v1.md) — pacote de métricas prioritárias para fechar “missing metrics”
+- [adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) — tabelas resumidas de janela (escalares e séries), descrições legíveis e vocabulário acessível; glossário como fonte de texto

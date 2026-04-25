@@ -43,6 +43,7 @@ Referências normativas:
 - [ADR 0017](adrs/0017-geracao-declarativa-de-candidatos-filtros-e-estrategias-v1.md)
 - [ADR 0019](adrs/0019-criterios-por-faixa-e-cobertura-na-geracao-v1.md)
 - [ADR 0020](adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md)
+- [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) — tabelas resumidas e linguagem acessível para *humanos* (não altera o JSON do MCP; modos resumo *vs.* interpretação)
 
 ## Regra operacional principal
 
@@ -753,9 +754,31 @@ Critério mínimo de aceite:
 - o utilizador consegue gerar candidatos **sem** filtros explícitos sem herdar silenciosamente os defaults atuais de exclusão estrutural no modo aleatório;
 - `seed` deixa de ser obrigatório nos caminhos normativos definidos em 26.1, com semântica de replay documentada e testada.
 
+### Fase 27 - Apresentacao de resumos de janela (ADR 0021)
+
+Objetivo: cumprir o [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) na **camada de documentação e de texto a humanos** (tutoriais, glossário, ajuda, orientação a agentes). O **envelope** `MetricValue` e as tools **não** mudam de forma obrigatória: o ADR regula *como* apresentar respostas (templates A e B, vocabulário acessível, dois modos de profundidade).
+
+Norma:
+
+- [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) (D1–D5, Apêndice de frases modelo)
+- Cruzamento: [metric-glossary.md](metric-glossary.md) (definição e *“O que observa”*), [ADR 0009](adrs/0009-help-e-catalogo-de-templates-resources-v1.md) quando a entrega tocar em *getting-started* / *index* de templates
+
+Passos atômicos (ordem recomendada):
+
+- **27.1 — `metric-glossary`:** adicionar subsecção **“Textos de resumo para tabelas (ADR 0021)”** (ou equivalente) com as frases do Apêndice da ADR, condensando ou reutilizando o bloco *“O que observa”* existente, sem contradizer [metric-catalog.md](metric-catalog.md).
+- **27.2 — `AGENTS.md` e consumidores de texto:** confirmar que o atalho para a ADR 0021 (e, se existir, regra em *rules* do repositório) aponta para a distinção **resumo padrão** (baixo custo em tokens) *vs.* **interpretação explícita** sob pedido (mais tokens, ancorada no catálogo e nos dados do MCP), conforme D5.
+- **27.3 (opcional) — `compute_window_metrics`:** enriquecer `ExplanationFor` no *Application* apenas onde hoje cai no genérico *“Metrica de janela.”* e a ADR 0021 pede texto mínimo coerente (não duplica a coluna “descrição” de tabelas A/B, mas melhora a tool para quem lê o JSON no cliente).
+- **27.4 (opcional) — resources:** rever `resources/help/`, `resources/prompts/index@*` e modelos alinhados ao [ADR 0009](adrs/0009-help-e-catalogo-de-templates-resources-v1.md) para exemplos de tabela A/B *sem* coluna técnica `shape`/`unit` em resumos a leigo.
+
+Critério mínimo de aceite:
+
+- existe secção de suporte no glossário (ou documento claramente referenciado) com frases reutilizáveis alinhadas ao Apêndice da ADR 0021;
+- a distinção D1/D5 (tabelas *vs.* interpretação; custo consciente de tokens) está explícita num documento normativo acessível a quem edita `AGENTS` / regras de host;
+- nenhuma frase de apresentação contradiz fórmulas do catálogo nem implica previsão de sorteio.
+
 Nota operacional: template para pedidos atômicos
 
-- Catálogo completo de **pedidos atômicos por fase** (0–20 do guia e **extensões** posteriores, ex.: Fase 21 alinhada ao [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md), Fase 22 ao [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md), **Fase 23** ao [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) e **Fase 26** ao [ADR 0020](adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md)): [fases-execucao-templates.md](fases-execucao-templates.md). O nome do ficheiro **não** fixa a quantidade de fases; novas entregas normativas podem acrescentar secções no mesmo padrão.
+- Catálogo completo de **pedidos atômicos por fase** (0–20 do guia e **extensões** posteriores, ex.: Fase 21 alinhada ao [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md), Fase 22 ao [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md), **Fase 23** ao [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md), **Fase 26** ao [ADR 0020](adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md) e **Fase 27** ao [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md)): [fases-execucao-templates.md](fases-execucao-templates.md). O nome do ficheiro **não** fixa a quantidade de fases; novas entregas normativas podem acrescentar secções no mesmo padrão.
 - O template abaixo pode (e deve) ser usado para gerar “pedidos atômicos” para implementação, mantendo o fluxo spec-driven:
 
 ```md
@@ -860,6 +883,8 @@ Mudanças que introduzam ou alterem **agregados canônicos** (histogramas, padr�
 
 Mudanças em **descoberta para consumidores** (norma *vs.* allowlist por build), **janela por concurso inicial e final (inclusivos)**, mapeamento **`HistoricoTop10MaisSorteados` → `top10_mais_sorteados`**, ou **rótulos de export legado** (`QtdFrequencia`, *etc.*) devem seguir o [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) em conjunto com [mcp-tool-contract.md](mcp-tool-contract.md), [metric-catalog.md](metric-catalog.md), [metric-glossary.md](metric-glossary.md) e [contract-test-plan.md](contract-test-plan.md) (Fase B.2), e cruzar [ADR 0006 D1](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) quando a entrega tocar em `details.allowed_metrics` ou erros ricos. Executar a Fase 23 (secção homónima neste documento e as [templates — Fase 23](fases-execucao-templates.md#fase-23-adr-0008-descoberta-janela-por-extremos-e-mapeamento-legado) em *fases-execucao-templates*) na mesma lógica spec → teste → código.
 
+Entregas que alterem **apenas** a forma de **explicar** resultados de janela a pessoas ou a agentes (tabelas A/B, textos acessíveis, modos *resumo* *vs.* *interpretação* conforme D5) devem seguir o [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) em conjunto com [metric-glossary.md](metric-glossary.md), sem reabrir fórmulas canónicas sem bump no [metric-catalog.md](metric-catalog.md). A [Fase 27](#fase-27---apresentacao-de-resumos-de-janela-adr-0021) e as [templates — Fase 27](fases-execucao-templates.md#fase-27---adr-0021-apresentacao-de-resumos-de-janela-tabelas-a-b-glossario-d5) cobrem o recorte documental.
+
 Se durante esse ciclo surgir desalinhamento explícito entre spec e implementação, interromper a fatia atual e executar a [Fase 12](#fase-12-correção-de-drift-desalinhamento-spec--implementação) antes de seguir.
 
 Além dessa ordem operacional, a progressão de conteúdo deve ir do mais simples para o mais complexo:
@@ -908,7 +933,7 @@ Criar novo documento apenas quando houver pergunta concreta que os atuais não r
 
 ## Checklist de início da execução
 
-- Pedidos atômicos por fase (e extensões) consultáveis em [fases-execucao-templates.md](fases-execucao-templates.md)
+- Pedidos atômicos por fase (e extensões, incl. [Fase 27](fases-execucao-templates.md#fase-27---adr-0021-apresentacao-de-resumos-de-janela-tabelas-a-b-glossario-d5) / [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md)) consultáveis em [fases-execucao-templates.md](fases-execucao-templates.md)
 - Arquitetura congelada no [ADR 0004](adrs/0004-estrutura-arquitetural-inicial-mcp-dotnet10.md)
 - Superfície MCP + rollout de tools conforme [ADR 0005](adrs/0005-transporte-mcp-e-superficie-tools-v1.md) (quando pós-V0)
 - Inter-tool, disponibilidade, pipeline, GAPS: [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) quando a entrega mexe nesses temas

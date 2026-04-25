@@ -37,6 +37,7 @@ Complementos frequentes: [docs/generation-strategies.md](docs/generation-strateg
 - [docs/adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md](docs/adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md) — inter-tool, disponibilidade de métricas em rota, pipeline, fluidez, GAPS e cenário pares–entropia
 - [docs/adrs/0007-agregados-canonicos-de-janela-v1.md](docs/adrs/0007-agregados-canonicos-de-janela-v1.md) — agregados canônicos via `summarize_window_aggregates`
 - [docs/adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md](docs/adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) — descoberta (tools vs resources), janela por extremos, mapeamento legado Top 10
+- [docs/adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md](docs/adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) — como apresentar resumos de `compute_window_metrics` (tabelas A/B, descrições, sem impor colunas técnicas ao leitor)
 
 ---
 
@@ -81,6 +82,7 @@ A documentação descreve camadas alvo (`LotofacilMcp.Domain`, `Application`, `I
 | Disponibilidade por rota, pipeline, GAPS, pares–entropia | [adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md](docs/adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md), [metric-catalog.md](docs/metric-catalog.md), [test-plan.md](docs/test-plan.md) |
 | Descoberta (instância *vs.* norma), janela por extremos, export legado Top 10 / `QtdFrequencia` | [adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md](docs/adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md), [spec-driven-execution-guide.md](docs/spec-driven-execution-guide.md) (Fase 23), [fases-execucao-templates.md](docs/fases-execucao-templates.md) (Fase 23), [contract-test-plan.md](docs/contract-test-plan.md) (Fase B.2) |
 | Geração de jogos / filtros | [generation-strategies.md](docs/generation-strategies.md), [metric-catalog.md](docs/metric-catalog.md) |
+| Explicar ou tabelar resultados de janela para leitores (sem colunas técnicas `shape`/`unit`); resumo *vs.* interpretação longa a pedido (custo em tokens) | [adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md](docs/adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) (D5), [metric-glossary.md](docs/metric-glossary.md) |
 | Ordem de implementação / “o que fazer a seguir” | [spec-driven-execution-guide.md](docs/spec-driven-execution-guide.md), [vertical-slice.md](docs/vertical-slice.md) |
 | Prompts para validação manual ou automática | [prompt-catalog.md](docs/prompt-catalog.md) |
 

@@ -2,7 +2,7 @@
 
 **Navegação:** [← Brief (índice)](brief.md) · [spec-driven-execution-guide.md](spec-driven-execution-guide.md)
 
-Este documento transforma as fases do [spec-driven-execution-guide.md](spec-driven-execution-guide.md) (numeradas 0 a 20 no guia) em **pedidos atômicos** prontos para uso com IA, preservando o formato normativo de template. A **contagem de fases no guia não é teto** — secções adicionais (a partir da *Fase 21* abaixo) estendem o roteiro quando surgem entregas normativas (ex.: [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md), [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md) e [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md), incluindo a [Fase 23](#fase-23-adr-0008-descoberta-janela-por-extremos-e-mapeamento-legado) para o 0008; [Fase 26](#fase-26---adr-0020-flexibilidade-de-geracao-aleatorio-explicito-filtros-opt-in-intersecao-teto-1k-seed-opcional) para o [ADR 0020](adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md)) sem reabrir a numeração fechada do guia; novas fases seguem o **mesmo padrão** (bloco `Implemente apenas…`, referências, arquivos, regras, critério de pronto). A Fase 23 do [guia de execução](spec-driven-execution-guide.md) (secção *Fase 23: Descoberta híbrida…*) e esta secção cobrem a mesma entrega normativa. A Fase 26 do [guia de execução](spec-driven-execution-guide.md) (secção homónima) corresponde à secção *Fase 26* abaixo (ADR 0020).
+Este documento transforma as fases do [spec-driven-execution-guide.md](spec-driven-execution-guide.md) (numeradas 0 a 20 no guia) em **pedidos atômicos** prontos para uso com IA, preservando o formato normativo de template. A **contagem de fases no guia não é teto** — secções adicionais (a partir da *Fase 21* abaixo) estendem o roteiro quando surgem entregas normativas (ex.: [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md), [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md) e [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md), incluindo a [Fase 23](#fase-23-adr-0008-descoberta-janela-por-extremos-e-mapeamento-legado) para o 0008; [Fase 26](#fase-26---adr-0020-flexibilidade-de-geracao-aleatorio-explicito-filtros-opt-in-intersecao-teto-1k-seed-opcional) para o [ADR 0020](adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md); [Fase 27](#fase-27---adr-0021-apresentacao-de-resumos-de-janela-tabelas-a-b-glossario-d5) para o [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) (apresentação legível de resumos de janela, sem alterar o JSON do MCP) sem reabrir a numeração fechada do guia; novas fases seguem o **mesmo padrão** (bloco `Implemente apenas…`, referências, arquivos, regras, critério de pronto). A Fase 23 do [guia de execução](spec-driven-execution-guide.md) (secção *Fase 23: Descoberta híbrida…*) e esta secção cobrem a mesma entrega normativa. A Fase 26 do [guia de execução](spec-driven-execution-guide.md) (secção homónima) corresponde à secção *Fase 26* abaixo (ADR 0020). A Fase 27 do [guia de execução](spec-driven-execution-guide.md) (secção homónima) corresponde à secção *Fase 27* abaixo (ADR 0021).
 
 ## Fase 0 - Congelar a base
 
@@ -1831,5 +1831,100 @@ Regras:
 
 Critério de pronto:
 - explicação audita modo, restrições efetivas e (quando aplicável) se o episódio foi replayável.
+```
+
+## Fase 27 - ADR 0021: apresentacao de resumos de janela (tabelas A-B, glossario, D5)
+
+*Extensão pós–Fase 26. Norma: [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md). Documentação e texto a humanos: **não** muda o envelope `MetricValue` do MCP. Espelha a [Fase 27 do guia](spec-driven-execution-guide.md#fase-27---apresentacao-de-resumos-de-janela-adr-0021). Cruzamento: [metric-glossary.md](metric-glossary.md), [ADR 0009](adrs/0009-help-e-catalogo-de-templates-resources-v1.md) (help/resources, quando a fatia tocar exemplos de tabela), [metric-catalog.md](metric-catalog.md) (fórmulas inalteradas salvo outro spec).*
+
+### Template 27.1 — `metric-glossary`: subsecção “Textos de resumo para tabelas (ADR 0021)”
+
+```md
+Implemente apenas a subsecção normativa de **textos de resumo** alinhada ao [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) (templates A e B, D2, Apêndice) em [metric-glossary.md](metric-glossary.md): copiar, condensar ou fundir com o bloco *“O que observa”* de cada métrica citada no Apêndice, sem contradição com o [metric-catalog.md](metric-catalog.md).
+
+Referências obrigatórias:
+- docs/adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md
+- docs/metric-catalog.md
+- (estado actual) docs/metric-glossary.md
+
+Arquivos esperados:
+- docs/metric-glossary.md
+
+Regras:
+- manter tom descritivo (nada de promessa de acerto futuro);
+- tabela A: exemplos de coluna **Descrição**; tabela B: o que a série *indica* com vocabulário acessível (entropia, HHI, *etc.* conforme D2);
+- não conflitar com a ADR 0021 D5: resumo padrão *vs.* interpretação longa *sob pedido* (a subsecção fornece o piso; o agente pode alargar quando o utilizador pedir, ancorado no catálogo + dados reais — mais tokens).
+
+Critério de pronto:
+- a subsecção existe, está referenciada no sumário se o glossário tiver índice, e cita a ADR 0021;
+- pelo menos as métricas do Apêndice da ADR 0021 têm uma linha de “texto de tabela” reutilizável em PT.
+```
+
+### Template 27.2 — `AGENTS.md` e regras do host: confirmar D5 (resumo *vs.* interpretação, tokens)
+
+```md
+Implemente apenas a confirmação/ajuste de [AGENTS.md](../AGENTS.md) (e de `.cursor/rules` ou equipe, se existirem) para explicitar: (1) tabelas A/B conforme ADR 0021; (2) modo **resumo padrão** (poucos tokens) *vs.* **interpretação explícita** quando o utilizador pedir (mais tokens, dados ancorados); (3) o glossário/ADR 0021 como fonte, não invenção de fórmulas.
+
+Referências obrigatórias:
+- docs/adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md
+- AGENTS.md
+
+Arquivos esperados:
+- AGENTS.md
+- (opcional) .cursor/rules/*.md
+
+Regras:
+- uma linha ou parágrafo no mapa/atalhos basta, sem duplicar a ADR inteira.
+
+Critério de pronto:
+- alguém que lê AGENTS sabe que a apresentação de resultados de janela tem norma (ADR 0021) e trade-off de tokens;
+- link para a ADR 0021 visível.
+```
+
+### Template 27.3 (opcional) — `ComputeWindowMetricsUseCase` / explicações por métrica no servidor
+
+```md
+Implemente apenas o enriquecimento de `ExplanationFor` (ou mapeamento equivalente) no caso de uso de cálculo de janela, **onde** ainda existir explicação genérica “Metrica de janela.” para uma métrica cujo texto mínimo já conste no ADR 0021 / glossário, sem alterar semântica de cálculo nem `MetricValue.value`.
+
+Referências obrigatórias:
+- docs/adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md
+- docs/metric-glossary.md
+- src/LotofacilMcp.Application/UseCases/ComputeWindowMetricsUseCase.cs (ou ficheiro actual)
+
+Arquivos esperados:
+- src/LotofacilMcp.Application/UseCases/ComputeWindowMetricsUseCase.cs
+- (testes) tests/ — apenas se o contrato fixar comparação literal de *explanation* (cuidado: mudança de string pode exigir golden)
+
+Regras:
+- strings curtas, alinhadas à norma, sem marketing preditivo;
+- não introduzir defaults semânticos novos;
+
+Critério de pronto:
+- nenhum teste de fórmula/valor quebre; ajustar goldens de *explanation* de forma consciente se a suíte comparar literalmente a string.
+```
+
+### Template 27.4 (opcional) — `resources/help` e `resources/prompts` (exemplos de tabela A/B)
+
+```md
+Implemente apenas a revisão de exemplos em [resources/help/](resources/help/) e [resources/prompts/](resources/prompts/) para alinhar, onde houver tabela de métricas *para leigos*, às colunas A/B da ADR 0021: sem coluna redundante *shape*/*unit* em resumos narrativos; ligação ao *getting-started* / índice conforme [ADR 0009](adrs/0009-help-e-catalogo-de-templates-resources-v1.md).
+
+Referências obrigatórias:
+- docs/adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md
+- docs/adrs/0009-help-e-catalogo-de-templates-resources-v1.md
+- resources/help/
+- resources/prompts/
+
+Arquivos esperados:
+- resources/help/getting-started@1.0.0.md (e outros tocados)
+- resources/prompts/index@1.0.0.md (e outros tocados)
+- (build) recursos embebidos replicados em src/LotofacilMcp.Server se o projecto o exigir
+
+Regras:
+- Markdown only; *resources* read-only; não expor N mágico de janela;
+- reforçar o opt-in a “explica o comportamento” = mais detalhe (D5) quando fizer sentido.
+
+Critério de pronto:
+- nenhum exemplo de tabela do resource contradiz a ADR 0021;
+- cópia embebida no server actualizada se o repositório duplicar *resources* no output de build.
 ```
 
