@@ -761,18 +761,19 @@ Objetivo: cumprir o [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-de
 Norma:
 
 - [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) (D1–D5, Apêndice de frases modelo)
-- Cruzamento: [metric-glossary.md](metric-glossary.md) (definição e *“O que observa”*), [ADR 0009](adrs/0009-help-e-catalogo-de-templates-resources-v1.md) quando a entrega tocar em *getting-started* / *index* de templates
+- Cruzamento: [metric-glossary.md](metric-glossary.md) (definição e *“O que observa”*), [metric-catalog.md](metric-catalog.md) quando o ADR 0021 remeta à leitura *legada* (ex. *QtdFrequencia* e distinção de nomes), [ADR 0009](adrs/0009-help-e-catalogo-de-templates-resources-v1.md) quando a entrega tocar em *getting-started* / *index* de templates
 
 Passos atômicos (ordem recomendada):
 
-- **27.1 — `metric-glossary`:** adicionar subsecção **“Textos de resumo para tabelas (ADR 0021)”** (ou equivalente) com as frases do Apêndice da ADR, condensando ou reutilizando o bloco *“O que observa”* existente, sem contradizer [metric-catalog.md](metric-catalog.md).
+- **27.1 — `metric-glossary`:** adicionar subsecção **“Textos de resumo para tabelas (ADR 2021)”** (ou equivalente) com as frases do Apêndice da ADR, condensando ou reutilizando o bloco *“O que observa”* existente, sem contradizer [metric-catalog.md](metric-catalog.md).
+- **27.1b (hotfix documental, *opcional* salvo *gap* aberto) — ponte *Vocabulário* («ausência» / frequência / atraso / `ausencia_blocos`):** alinhar em cadeia [metric-catalog.md](metric-catalog.md) (secção *QtdFrequencia* e, se necessário, notas colaterais), o Apêndice e o D3 da [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) e o glossário (âncora `#vocab-ausencia-adr-0021`, tabela *Vocabulário*), para a conversa *ausente *N* concursos* **não** se confundir com `frequencia_por_dezena` (somas) nem com o *shape* de `ausencia_blocos`. **Não** altera fórmulas nem o contrato MCP. Usar quando, após 27.1, ainda houver risco de ambiguidade editorial entre o catálogo, o apêndice e o glossário.
 - **27.2 — `AGENTS.md` e consumidores de texto:** confirmar que o atalho para a ADR 0021 (e, se existir, regra em *rules* do repositório) aponta para a distinção **resumo padrão** (baixo custo em tokens) *vs.* **interpretação explícita** sob pedido (mais tokens, ancorada no catálogo e nos dados do MCP), conforme D5.
 - **27.3 (opcional) — `compute_window_metrics`:** enriquecer `ExplanationFor` no *Application* apenas onde hoje cai no genérico *“Metrica de janela.”* e a ADR 0021 pede texto mínimo coerente (não duplica a coluna “descrição” de tabelas A/B, mas melhora a tool para quem lê o JSON no cliente).
 - **27.4 (opcional) — resources:** rever `resources/help/`, `resources/prompts/index@*` e modelos alinhados ao [ADR 0009](adrs/0009-help-e-catalogo-de-templates-resources-v1.md) para exemplos de tabela A/B *sem* coluna técnica `shape`/`unit` em resumos a leigo.
 
 Critério mínimo de aceite:
 
-- existe secção de suporte no glossário (ou documento claramente referenciado) com frases reutilizáveis alinhadas ao Apêndice da ADR 0021;
+- existe secção de suporte no glossário (ou documento claramente referenciado) com frases reutilizáveis alinhadas ao Apêndice da ADR 0021; se 27.1b for aplicada, a ponte *Vocabulário* e o *QtdFrequencia* estão coerentes entre catálogo, ADR 0021 e glossário, sem conflito de nomes;
 - a distinção D1/D5 (tabelas *vs.* interpretação; custo consciente de tokens) está explícita num documento normativo acessível a quem edita `AGENTS` / regras de host;
 - nenhuma frase de apresentação contradiz fórmulas do catálogo nem implica previsão de sorteio.
 

@@ -1860,6 +1860,33 @@ Critério de pronto:
 - pelo menos as métricas do Apêndice da ADR 0021 têm uma linha de “texto de tabela” reutilizável em PT.
 ```
 
+### Template 27.1b (hotfix documental, opcional) — ponte *Vocabulário* (ausência / frequência / atraso / `ausencia_blocos`)
+
+*Aplica-se quando, após 27.1, o *gap* editorial ainda puder fazer o leitor confundir: «*ausente *N* concursos*» (vector 0,1,2,…) *vs.* `frequencia_por_dezena` (somas) *vs.* `ausencia_blocos` (listas). Não altera fórmulas nem o MCP.*
+
+```md
+Implemente apenas a **ponte de vocabulário** e referências cruzadas entre: (1) a secção *QtdFrequencia* e, se aplicável, a nota de *linguagem acessível* (ADR 0021) em [metric-catalog.md](metric-catalog.md); (2) o D3, o Apêndice (tabela A, nota *Ausência*) da [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md); (3) a secção e âncora `#vocab-ausencia-adr-0021` em [metric-glossary.md](metric-glossary.md), sem reabrir a semântica da Tabela 2 do catálogo.
+
+Referências obrigatórias:
+- docs/metric-catalog.md
+- docs/adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md
+- docs/metric-glossary.md
+
+Arquivos esperados (conforme *gap*):
+- docs/metric-catalog.md
+- docs/adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md
+- docs/metric-glossary.md
+
+Regras:
+- nenhuma alteração a `MetricValue`, contrato MCP, nem a fórmula canónica das métricas; apenas texto, âncoras e tabelas de explicação;
+- `QtdFrequencia` continua a mapear `frequencia_por_dezena`; a ponte deixa claro o sentido *leigo* de “ausência” = atraso / `estado_atual_dezena` para leitores, não a renomear métricas;
+- a âncora e o id HTML `vocab-ausencia-adr-0021` permanecem estáveis para ligação a partir da ADR e do catálogo.
+
+Critério de pronto:
+- catálogo, ADR (apêndice/D3) e glossário não contradizem-se sobre os quatro *papéis* (frequência na janela; atraso/estado; `ausencia_blocos`; distinção explícita em tabela);
+- links internos (âncora `#vocab-ausencia-adr-0021`) resolvam no *preview* do repositório.
+```
+
 ### Template 27.2 — `AGENTS.md` e regras do host: confirmar D5 (resumo *vs.* interpretação, tokens)
 
 ```md

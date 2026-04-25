@@ -10,6 +10,21 @@ Documento pedagógico complementar ao catálogo técnico em [metric-catalog.md](
 
 **Interação entre métricas (ex. pares e entropia de linha no mesmo recorte):** o co-movimento estatístico (Spearman/Pearson) entre séries alinhadas por concurso — p.ex. `pares_no_concurso` e `entropia_linha_por_concurso` — descreve-se com `analyze_indicator_associations` conforme [test-plan.md](test-plan.md) e [ADR 0006 D5](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md). Isto **não** implica que “mais pares causam” mais ou menos entropia; a janela é descritiva.
 
+## Vocabulário: «ausência» × frequência × atraso × `ausencia_blocos`
+
+<span id="vocab-ausencia-adr-0021"></span>
+
+Quatro ideias distintas entram com **vector 1..25** ou listas longas; o alinhamento com [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) (tabelas A, nota *Ausência*) e com a [Tabela 2](metric-catalog.md#tabela-2--semântica) do catálogo evita trocar rótulos.
+
+| O que a pessoa quis dizer (exemplo de intenção) | Métrica canónica | Forma / lembrete |
+|-----------------------------------------------|------------------|------------------|
+| “Saiu quantas vezes nesta janela?” (popularidade *bruta*) | `frequencia_por_dezena` | `vector_by_dezena`, contagens; **soma** dos 25 = `15 × N` (N = concursos da janela). |
+| “Faz *N* concursos que *não* saiu / está *ausente* desde a última?” (frio) | `atraso_por_dezena` (e, no fim do recorte, muito do que se lê com `estado_atual_dezena`) | `vector_by_dezena`, valores 0…N; **não** soma `15×N`. O *look* de vector com muitos 0, 1, 2, … alinha a **atraso**, não a soma de `frequencia_por_dezena`. |
+| “Quais foram os **tamanhos** dos períodos **seguidos** *sem* a dezena?” (estrutura de blocos) | `ausencia_blocos` | `count_list_by_dezena` (codificação por dezena: dezena, nº de blocos, comprimentos…), **não** um simples vector[25] de inteiros. |
+| (Análogo à linha de cima, para blocos de **presença**) | `frequencia_blocos` | `count_list_by_dezena`. |
+
+*Redação de painéis e tabelas A (ADR 0021):* quando um exemplo de vector “como” `[0,1,1,0,1,0,0,4,0,…]` for usado em contexto de **ausência** *no sentido de atraso*, a **definição canónica** a citar no texto é `atraso_por_dezena` (ou `estado_atual_dezena` consoante o fim de janela), não `frequencia_por_dezena`.
+
 ---
 
 ## Textos de resumo para tabelas (ADR 0021)
@@ -45,8 +60,9 @@ Texto padrão para o **modo resumo** ([ADR 0021 D5](adrs/0021-apresentacao-resum
 | Métrica | Texto de tabela (coluna **Descrição**) |
 |--------|----------------------------------------|
 | `estabilidade_ranking` | Mede, entre **sub-janelas consecutivas** do recorte, se a **ordem** das 25 dezenas por **frequência** tende a manter-se parecida: 0 muito instável, 1 muito estável (intervalo \([0,1]\)). Não indica “confiança” de resultado futuro; descreve **persistência de ranking** no histórico (ver *O que observa* e catálogo). |
-| `frequencia_por_dezena` | Conta quantas vezes cada dezena 1 a 25 **saiu** nos concursos **desta janela** (cada concurso conta no máximo uma vez por dezena). Aproxima a ideia de “popularidade” bruta no período, sem leitura preditiva. |
-| `atraso_por_dezena` | Número de **concursos desde a última ocorrência** de cada dezena no referencial de janela ou política declarada no catálogo; 0 = saiu no **último** sorteio do recorte considerado. Não implica previsão de saída futura. |
+| `frequencia_por_dezena` | Conta quantas vezes cada dezena 1 a 25 **saiu** nos concursos **desta janela** (cada concurso conta no máximo uma vez por dezena). Soma global dos 25 = `15×N`. *Não* descreve «há *N* concursos *sem* sair»; ver a tabela *Vocabulário* [acima](#vocab-ausencia-adr-0021) e a linha de `atraso_por_dezena`. |
+| `atraso_por_dezena` | Número de **concursos desde a última ocorrência**; 0 = saiu no **último** sorteio do recorte. Em prosa, «ausente há *N* edições» alinha aqui, **não** a `frequencia_por_dezena` (ver [ADR 0021, apêndice tabela A](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md)). |
+| `estado_atual_dezena` | `0` se a dezena saiu no último concurso do recorte; senão, atraso corrente. Mesma família de *look* de vector que o atraso, para a leitura «agora» (Tabela 2 do catálogo). |
 | `top10_mais_sorteados` | Lista compacta das 10 dezenas com **mais** ocorrências de saída na janela declarada (frequência bruta, como no catálogo). |
 | `top10_menos_sorteados` | Lista compacta das 10 dezenas com **menos** ocorrências de saída na mesma janela (frequência bruta). |
 
@@ -81,6 +97,7 @@ Texto padrão para o **modo resumo** ([ADR 0021 D5](adrs/0021-apresentacao-resum
 - **O que observa:** popularidade bruta de cada número naquele recorte — quais saíram mais vezes.
 - **Exemplo de uso:** “Nas últimas 50 edições, quais dezenas acumularam mais ocorrências para montar um ranking de frequência?”
 - **Mapeamento do gráfico `QtdFrequencia` (export `indicadores.json` de referência):** o vector 1..25 nesse ficheiro é **frequência na janela** e corresponde a `frequencia_por_dezena`, não a `atraso_por_dezena` (ver secção homónima no [metric-catalog.md](metric-catalog.md)). A documentação antiga do *controller* podia chamar o endpoint de “atraso” com exemplos numéricos ambíguos; a **norma de substituição MCP** para esse export é frequência.
+- **Vocabulário acessível *vs.* «ausência» (ADR 0021):** um *look* de vector com muitos 0, 1, 2, … no sentido «*N* concursos *sem* sair» alinha a [`atraso_por_dezena`](#atraso_por_dezena) (e `estado_atual_dezena` no fim do recorte), não a esta contagem; ver a tabela *Vocabulário* [acima](#vocab-ausencia-adr-0021).
 
 ---
 
@@ -128,6 +145,7 @@ Texto padrão para o **modo resumo** ([ADR 0021 D5](adrs/0021-apresentacao-resum
 - **O que observa:** “frio” ou tempo sem sair por número — atraso actual ou na janela definida.
 - **Exemplo de uso:** “Quais dezenas estão há mais edições sem ser sorteadas no histórico considerado?”
 - **Não confundir com o rótulo de gráfico `QtdFrequencia` do export** `indicadores.json` de referência: esse bloco normativo mapeia para `frequencia_por_dezena` (contagens), não para atraso.
+- **Vocabulário acessível (ADR 0021):** o discurso «*ausente* *N* concursos» e o padrão numérico 0, 1, 2, … batem com **esta** métrica; confundem-se em painéis com `frequencia_por_dezena` (somas) e com `ausencia_blocos` (listas de blocos) — ver [Vocabulário](#vocab-ausencia-adr-0021).
 
 ---
 
