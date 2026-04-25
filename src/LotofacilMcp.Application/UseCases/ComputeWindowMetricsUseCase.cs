@@ -186,6 +186,10 @@ public sealed class ComputeWindowMetricsUseCase
             "Lista de blocos consecutivos de presença por dezena, codificada de forma determinística como [dezena, quantidade_blocos, blocos...].",
         "ausencia_blocos" =>
             "Lista de blocos consecutivos de ausência por dezena, codificada de forma determinística como [dezena, quantidade_blocos, blocos...].",
+        "assimetria_blocos" =>
+            "Por dezena, razão (presenças - ausências)/(presenças + ausências) em blocos; desequilíbrio entre períodos de presença e ausência no recorte analisado.",
+        "atraso_por_dezena" =>
+            "Quantos concursos à frente do fim desta janela desde a última vez em que a dezena saiu; 0 = saiu no último sorteio do recorte.",
         "estado_atual_dezena" =>
             "Estado corrente por dezena ao fim da janela: 0 quando saiu no último concurso da janela, ou atraso atual quando não saiu.",
         "estabilidade_ranking" =>
