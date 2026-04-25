@@ -825,6 +825,41 @@ Sequência obrigatória (repetir por “lote pequeno” de métricas):
   - Cruzar com a superfície real (ex.: `discover_capabilities`/registro de métricas por build) e produzir uma lista: **implementadas** vs **faltantes**.
   - Proibir “assumir implementado porque existe arquivo”: só conta como implementado se estiver **registrado/exposto** conforme o recorte (ex.: dispatcher/allowlist por tool quando aplicável).
 
+#### Ferramenta auxiliar (opcional) — Auditoria MCP STDIO de métricas expostas e invariantes (runner)
+
+Quando a intenção for auditar a **superfície real** disponível via **MCP STDIO** (instância/build) e validar rapidamente se o texto de `MetricValue.explanation` e as formas retornadas estão coerentes com invariantes simples (janela, shapes e tamanhos), use o runner:
+
+- `tools/McpMetricAudit/McpMetricAudit.csproj`
+
+O runner executa, via MCP STDIO:
+
+- `discover_capabilities` (fonte de verdade da allowlist da **instância**) e extrai `metrics.compute_window_metrics_allowed`;
+- `compute_window_metrics` em batch para todas as métricas permitidas, em uma janela fixa, e imprime:
+  - tabela “métrica → explanation → evidência de resultado”;
+  - tabela final de divergências quando houver.
+
+**Como rodar (local):**
+
+```bash
+dotnet build LotofacilMcp.sln -c Debug
+dotnet run --project tools/McpMetricAudit/McpMetricAudit.csproj -c Debug
+```
+
+**Premissas atuais (V0 / fixture):**
+
+- A instância usa a fixture configurada em `src/LotofacilMcp.Server/appsettings*.json` (por padrão `tests/fixtures/synthetic_min_window.json`).
+- A auditoria usa uma janela declarada de 20 concursos e ancoragem no fim do recorte (no fixture atual, `end_contest_id=3666`).
+
+**O que este runner valida (escopo):**
+
+- Descoberta e allowlist **real** da build (não inferida por código-fonte).
+- Invariantes simples de forma e tamanho por métrica (ex.: `frequencia_por_dezena` com 25 posições e soma `15×N`, séries com N pontos, distribuições por linha/coluna como série de blocos de 5).
+
+**O que este runner não substitui:**
+
+- o catálogo normativo (`metric-catalog.md`) e suas fórmulas;
+- testes de domínio e contrato; ele é uma evidência rápida e auditável de superfície MCP STDIO para o recorte atual.
+
 - **28.2 — Fechar precondições e bordas no spec (se houver ambiguidade):**
   - Se alguma métrica faltante tiver regra de borda não testável a partir do catálogo (ex.: comprimento de série, política de saturação, smoothing, erro de insuficiência), **não inventar**: abrir o trecho exato do catálogo/ADR aplicável e, se necessário, criar um ajuste mínimo no spec **antes** do código.
 

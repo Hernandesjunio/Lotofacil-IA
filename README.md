@@ -78,6 +78,12 @@ Para clientes MCP desktop (ex.: Cursor), use o mesmo executável `LotofacilMcp.S
 
 Nesse modo o host MCP consegue descobrir e invocar as tools atualmente entregues no recorte V1 (`get_draw_window`, `compute_window_metrics` e `analyze_indicator_stability`) com a mesma semântica JSON usada nos POSTs HTTP `/tools/*`.
 
+### Auditoria da superfície MCP STDIO (métricas expostas)
+
+Para auditar a **allowlist real** de métricas expostas por `compute_window_metrics` nesta build (via `discover_capabilities`) e validar invariantes simples por janela (ex.: tamanho/shape/somas), veja o runner `tools/McpMetricAudit` documentado em:
+
+- [docs/spec-driven-execution-guide.md](docs/spec-driven-execution-guide.md#ferramenta-auxiliar-opcional--auditoria-mcp-stdio-de-métricas-expostas-e-invariantes-runner)
+
 ### Getting started (agnóstico ao host)
 
 Para onboarding e discovery, a instância MCP expõe:

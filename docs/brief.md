@@ -117,6 +117,7 @@ Esses templates **não** substituem tools nem mudam o contrato: são conteúdo d
 - [test-plan.md](test-plan.md) — matriz de cobertura de testes do domínio
 - [brief-vs-src-gap-matrix.md](brief-vs-src-gap-matrix.md) — matriz de aderência do brief vs implementação e backlog técnico (GAPs B01–B24)
 - [spec-driven-execution-guide.md](spec-driven-execution-guide.md) — ordem prática de execução, passos atômicos e uso dos specs na implementação (inclui **Fase 25**: fechamento sistemático dos GAPs do brief; **Fase 27**: [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) apresentação legível de resumos de janela)
+- [spec-driven-execution-guide.md](spec-driven-execution-guide.md#ferramenta-auxiliar-opcional--auditoria-mcp-stdio-de-métricas-expostas-e-invariantes-runner) — auditoria rápida da superfície MCP STDIO (allowlist real + validação de invariantes) usando `tools/McpMetricAudit`
 - [fases-execucao-templates.md](fases-execucao-templates.md) — pedidos atômicos por fase (0–20 do guia e extensões; inclui **Fase 25**: ADR 0010–0018; **Fase 27**: ADR 0021, tabelas A-B e glossário)
 - [live-openai-integration-pipeline.md](live-openai-integration-pipeline.md) — integração real com API OpenAI, suíte mínima L1–L5 e esteira GitHub dedicada
 - [vertical-slice.md](vertical-slice.md) — primeira fatia de implementação (dados → métrica única → MCP)
