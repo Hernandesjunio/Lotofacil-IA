@@ -1961,6 +1961,130 @@ Critério de pronto:
 - cópia embebida no server actualizada se o repositório duplicar *resources* no output de build.
 ```
 
+### Template 27.5 — Checklist de cobertura (métricas do Apêndice da ADR 0021)
+
+```md
+Implemente apenas um checklist de cobertura (sem criar métricas novas) para garantir que **todas** as métricas citadas no **Apêndice** do [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) aparecem com texto reutilizável na secção **“Textos de resumo para tabelas (ADR 0021)”** do [metric-glossary.md](metric-glossary.md) (tabela A e tabela B) e, quando houver `explanation` no servidor, não ficam presas ao texto genérico “Metrica de janela.”.
+
+Referências obrigatórias:
+- docs/adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md (Apêndice, D1–D2, D5)
+- docs/metric-glossary.md (secção “Textos de resumo para tabelas (ADR 0021)”)
+- docs/spec-driven-execution-guide.md (Fase 27.5)
+
+Arquivos esperados:
+- docs/metric-glossary.md (ajuste só se faltar alguma linha de texto)
+- (opcional) src/LotofacilMcp.Application/UseCases/ComputeWindowMetricsUseCase.cs (somente se alguma métrica cair no default do `ExplanationFor`)
+
+Checklist (lista nominal do Apêndice; não inventar outras):
+- Tabela A: `estabilidade_ranking`, `frequencia_por_dezena`, `total_de_presencas_na_janela_por_dezena`, `sequencia_atual_de_presencas_por_dezena`, `atraso_por_dezena`, `estado_atual_dezena`, `top10_mais_sorteados`, `top10_menos_sorteados`, `top10_maiores_totais_de_presencas_na_janela`, `top10_menores_totais_de_presencas_na_janela`
+- Tabela B: `entropia_linha_por_concurso`, `entropia_coluna_por_concurso`, `hhi_linha_por_concurso`, `hhi_coluna_por_concurso`, `repeticao_concurso_anterior`, `pares_no_concurso`, `quantidade_vizinhos_por_concurso`, `sequencia_maxima_vizinhos_por_concurso`, `distribuicao_linha_por_concurso`, `distribuicao_coluna_por_concurso`
+
+Regras:
+- cumprir ADR 0021 D1: coluna “Descrição” (A) e “O que esta série indica” (B) são obrigatórias quando a métrica aparecer em tabela humana;
+- cumprir ADR 0021 D2: vocabulário acessível mínimo para entropia/HHI/pares/vizinhos;
+- cumprir ADR 0021 D5: resumo padrão por defeito; interpretação longa só sob pedido explícito;
+- não alterar fórmulas nem versões (isso é `metric-catalog.md`); se detectar lacuna semântica, registrar como dúvida em vez de improvisar.
+
+Critério de pronto:
+- todas as métricas do Apêndice têm um texto reutilizável em PT no glossário (tabela A e B);
+- nenhuma métrica do Apêndice fica sem texto (lacuna) ou com texto que contradiga o catálogo;
+- (se aplicável) `ExplanationFor` não devolve a string genérica para métricas já canônicas e citadas no Apêndice.
+```
+
+## Fase 28 — Implementar métricas canônicas pendentes do catálogo (execução dirigida por plano)
+
+*Extensão pós–Fase 27. Norma: [metric-catalog.md](metric-catalog.md) (Tabelas 1 e 2) + contrato MCP quando a métrica for exposta por tool. Esta fase existe para evitar implementação avulsa: o trabalho é executado por templates atômicos, sempre na ordem spec → teste → código.*
+
+### Template 28.1 — Auditoria: catálogo (Tabela 1) × superfície real (build) e lista de lacunas
+
+```md
+Implemente apenas uma auditoria determinística (sem codar métricas novas) que produza a lista das métricas **canônicas** do [metric-catalog.md](metric-catalog.md) (Tabela 1) e marque, para esta build, quais estão **implementadas/expostas** vs **faltantes**, com referência explícita ao mecanismo de registro/dispatcher/discovery do repositório.
+
+Referências obrigatórias:
+- docs/metric-catalog.md (Tabela 1 — Identificação e tipagem; Status=canonica)
+- docs/mcp-tool-contract.md (quando a auditoria depender de rota/tool exposta)
+- docs/spec-driven-execution-guide.md (Fase 28 — sequência obrigatória)
+
+Arquivos esperados:
+- tests/ (novo teste ou utilitário de validação, conforme convenção do repositório)
+- (opcional) docs/ (curta evidência da lista de lacunas, se o repositório exigir)
+
+Regras:
+- não considerar “implementada” só porque existe arquivo/classe: precisa estar registrada/descoberta e/ou despachável no recorte alvo;
+- se a build operar por allowlist, a auditoria deve reportar o subconjunto permitido por rota;
+- não inventar métricas fora da Tabela 1.
+
+Critério de pronto:
+- a auditoria falha se existir métrica canônica não implementada no recorte escolhido (ou produz lista explícita de faltantes, conforme decisão do template).
+```
+
+### Template 28.2 — Lote pequeno: testes vermelhos (domínio + contrato) para métricas faltantes
+
+```md
+Implemente apenas os testes (vermelhos primeiro) para um **lote pequeno** (2–5) de métricas canônicas marcadas como faltantes no Template 28.1, cobrindo fórmula, bordas e tipagem (`scope`, `shape`, `unit`, `version`) conforme o catálogo/contrato.
+
+Referências obrigatórias:
+- docs/metric-catalog.md (Tabela 2 — Semântica das métricas do lote)
+- docs/test-plan.md e docs/contract-test-plan.md (quando existirem casos/goldens aplicáveis)
+- docs/mcp-tool-contract.md (se a métrica for exposta por tool)
+
+Arquivos esperados:
+- tests/LotofacilMcp.Domain.Tests/
+- (quando exposta) tests/LotofacilMcp.ContractTests/
+- tests/fixtures/ (se precisar fixture mínima adicional)
+
+Regras:
+- não escrever implementação antes dos testes falharem pelo motivo correto;
+- quando o catálogo remeter a ADR (ex.: bordas/length), citar o trecho aplicável no teste.
+
+Critério de pronto:
+- testes falham antes do código e descrevem o comportamento normativo com asserts objetivos.
+```
+
+### Template 28.3 — Lote pequeno: implementação mínima + registro/dispatcher + discovery (após 28.2)
+
+```md
+Implemente apenas a implementação mínima das métricas do lote (do Template 28.2) no `Domain`, mais o registro necessário (dispatcher/registro único/allowlist) para que elas sejam despacháveis e descobertas na build, até os testes passarem.
+
+Referências obrigatórias:
+- docs/metric-catalog.md (Tabela 1: nome/scope/shape/unit/version; Tabela 2: fórmula)
+- docs/adrs/0001-fechamento-semantico-e-determinismo-v1.md (determinismo)
+- docs/adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md (se tocar em allowlist/erro `UNKNOWN_METRIC` com `details`)
+
+Arquivos esperados:
+- src/LotofacilMcp.Domain/Metrics/
+- src/LotofacilMcp.Application/ (validação/registro se aplicável)
+- src/LotofacilMcp.Server/Tools/ (se a rota precisar expor)
+
+Regras:
+- não mudar catálogo para “acomodar” implementação: código deve seguir o spec;
+- se a métrica tiver texto humano (glossário/resources), alinhar com ADR 0021 (tabelas A/B) sem mexer no payload JSON.
+
+Critério de pronto:
+- testes do Template 28.2 passam;
+- `discover_capabilities` (ou mecanismo equivalente) reflete a métrica como implementada;
+- a auditoria do Template 28.1 não lista mais a métrica como faltante.
+```
+
+### Template 28.4 — Gate final: “catálogo completo implementado” (objetivo principal)
+
+```md
+Implemente apenas um gate de validação final que falhe se houver qualquer métrica `Status=canonica` no [metric-catalog.md](metric-catalog.md) sem implementação/registro na build alvo, e que gere uma lista determinística das faltantes para o próximo lote (loop 28.2–28.3).
+
+Referências obrigatórias:
+- docs/metric-catalog.md (Tabela 1)
+- docs/spec-driven-execution-guide.md (Fase 28.6 — validação final)
+
+Arquivos esperados:
+- tests/ (validação automatizada rodando no pipeline local/CI)
+
+Regras:
+- o gate não pode ser “manual”: deve ser verificável por teste.
+
+Critério de pronto:
+- executar a suíte resulta em “zero métricas canônicas faltantes” para a build alvo.
+```
+
 ## Extensão (hotfix pós-V0) — Métricas autoexplicativas + sunset (compatibilidade temporária)
 
 *Objetivo:* introduzir métricas com nomes não ambíguos para (1) **total de presenças na janela** e (2) **sequência atual com reinício ao ausente**, mantendo compatibilidade com nomes antigos por um período definido e documentando comportamento pós-sunset via `UNKNOWN_METRIC` com `details` de migração.

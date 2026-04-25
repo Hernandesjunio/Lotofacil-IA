@@ -797,6 +797,9 @@ Passos atômicos (ordem recomendada):
 - **27.2 — `AGENTS.md` e consumidores de texto:** confirmar que o atalho para a ADR 0021 (e, se existir, regra em *rules* do repositório) aponta para a distinção **resumo padrão** (baixo custo em tokens) *vs.* **interpretação explícita** sob pedido (mais tokens, ancorada no catálogo e nos dados do MCP), conforme D5; ver [ADR 0009](adrs/0009-help-e-catalogo-de-templates-resources-v1.md) (D4) se o texto for onboarding/template.
 - **27.3 (opcional) — `compute_window_metrics` e texto no `MetricValue`:** ponto de extensão em código: [ComputeWindowMetricsUseCase.cs](../src/LotofacilMcp.Application/UseCases/ComputeWindowMetricsUseCase.cs) (`ExplanationFor` → campo `explanation` por métrica, quando existir no contrato). **Estado de referência:** o `switch` já cobre as métricas canónicas conhecidas; o genérico *“Metrica de janela.”* aplica-se **só** ao ramo *default* (nomes de métrica fora do mapa / futuras extensões). 27.3: (a) alargar o mapa se novas métricas deixarem cair no default, e/ou (b) alinhar *strings* técnicas ao tom mínimo do glossário/ADR **sem** substituir a norma A/B (apresentação humana). Não muda `MetricValue.value` nem semântica.
 - **27.4 (opcional) — resources D4:** rever `resources/help/`, `resources/prompts/` (ex. `index@1.0.0.md`, prompts temáticos) e modelos alinhados ao [ADR 0009](adrs/0009-help-e-catalogo-de-templates-resources-v1.md) para exemplos de tabela A/B *sem* coluna redundante `shape`/`unit` em resumos a leigo; o [LotofacilMcp.Server.csproj](../src/LotofacilMcp.Server/LotofacilMcp.Server.csproj) copia `resources/**` para o *output* — após editar, garantir a mesma cópia/versão usada no *publish* (aberto no item *resources* da [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md)).
+- **27.5 — Checklist (cobertura do Apêndice da ADR 0021):** garantir que **todas** as métricas citadas explicitamente no **Apêndice** (tabelas A e B) têm texto reutilizável e coerente com D1–D2 no `metric-glossary` (27.1) e, quando aplicável, não caem no ramo genérico do `explanation` (27.3). Lista nominal (não inventar novas além do Apêndice):  
+  - **Tabela A:** `estabilidade_ranking`, `frequencia_por_dezena`, `total_de_presencas_na_janela_por_dezena`, `sequencia_atual_de_presencas_por_dezena`, `atraso_por_dezena`, `estado_atual_dezena`, `top10_mais_sorteados`, `top10_menos_sorteados`, `top10_maiores_totais_de_presencas_na_janela`, `top10_menores_totais_de_presencas_na_janela`  
+  - **Tabela B:** `entropia_linha_por_concurso`, `entropia_coluna_por_concurso`, `hhi_linha_por_concurso`, `hhi_coluna_por_concurso`, `repeticao_concurso_anterior`, `pares_no_concurso`, `quantidade_vizinhos_por_concurso`, `sequencia_maxima_vizinhos_por_concurso`, `distribuicao_linha_por_concurso`, `distribuicao_coluna_por_concurso`
 
 **Superfície de ficheiros (Fase 27, exceto 27.3 *strictly* code):** `docs/metric-glossary.md`; opc. `docs/metric-catalog.md`; `AGENTS.md`; `.cursor/rules/*`; `resources/help/*.md`, `resources/prompts/*.md`; código `src/LotofacilMcp.Application/UseCases/ComputeWindowMetricsUseCase.cs` (27.3).
 
@@ -805,6 +808,46 @@ Critério mínimo de aceite:
 - existe secção de suporte no glossário (ou documento claramente referenciado) com frases reutilizáveis alinhadas ao Apêndice da ADR 0021; se 27.1b for aplicada, a ponte *Vocabulário* e o *QtdFrequencia* estão coerentes entre catálogo, ADR 0021 e glossário, sem conflito de nomes, e as âncoras D3 (ex. `#vocab-ausencia-adr-0021`, `#export-legado-qtdfrequencia`, apêndice `#nota-ausencia-adr-0021`) resolvam-se;
 - a distinção D1/D5 (tabelas *vs.* interpretação; custo consciente de tokens) e D2 (mínimo léxico em séries) estão refletidas na documentação e, para agentes, em `AGENTS`/regras;
 - nenhuma frase de apresentação contradiz fórmulas do catálogo nem implica previsão de sorteio.
+
+### Fase 28 — Implementar métricas canônicas pendentes do catálogo (execução dirigida por plano)
+
+Objetivo: garantir que **todas as métricas canônicas** de `docs/metric-catalog.md` (Tabela 1/2) que ainda não estejam materializadas no código sejam implementadas via execução spec-driven, **sem implementação avulsa fora de uma fase** e mantendo rastreabilidade por testes.
+
+Escopo (normativo):
+
+- Métricas canônicas e satélites **são definidas no catálogo**; a implementação deve seguir **nome**, **scope**, **shape**, **unit** e **version** declarados.
+- Métricas de apresentação humana seguem [ADR 0021](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) **quando houver texto/tabela** (glossário/resources/explicação), mas a ADR 0021 **não** substitui fórmula nem tipagem.
+
+Sequência obrigatória (repetir por “lote pequeno” de métricas):
+
+- **28.1 — Auditoria de lacunas (catálogo → código):**
+  - Derivar a lista de métricas alvo a partir de `metric-catalog.md` (Tabela 1) filtrando por `Status=canonica` (e, se o passo explicitamente incluir, `satelite`).
+  - Cruzar com a superfície real (ex.: `discover_capabilities`/registro de métricas por build) e produzir uma lista: **implementadas** vs **faltantes**.
+  - Proibir “assumir implementado porque existe arquivo”: só conta como implementado se estiver **registrado/exposto** conforme o recorte (ex.: dispatcher/allowlist por tool quando aplicável).
+
+- **28.2 — Fechar precondições e bordas no spec (se houver ambiguidade):**
+  - Se alguma métrica faltante tiver regra de borda não testável a partir do catálogo (ex.: comprimento de série, política de saturação, smoothing, erro de insuficiência), **não inventar**: abrir o trecho exato do catálogo/ADR aplicável e, se necessário, criar um ajuste mínimo no spec **antes** do código.
+
+- **28.3 — Testes vermelhos (domínio + contrato) para o lote escolhido:**
+  - Domínio: testes de fórmula com fixture pequena (e testes de propriedade quando aplicável, ex.: somas, limites, monotonicidade).
+  - Contrato: quando a métrica for exposta por tool (ex.: `compute_window_metrics`), testes de shape (`scope`, `shape`, `unit`, `version`) e erros canônicos (ex.: `UNKNOWN_METRIC`) conforme contrato.
+
+- **28.4 — Implementação mínima (somente após 28.3):**
+  - Implementar no `Domain` e registrar no dispatcher/registro único (se existente) para que a tool consiga despachar.
+  - Manter determinismo e desempates canônicos do catálogo.
+
+- **28.5 — Exposição e discovery coerentes:**
+  - Atualizar `discover_capabilities`/registro para refletir a superfície real (sem drift).
+  - Atualizar allowlists por rota (quando aplicável) em conjunto com os testes.
+
+- **28.6 — Validação final do objetivo principal (gate de sucesso):**
+  - Rodar uma validação “catálogo completo” que falhe se existir métrica canônica no catálogo sem implementação/registro no recorte alvo.
+  - Se o projeto optar por implementar em ondas (por tool/rota), a validação deve ser parametrizada por **perfil/build**, mas nunca “silenciosa”.
+
+Critério mínimo de aceite:
+
+- existe um passo executável (template) que, ao ser seguido, implementa **todas** as métricas canônicas faltantes sem improviso;
+- existe uma validação final que impede regressão (catálogo diz que existe, mas build não implementa).
 
 Nota operacional: template para pedidos atômicos
 
