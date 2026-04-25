@@ -10,7 +10,7 @@ Construir um sistema educacional para engenharia de IA aplicado a Lotofácil, ca
 - calcular indicadores estatísticos determinísticos;
 - estruturar dados para consumo por IA via MCP;
 - compor análises dinâmicas a partir de indicadores canônicos;
-- gerar jogos candidatos por heurísticas descritivas e reproduzíveis;
+- gerar jogos candidatos por heurísticas descritivas e explicáveis (com replay opcional);
 - explicar como cada análise, ranking, filtro ou jogo foi produzido.
 
 O sistema existe para apoiar estudo, análise e tomada de decisão assistida. Ele não deve prometer aumento de chance, acerto futuro ou previsão de resultado.
@@ -25,7 +25,7 @@ O sistema existe para apoiar estudo, análise e tomada de decisão assistida. El
 - composição dinâmica de indicadores com pesos, transformações e filtros declarativos;
 - análise de estabilidade, persistência, associação, divergência e faixas típicas;
 - análise histórica de linhas, colunas, pares/ímpares, vizinhos, repetição, top 10 e slots;
-- geração determinística de jogos candidatos com critérios escolhidos;
+- geração de jogos candidatos por critérios/filtros **opt-in**, priorizando **faixas (ranges)** para flexibilidade;
 - filtros estruturais para excluir padrões raros ou pouco úteis para geração;
 - explicação dos critérios, pesos e filtros usados em cada análise;
 - comparação entre estratégias de geração de jogos.
@@ -82,10 +82,11 @@ Esses templates **não** substituem tools nem mudam o contrato: são conteúdo d
 - **Stack (implementação MCP):** C# / **.NET 10**.
 - Dados históricos obtidos inicialmente via arquivo da CEF.
 - Atualizações futuras via API a ser definida.
-- Processamento deve ser determinístico (mesmo input => mesmo output). Isso exige: (a) `seed` explícito em toda chamada com componente estocástico, (b) `dataset_version` rastreável por hash do snapshot, (c) `deterministic_hash` canônico por resposta.
+- Processamento deve ser determinístico **quando normativo** (mesmo input canônico ⇒ mesmo output canônico) para métricas, agregações e validações. Para **geração** de jogos, a reprodutibilidade (*replay*) é **opcional**: quando `seed` for fornecida, o servidor deve garantir replay do episódio estocástico; quando `seed` estiver ausente, o servidor pode gerar candidatos diferentes entre invocações mesmo com o mesmo JSON.
+- Rastreabilidade permanece obrigatória por `dataset_version`, `tool_version` e `deterministic_hash` (hash canônico conforme contrato; em geração não replayável, o hash não deve ser interpretado como garantia de replay do conjunto concreto de candidatos).
 - Toda composição dinâmica deve declarar explicitamente componentes, transformações, agregações, pesos, janelas de referência e operadores; não pode haver regra implícita inferida por prompt.
 - Quando a intenção do usuário não permitir inferir com segurança os parâmetros das tools MCP, o fluxo (agente/host) deve fazer **perguntas específicas** alinhadas ao contrato até obter um JSON válido; o servidor não supre defaults não documentados. Detalhes e uso opcional de **Prompts/Resources** do protocolo MCP estão em [mcp-tool-contract.md](mcp-tool-contract.md).
-- A geração de jogos deve registrar critérios, pesos efetivos, filtros, janela, `seed`, `search_method`, `tie_break_rule` e versão da estratégia usada.
+- A geração de jogos deve registrar critérios, pesos efetivos, filtros, janela, **modo de geração**, orçamento/tentativas (quando aplicável) e a versão da estratégia usada; quando `seed` estiver presente, ela também deve ser registrada para permitir replay.
 - O sistema deve permitir evolução da persistência e do armazenamento sem alterar a semântica das métricas.
 
 ## Premissas estatísticas
@@ -100,7 +101,7 @@ Esses templates **não** substituem tools nem mudam o contrato: são conteúdo d
 
 ## Critérios de sucesso
 
-- A mesma entrada deve produzir a mesma análise e os mesmos jogos candidatos.
+- A mesma entrada deve produzir a mesma análise. Para geração de jogos candidatos: com `seed` presente, o mesmo input deve produzir os mesmos candidatos; sem `seed`, a geração pode ser não replayável (mantendo explicabilidade e rastreabilidade do que foi aplicado).
 - Cada resultado deve informar quais métricas, transformações, pesos, filtros e referências foram usados.
 - O sistema deve permitir comparar estratégias e composições dinâmicas sem reescrever o cálculo canônico.
 - O contrato MCP deve ser claro o suficiente para automação por IA sem ambiguidade semântica.

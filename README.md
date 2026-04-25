@@ -17,7 +17,7 @@ Isso significa que:
 
 ### Fluxo da aplicação (visão geral)
 
-O serviço expõe ferramentas MCP/HTTP; o cliente (host ou agente) envia parâmetros alinhados ao contrato. O servidor delega a casos de uso, que combinam regras do domínio com dados versionados da infraestrutura e devolvem JSON determinístico e explicável.
+O serviço expõe ferramentas MCP/HTTP; o cliente (host ou agente) envia parâmetros alinhados ao contrato. O servidor delega a casos de uso, que combinam regras do domínio com dados versionados da infraestrutura e devolvem JSON explicável e rastreável. Métricas e agregações são determinísticas (mesmo input canônico ⇒ mesmo output canônico); já a geração de jogos candidatos pode ser **não replayável** quando a estratégia for estocástica e o request não declarar `seed` (replay é opt-in).
 
 ```mermaid
 flowchart TD
