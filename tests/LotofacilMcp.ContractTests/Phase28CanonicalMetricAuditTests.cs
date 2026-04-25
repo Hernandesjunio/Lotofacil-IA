@@ -52,14 +52,7 @@ public sealed class Phase28CanonicalMetricAuditTests
         // build registry/discovery. We keep this list explicit and deterministic to avoid silent drift.
         //
         // If you implement/register any of these, update this expected snapshot in the same PR.
-        var expectedNotTrackedInThisBuild =
-            new[]
-            {
-                "sequencia_atual_de_presencas_por_dezena",
-                "top10_maiores_totais_de_presencas_na_janela",
-                "top10_menores_totais_de_presencas_na_janela",
-                "total_de_presencas_na_janela_por_dezena"
-            };
+        var expectedNotTrackedInThisBuild = Array.Empty<string>();
 
         Assert.Equal(expectedNotTrackedInThisBuild, canonicalNotTracked);
 

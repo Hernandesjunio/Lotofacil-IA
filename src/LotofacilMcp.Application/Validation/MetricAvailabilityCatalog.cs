@@ -6,8 +6,12 @@ public static class MetricAvailabilityCatalog
     [
         // Implemented in this build
         new("frequencia_por_dezena", "1.0.0", "window", "vector_by_dezena", "stable", true, true, true, true, true),
+        new("total_de_presencas_na_janela_por_dezena", "1.0.0", "window", "vector_by_dezena", "stable", true, true, true, true, true),
+        new("sequencia_atual_de_presencas_por_dezena", "1.0.0", "window", "vector_by_dezena", "stable", true, true, true, false, true),
         new("top10_mais_sorteados", "1.0.0", "window", "dezena_list[10]", "stable", true, true, true, false, false),
         new("top10_menos_sorteados", "1.0.0", "window", "dezena_list[10]", "stable", true, true, true, false, false),
+        new("top10_maiores_totais_de_presencas_na_janela", "1.0.0", "window", "dezena_list[10]", "stable", true, true, true, false, false),
+        new("top10_menores_totais_de_presencas_na_janela", "1.0.0", "window", "dezena_list[10]", "stable", true, true, true, false, false),
         new("repeticao_concurso_anterior", "1.0.0", "series", "series", "pending", true, true, true, true, false),
         new("atraso_por_dezena", "1.0.0", "window", "vector_by_dezena", "stable", true, true, true, false, true),
         new("pares_no_concurso", "1.0.0", "series", "series", "stable", true, true, true, true, false),

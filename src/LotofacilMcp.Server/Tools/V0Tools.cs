@@ -570,10 +570,15 @@ public sealed class V0Tools
         var validator = new V0CrossFieldValidator();
 
         var frequencyByDezena = new FrequencyByDezenaMetric();
+        var totalDePresencasNaJanelaPorDezena = new TotalDePresencasNaJanelaPorDezenaMetric(frequencyByDezena);
         var windowMetricDispatcher = new WindowMetricDispatcher(
             frequencyByDezena,
+            totalDePresencasNaJanelaPorDezena,
             new Top10MaisSorteadosMetric(frequencyByDezena),
             new Top10MenosSorteadosMetric(frequencyByDezena),
+            new Top10MaioresTotaisDePresencasNaJanelaMetric(totalDePresencasNaJanelaPorDezena),
+            new Top10MenoresTotaisDePresencasNaJanelaMetric(totalDePresencasNaJanelaPorDezena),
+            new SequenciaAtualDePresencasPorDezenaMetric(),
             new ParesNoConcursoMetric(),
             new RepeticaoConcursoAnteriorMetric(),
             new QuantidadeVizinhosPorConcursoMetric(),

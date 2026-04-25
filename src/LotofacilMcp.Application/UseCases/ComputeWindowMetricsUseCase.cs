@@ -156,10 +156,18 @@ public sealed class ComputeWindowMetricsUseCase
     private static string ExplanationFor(string metricName) => metricName switch
     {
         "frequencia_por_dezena" => "Contagem de ocorrencias por dezena na janela resolvida.",
+        "total_de_presencas_na_janela_por_dezena" =>
+            "Total de presencas por dezena na janela resolvida (equivalente a frequencia_por_dezena no mesmo recorte).",
+        "sequencia_atual_de_presencas_por_dezena" =>
+            "Sequencia atual (streak) de presencas por dezena ao fim da janela; reinicia em 0 quando a dezena nao aparece no concurso.",
         "top10_mais_sorteados" =>
             "Dez dezenas com maior frequencia na janela; empates resolvidos por dezena ascendente.",
         "top10_menos_sorteados" =>
             "Dez dezenas com menor frequencia na janela; empates resolvidos por dezena ascendente.",
+        "top10_maiores_totais_de_presencas_na_janela" =>
+            "Dez dezenas com maior total de presencas na janela; empates resolvidos por dezena ascendente.",
+        "top10_menores_totais_de_presencas_na_janela" =>
+            "Dez dezenas com menor total de presencas na janela; empates resolvidos por dezena ascendente.",
         "pares_no_concurso" =>
             "Série da quantidade de dezenas pares em cada concurso da janela (ordem cronologica).",
         "repeticao_concurso_anterior" =>

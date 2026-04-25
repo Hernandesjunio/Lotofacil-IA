@@ -9,8 +9,12 @@ public sealed class WindowMetricDispatcher
 
     public WindowMetricDispatcher(
         FrequencyByDezenaMetric frequencyByDezenaMetric,
+        TotalDePresencasNaJanelaPorDezenaMetric totalDePresencasNaJanelaPorDezenaMetric,
         Top10MaisSorteadosMetric top10MaisSorteadosMetric,
         Top10MenosSorteadosMetric top10MenosSorteadosMetric,
+        Top10MaioresTotaisDePresencasNaJanelaMetric top10MaioresTotaisDePresencasNaJanelaMetric,
+        Top10MenoresTotaisDePresencasNaJanelaMetric top10MenoresTotaisDePresencasNaJanelaMetric,
+        SequenciaAtualDePresencasPorDezenaMetric sequenciaAtualDePresencasPorDezenaMetric,
         ParesNoConcursoMetric paresNoConcursoMetric,
         RepeticaoConcursoAnteriorMetric repeticaoConcursoAnteriorMetric,
         QuantidadeVizinhosPorConcursoMetric quantidadeVizinhosPorConcursoMetric,
@@ -30,8 +34,12 @@ public sealed class WindowMetricDispatcher
         EstabilidadeRankingMetric estabilidadeRankingMetric)
     {
         ArgumentNullException.ThrowIfNull(frequencyByDezenaMetric);
+        ArgumentNullException.ThrowIfNull(totalDePresencasNaJanelaPorDezenaMetric);
         ArgumentNullException.ThrowIfNull(top10MaisSorteadosMetric);
         ArgumentNullException.ThrowIfNull(top10MenosSorteadosMetric);
+        ArgumentNullException.ThrowIfNull(top10MaioresTotaisDePresencasNaJanelaMetric);
+        ArgumentNullException.ThrowIfNull(top10MenoresTotaisDePresencasNaJanelaMetric);
+        ArgumentNullException.ThrowIfNull(sequenciaAtualDePresencasPorDezenaMetric);
         ArgumentNullException.ThrowIfNull(paresNoConcursoMetric);
         ArgumentNullException.ThrowIfNull(repeticaoConcursoAnteriorMetric);
         ArgumentNullException.ThrowIfNull(quantidadeVizinhosPorConcursoMetric);
@@ -53,8 +61,12 @@ public sealed class WindowMetricDispatcher
         _dispatchByMetricName = new Dictionary<string, Func<DrawWindow, WindowMetricValue>>(StringComparer.Ordinal)
         {
             ["frequencia_por_dezena"] = frequencyByDezenaMetric.Compute,
+            ["total_de_presencas_na_janela_por_dezena"] = totalDePresencasNaJanelaPorDezenaMetric.Compute,
+            ["sequencia_atual_de_presencas_por_dezena"] = sequenciaAtualDePresencasPorDezenaMetric.Compute,
             ["top10_mais_sorteados"] = top10MaisSorteadosMetric.Compute,
             ["top10_menos_sorteados"] = top10MenosSorteadosMetric.Compute,
+            ["top10_maiores_totais_de_presencas_na_janela"] = top10MaioresTotaisDePresencasNaJanelaMetric.Compute,
+            ["top10_menores_totais_de_presencas_na_janela"] = top10MenoresTotaisDePresencasNaJanelaMetric.Compute,
             ["pares_no_concurso"] = paresNoConcursoMetric.Compute,
             ["repeticao_concurso_anterior"] = repeticaoConcursoAnteriorMetric.Compute,
             ["quantidade_vizinhos_por_concurso"] = quantidadeVizinhosPorConcursoMetric.Compute,
