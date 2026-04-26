@@ -82,6 +82,9 @@ Esses templates **não** substituem tools nem mudam o contrato: são conteúdo d
 - **Stack (implementação MCP):** C# / **.NET 10**.
 - Dados históricos obtidos inicialmente via arquivo da CEF.
 - Atualizações futuras via API a ser definida.
+- A origem do dataset é configurada por **`Dataset:DrawsSourceUri`** (via variável de ambiente **`Dataset__DrawsSourceUri`** em .NET; ver [ADR 0022](adrs/0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md)).
+  - A configuração é **obrigatória (sem fallback)** e deve aceitar **path local** e **URI `file://`**.
+  - Se estiver ausente ou inválida, tools que dependem do histórico devem falhar com `DATASET_UNAVAILABLE` e `details` com exemplos (ver contrato MCP).
 - Processamento deve ser determinístico **quando normativo** (mesmo input canônico ⇒ mesmo output canônico) para métricas, agregações e validações. Para **geração** de jogos, a reprodutibilidade (*replay*) é **opcional**: quando `seed` for fornecida, o servidor deve garantir replay do episódio estocástico; quando `seed` estiver ausente, o servidor pode gerar candidatos diferentes entre invocações mesmo com o mesmo JSON.
 - Rastreabilidade permanece obrigatória por `dataset_version`, `tool_version` e `deterministic_hash` (hash canônico conforme contrato; em geração não replayável, o hash não deve ser interpretado como garantia de replay do conjunto concreto de candidatos).
 - Toda composição dinâmica deve declarar explicitamente componentes, transformações, agregações, pesos, janelas de referência e operadores; não pode haver regra implícita inferida por prompt.

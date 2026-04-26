@@ -57,17 +57,22 @@ Os documentos centrais dessa metodologia são:
 
 ## Como executar no host MCP (stdio)
 
-Para clientes MCP desktop (ex.: Cursor), use o mesmo executável `LotofacilMcp.Server` em modo `stdio`:
+Para clientes MCP desktop (ex.: Cursor), execute o servidor em modo `stdio`.
+
+### Opção A — Rodando via `dotnet run` (dev)
 
 ```json
 {
   "mcpServers": {
     "lotofacil-ia": {
       "command": "dotnet",
+      "env": {
+        "Dataset__DrawsSourceUri": "{workspace}/tests/fixtures/synthetic_min_window.json"
+      },
       "args": [
         "run",
         "--project",
-        "C:/_projeto/Lotofacil-IA/src/LotofacilMcp.Server/LotofacilMcp.Server.csproj",
+        "{workspace}/src/LotofacilMcp.Server/LotofacilMcp.Server.csproj",
         "--",
         "--mcp-stdio"
       ]
@@ -77,6 +82,32 @@ Para clientes MCP desktop (ex.: Cursor), use o mesmo executável `LotofacilMcp.S
 ```
 
 Nesse modo o host MCP consegue descobrir e invocar as tools atualmente entregues no recorte V1 (`get_draw_window`, `compute_window_metrics` e `analyze_indicator_stability`) com a mesma semântica JSON usada nos POSTs HTTP `/tools/*`.
+
+### Opção B — Rodando um executável publicado (`dotnet publish`)
+
+Após publicar, você pode apontar o host diretamente para o executável gerado (Windows):
+
+- exemplo de publish (pasta local):
+
+```bash
+dotnet publish "{workspace}/src/LotofacilMcp.Server/LotofacilMcp.Server.csproj" -c Release -o "{workspace}/artifacts/publish"
+```
+
+- exemplo de configuração MCP usando o executável:
+
+```json
+{
+  "mcpServers": {
+    "lotofacil-ia": {
+      "command": "{workspace}/artifacts/publish/LotofacilMcp.Server.exe",
+      "env": {
+        "Dataset__DrawsSourceUri": "{workspace}/tests/fixtures/synthetic_min_window.json"
+      },
+      "args": ["--mcp-stdio"]
+    }
+  }
+}
+```
 
 ### Auditoria da superfície MCP STDIO (métricas expostas)
 
@@ -92,9 +123,60 @@ Para onboarding e discovery, a instância MCP expõe:
 - o resource `lotofacil-ia://help/getting-started@1.0.0` (guia curto “por onde começo / quais opções”)
 - o índice de templates em `lotofacil-ia://prompts/index@1.0.0`
 
+## Dataset: `Dataset:DrawsSourceUri` (local ou URL)
+
+O servidor lê o histórico de concursos a partir da configuração **`Dataset:DrawsSourceUri`** (ver [ADR 0022](docs/adrs/0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md)). Em .NET, você pode configurar via variável de ambiente **`Dataset__DrawsSourceUri`**. Se ela estiver ausente/inválida, tools que dependem do histórico devem retornar `DATASET_UNAVAILABLE`.
+
+Regras importantes:
+
+- **Obrigatório (sem fallback):** se `Dataset__DrawsSourceUri` não for fornecida, o servidor não deve “adivinhar” uma fixture default.
+- **`file://` suportado:** você pode passar um caminho local via URI `file://` (além de paths diretos).
+
+### CSV (estilo CEF)
+
+- **Separador**: `,` ou `;` ou tab (`\t`)
+- **Header**: opcional (se existir, pode ser o header CEF)
+- **Header CEF aceito**:
+  - `Concurso`, `Data Sorteio`, `Bola1`..`Bola15`, `Ganhadores 15 acertos`
+- **Sem header (posicional)**: 18 colunas nesta ordem:
+  - `contest_id`, `draw_date`, `b1..b15`, `winners_15`
+
+### JSON (canônico)
+
+Arquivo com objeto e lista `draws`:
+
+```json
+{
+  "draws": [
+    {
+      "contest_id": 1001,
+      "draw_date": "2024-01-01",
+      "numbers": [1,2,3,6,7,8,11,12,13,16,17,18,21,22,23],
+      "winners_15": 0,
+      "has_winner_15": false
+    }
+  ]
+}
+```
+
+Regras:
+
+- `winners_15` é obrigatório e `has_winner_15` deve ser coerente com `winners_15 > 0` (quando presente).
+
 ## Como executar no host MCP (HTTP)
 
 Para clientes MCP que conectam por URL, execute o servidor web normalmente e aponte para o endpoint MCP streamable:
+
+1) Inicie o servidor definindo `Dataset__DrawsSourceUri` no ambiente do processo.
+
+Exemplo (bash):
+
+```bash
+export Dataset__DrawsSourceUri="{workspace}/tests/fixtures/synthetic_min_window.json"
+dotnet run --project "{workspace}/src/LotofacilMcp.Server/LotofacilMcp.Server.csproj"
+```
+
+2) Configure o host MCP para conectar por URL:
 
 ```json
 {

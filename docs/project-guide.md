@@ -366,7 +366,7 @@ Se a base for pequena, estavel e facilmente reconstruivel em cada teste.
 ### `docs/runbook.md`
 
 - `Qual problema isso resolve?`
-Resume operacao real: rotacao de chaves, ajuste de throttling, diagnostico de erro, fallback de provider e procedimentos de incidente.
+Resume operacao real: rotacao de chaves, ajuste de throttling, diagnostico de erro, **failover/alternativas operacionais** de provider (quando existirem) e procedimentos de incidente.
 - `Em que momento do projeto isso se torna necessario?`
 Quando o servico deixa de ser "rodo localmente quando quero" e passa a ficar disponivel com alguma regularidade.
 - `Quem consome isso?`

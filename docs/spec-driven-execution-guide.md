@@ -188,6 +188,39 @@ Objetivo: ler fixture, versionar dataset e implementar determinismo técnico sem
 Passos atômicos:
 
 - Criar provider de fixture em `Infrastructure/Providers/`.
+- Evoluir o provider para ler a fonte configurada por **`Dataset:DrawsSourceUri`** (via env var **`Dataset__DrawsSourceUri`** em .NET), mantendo o **mesmo modelo canônico** de `Draw` e validações (ver [ADR 0022](adrs/0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md)).
+
+#### Subfase 4.0 — Cirurgia de configuração (obrigatória): `V0Data:FixturePath` → `Dataset:DrawsSourceUri` (sem fallback, com `file://`)
+
+**Objetivo:** remover ambiguidade entre `docs/` e runtime V0 **sem** trocar a fixture usada pelos testes.
+
+**Contrato desta subfase:**
+
+- A configuração **passa a ser obrigatória** (sem fallback). Ausente/vazia ⇒ falha explícita.
+- `Dataset:DrawsSourceUri` deve aceitar **path local** e **URI `file://`**.
+- Nesta subfase, o servidor pode continuar lendo **apenas JSON fixture local** (o ganho é a chave única + parsing `file://` + falha explícita, não ainda HTTP/CSV).
+
+**Passos atômicos (ordem recomendada):**
+
+1. Atualizar opções/binding no servidor: section `"V0Data"` → `"Dataset"`, propriedade `FixturePath` → `DrawsSourceUri`.
+2. Atualizar `appsettings*.json` para usar `Dataset:DrawsSourceUri` apontando para o mesmo `tests/fixtures/synthetic_min_window.json`.
+3. Atualizar testes que injetam configuração (ex.: overrides em `WebApplicationFactory`) trocando a chave antiga pela nova, sem mudar o path.
+4. Implementar parsing mínimo de `file://`:
+   - `file:///C:/...` ⇒ `C:\...` (Windows) + `Path.GetFullPath`.
+   - se a URI for inválida ⇒ `DATASET_UNAVAILABLE` com `reason="invalid_format"` (ou falha de inicialização equivalente; decidir na etapa de implementação).
+5. Remover qualquer fallback silencioso de fixture default quando a chave estiver ausente.
+
+**Checklist de validação:**
+
+- `dotnet test` passa (inclui contrato e paridade MCP/HTTP).
+- Rodar o servidor com `Dataset__DrawsSourceUri="{workspace}/tests/fixtures/synthetic_min_window.json"` funciona.
+- Rodar o servidor com `Dataset__DrawsSourceUri="file:///C:/.../tests/fixtures/synthetic_min_window.json"` funciona.
+- Rodar o servidor sem `Dataset__DrawsSourceUri` falha explicitamente (sem defaults ocultos).
+
+#### Continuação da Fase 4 (após Subfase 4.0)
+
+Passos atômicos:
+
 - Criar implementação de `dataset_version` em `Infrastructure/DatasetVersioning/`.
 - Criar implementação de JSON canônico em `Infrastructure/CanonicalJson/`.
 - Criar implementação de hashing SHA-256.
@@ -198,6 +231,7 @@ Referências:
 
 - [mcp-tool-contract.md](mcp-tool-contract.md)
 - [brief.md](brief.md)
+- [ADR 0022](adrs/0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md)
 - [ADR 0001](adrs/0001-fechamento-semantico-e-determinismo-v1.md)
 - [ADR 0004](adrs/0004-estrutura-arquitetural-inicial-mcp-dotnet10.md)
 

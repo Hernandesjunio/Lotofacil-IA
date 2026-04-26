@@ -139,6 +139,7 @@ Implemente apenas a infraestrutura determinística mínima: provider de fixture,
 Referências obrigatórias:
 - docs/spec-driven-execution-guide.md (Fase 4)
 - docs/mcp-tool-contract.md
+- docs/adrs/0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md
 - docs/adrs/0001-fechamento-semantico-e-determinismo-v1.md
 - docs/adrs/0004-estrutura-arquitetural-inicial-mcp-dotnet10.md
 
@@ -151,6 +152,8 @@ Arquivos esperados:
 Regras:
 - não extrapolar além do recorte citado;
 - manter TDD;
+- o provider deve suportar `Dataset:DrawsSourceUri` (via env var `Dataset__DrawsSourceUri` em .NET) e falhar com `DATASET_UNAVAILABLE` quando a fonte estiver ausente/inválida, com `details` orientando o host;
+- nesta fase, o requisito **mínimo e obrigatório** é: aceitar **path local** e **URI `file://`**, e **não ter fallback** quando `Dataset__DrawsSourceUri` estiver ausente (ver ADR 0022 e Subfase 4.0 do guia);
 - não introduzir semântica estatística na infraestrutura.
 
 Critério de pronto:
