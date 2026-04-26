@@ -6,6 +6,8 @@
 
 Separar a semântica das estratégias de geração do contrato MCP e da implementação do motor. Cada estratégia é um contrato formal testável.
 
+**Nota (metadados do dataset):** campos factuais do concurso como `winners_15` / `has_winner_15` (ganhadores de 15 acertos) pertencem ao `Draw` e a consultas de janela (`get_draw_window`), não ao catálogo de métricas nem ao score de geração (ver [ADR 0022](adrs/0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md)).
+
 ## Modo de geração no pedido MCP (`generation_mode`)
 
 A superfície **`generate_candidate_games`** exige `generation_mode` no JSON do pedido ([mcp-tool-contract.md](mcp-tool-contract.md), [ADR 0020 D1](adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md)):

@@ -349,6 +349,7 @@ Esta secção regula **nomes** (ergonomia e migração), não altera o contrato 
 - Probabilidade empírica histórica só pode aparecer com base de cálculo declarada e interpretação não preditiva.
 - Métricas compostas que consomem histórico e jogo candidato mantêm `scope = "candidate_game"`.
 - `distribuicao_linha_por_concurso` e `distribuicao_coluna_por_concurso` exigem agregação explícita quando usadas em ranking global ou associação.
+- **Metadados do concurso (não métricas):** `winners_15` e `has_winner_15` (ganhadores de 15 acertos) são fatos do `Draw` no dataset e não fazem parte do catálogo de `MetricValue`; são expostos por tools de janela (ex.: `get_draw_window`) quando solicitados (ver [ADR 0022](adrs/0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md)).
 - **Nota (ADR 0019):** algumas restrições usadas na geração são **features derivadas escalares** (ex.: `top10_overlap_count(game)`), calculadas a partir de métricas canônicas (ex.: `top10_mais_sorteados`). Essas features não precisam ser expostas como métricas independentes em `compute_window_metrics`; devem ser documentadas no contrato de geração/estratégias e ecoadas em `explain_candidate_games` quando participarem de critérios/filtros.
 
 ## Rastreabilidade com ADRs

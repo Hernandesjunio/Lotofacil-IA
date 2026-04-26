@@ -132,10 +132,12 @@ Um sorteio único da Lotofácil no histórico canônico.
 - `contest_id` — identificador estável do concurso (chave de junção com janelas e métricas).
 - `draw_date` — data do sorteio no calendário (auditoria e ordenação humana).
 - `numbers` — array ordenado crescente com 15 dezenas válidas entre 1 e 25 (regra do jogo).
+- `winners_15` — número de ganhadores de 15 acertos (inteiro em `[0..99999]`).
+- `has_winner_15` — booleano derivado: `winners_15 > 0`.
 - `source` — origem do registro (arquivo, API, migração) para rastreabilidade.
 - `ingested_at` — quando o registro entrou no dataset; útil para versionamento e depuração.
 
-**Validação:** 15 dezenas distintas, intervalo [1, 25], ordem crescente; duplicidade de `contest_id` no dataset é erro de dados.
+**Validação:** 15 dezenas distintas, intervalo [1, 25], ordem crescente; duplicidade de `contest_id` no dataset é erro de dados. Para winners: `winners_15 ∈ [0..99999]` e `has_winner_15 == (winners_15 > 0)`; inconsistência entre campos é erro de dados.
 
 #### `Window`
 
@@ -414,7 +416,12 @@ Retornar um recorte canônico de concursos.
 {
   "window_size": 20,
   "end_contest_id": 3400,
-  "include_metadata": true
+  "include_metadata": true,
+  "include_winners_15": false,
+  "draw_filters": {
+    "has_winner_15": true,
+    "winners_15": { "min": 1, "max": 3 }
+  }
 }
 ```
 
@@ -423,12 +430,32 @@ Retornar um recorte canônico de concursos.
 - `window_size` deve ser inteiro positivo.
 - Se `end_contest_id` for omitido, usar o concurso mais recente.
 - Os concursos devem ser retornados em ordem crescente.
+- `include_winners_15` (quando suportado pela build) controla se `winners_15` e `has_winner_15` aparecem em `draws[]`. Default: `false`.
+- `draw_filters` é opcional. Quando presente, o servidor deve aplicar filtros **explicitamente declarados** e retornar os **últimos `window_size` concursos após o filtro** (top‑N filtrado, ainda ordenado por `contest_id` crescente no output).
+- Se `draw_filters` estiver presente e não houver concursos suficientes para satisfazer `window_size`, a tool deve falhar com `INSUFFICIENT_HISTORY`, incluindo em `details` ao menos `requested` e `available_after_filter`.
 
 #### Semântica e validação
 
 - **Output esperado:** um `Window` (ou estrutura equivalente) com `draws` ordenados por `contest_id` crescente.
 - **Caso limite:** se não houver `window_size` concursos até o fim ancorado → `INSUFFICIENT_HISTORY`.
 - **Uso:** base para todas as análises; não calcula métricas, apenas materializa o recorte de dados.
+ - **Winners (metadado factual):** `winners_15` e `has_winner_15` são fatos do concurso, não métricas; por padrão podem ser omitidos do payload para reduzir ruído, e incluídos via `include_winners_15: true`.
+
+##### `draw_filters` (quando suportado)
+
+Campos aceitos:
+
+- `has_winner_15` — booleano. `true` filtra concursos com `winners_15 > 0`; `false` filtra concursos com `winners_15 == 0`.
+- `winners_15` — objeto com predicados fechados:
+  - `eq` (inteiro)
+  - `min` (inteiro)
+  - `max` (inteiro)
+
+Validação:
+
+- Predicados devem ser coerentes (`min <= max`).
+- Valores devem respeitar o domínio `[0..99999]`.
+- Predicados não suportados → `INVALID_REQUEST`.
 
 ### 2. `compute_window_metrics`
 
@@ -1036,6 +1063,17 @@ Formato sugerido:
 | `INTERNAL_ERROR` | erro raro e rastreável por hash | todas |
 
 ## Glossário mínimo (termos de linguagem definida)
+
+### Nota — `DATASET_UNAVAILABLE` (recomendação de `details`)
+
+Quando a fonte do dataset não estiver configurada (ex.: variável de ambiente ausente) ou a leitura/validação do dataset falhar, recomenda-se que `details` inclua pistas estruturadas suficientes para o host/agente orientar o usuário **sem** inferência silenciosa:
+
+- `missing_env` (ex.: `"Dataset__DrawsSourceUri"`) quando aplicável
+- `source` (o valor atual quando presente)
+- `accepted_schemes`: `["file","http","https"]`
+- `accepted_formats`: `["csv","json"]`
+- `examples`: lista curta com exemplos válidos (2–3)
+- `reason`: `"missing_env" | "unreachable" | "invalid_format" | "invalid_data"`
 
 Esta seção fecha os termos citados no invariante 5. Respostas em `explanation`/`rationale` devem usar esses termos apenas com o significado abaixo (ou declarar definição alternativa no próprio payload).
 

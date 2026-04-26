@@ -8,6 +8,8 @@ Documento pedagógico complementar ao catálogo técnico em [metric-catalog.md](
 
 **Nota sobre predição:** todas descrevem padrões no histórico ou estrutura de um jogo; nenhuma implica acerto futuro.
 
+**Nota sobre metadados do concurso (não métricas):** campos como `winners_15` e `has_winner_15` (ganhadores de 15 acertos no concurso histórico) pertencem ao `Draw` e são expostos em consultas de janela quando solicitados; não são `MetricValue` e não entram neste glossário de métricas (ver [ADR 0022](adrs/0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md)).
+
 **Interação entre métricas (ex. pares e entropia de linha no mesmo recorte):** o co-movimento estatístico (Spearman/Pearson) entre séries alinhadas por concurso — p.ex. `pares_no_concurso` e `entropia_linha_por_concurso` — descreve-se com `analyze_indicator_associations` conforme [test-plan.md](test-plan.md) e [ADR 0006 D5](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md). Isto **não** implica que “mais pares causam” mais ou menos entropia; a janela é descritiva.
 
 <h2 id="vocab-ausencia-adr-0021">Vocabulário: «ausência» × frequência × atraso × <code>ausencia_blocos</code></h2>
