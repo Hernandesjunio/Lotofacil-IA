@@ -558,11 +558,11 @@ public sealed class V0Tools
     private readonly GenerateCandidateGamesUseCase _generateCandidateGamesUseCase;
     private readonly ExplainCandidateGamesUseCase _explainCandidateGamesUseCase;
     private readonly DeterministicHashService _deterministicHashService;
-    private readonly string _fixturePath;
+    private readonly string? _drawsSourcePath;
     private const string HelpToolVersion = "1.0.0";
     private const string DiscoverCapabilitiesToolVersion = "1.1.0";
 
-    public V0Tools(string? fixturePath = null)
+    public V0Tools(string? drawsSourcePath)
     {
         var mapper = new V0RequestMapper(new DrawNormalizer());
         var fixtureProvider = new SyntheticFixtureProvider();
@@ -671,7 +671,7 @@ public sealed class V0Tools
             new CanonicalJsonSerializer(),
             new Sha256Hasher());
 
-        _fixturePath = fixturePath ?? GetDefaultFixturePath();
+        _drawsSourcePath = drawsSourcePath;
     }
 
     public object Help()
@@ -762,7 +762,7 @@ public sealed class V0Tools
             BuildProfile: "v0",
             DatasetRequirements:
             [
-                "requires synthetic fixture json path configured in server build/runtime"
+                "requires Dataset__DrawsSourceUri configured (path or file://) to load draws dataset"
             ],
             WindowModesSupported:
             [
@@ -951,6 +951,11 @@ public sealed class V0Tools
 
     public object ComputeWindowMetrics(ComputeWindowMetricsRequest request)
     {
+        if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+        {
+            return datasetError!;
+        }
+
         try
         {
             var (windowSize, endContestId) = WindowRequestResolver.Resolve(
@@ -963,7 +968,7 @@ public sealed class V0Tools
                 EndContestId: endContestId,
                 Metrics: request.Metrics?.Select(metric => new MetricRequestInput(metric.Name)).ToArray(),
                 AllowPending: request.AllowPending,
-                FixturePath: _fixturePath));
+                FixturePath: fixturePath));
 
             var deterministicHash = _deterministicHashService.Compute(
                 result.DeterministicHashInput,
@@ -1001,6 +1006,11 @@ public sealed class V0Tools
 
     public object GetDrawWindow(GetDrawWindowRequest request)
     {
+        if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+        {
+            return datasetError!;
+        }
+
         try
         {
             var (windowSize, endContestId) = WindowRequestResolver.Resolve(
@@ -1011,7 +1021,7 @@ public sealed class V0Tools
             var result = _getDrawWindowUseCase.Execute(new GetDrawWindowInput(
                 WindowSize: windowSize,
                 EndContestId: endContestId,
-                FixturePath: _fixturePath));
+                FixturePath: fixturePath));
 
             var deterministicHash = _deterministicHashService.Compute(
                 result.DeterministicHashInput,
@@ -1038,6 +1048,11 @@ public sealed class V0Tools
 
     public object AnalyzeIndicatorStability(AnalyzeIndicatorStabilityRequest request)
     {
+        if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+        {
+            return datasetError!;
+        }
+
         try
         {
             var (windowSize, endContestId) = WindowRequestResolver.Resolve(
@@ -1054,7 +1069,7 @@ public sealed class V0Tools
                 NormalizationMethod: request.NormalizationMethod,
                 TopK: request.TopK,
                 MinHistory: request.MinHistory,
-                FixturePath: _fixturePath));
+                FixturePath: fixturePath));
 
             var deterministicHash = _deterministicHashService.Compute(
                 result.DeterministicHashInput,
@@ -1089,6 +1104,11 @@ public sealed class V0Tools
 
     public object ComposeIndicatorAnalysis(ComposeIndicatorAnalysisRequest request)
     {
+        if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+        {
+            return datasetError!;
+        }
+
         try
         {
             var (windowSize, endContestId) = WindowRequestResolver.Resolve(
@@ -1108,7 +1128,7 @@ public sealed class V0Tools
                         component.Weight))
                     .ToArray(),
                 TopK: request.TopK,
-                FixturePath: _fixturePath));
+                FixturePath: fixturePath));
 
             var deterministicHash = _deterministicHashService.Compute(
                 result.DeterministicHashInput,
@@ -1141,6 +1161,11 @@ public sealed class V0Tools
 
     public object AnalyzeIndicatorAssociations(AnalyzeIndicatorAssociationsRequest request)
     {
+        if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+        {
+            return datasetError!;
+        }
+
         try
         {
             var (windowSize, endContestId) = WindowRequestResolver.Resolve(
@@ -1163,7 +1188,7 @@ public sealed class V0Tools
                         request.StabilityCheck.SubwindowSize,
                         request.StabilityCheck.Stride,
                         request.StabilityCheck.MinSubwindows),
-                FixturePath: _fixturePath));
+                FixturePath: fixturePath));
 
             var deterministicHash = _deterministicHashService.Compute(
                 result.DeterministicHashInput,
@@ -1226,6 +1251,11 @@ public sealed class V0Tools
 
     public object SummarizeWindowPatterns(SummarizeWindowPatternsRequest request)
     {
+        if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+        {
+            return datasetError!;
+        }
+
         try
         {
             var (windowSize, endContestId) = WindowRequestResolver.Resolve(
@@ -1241,7 +1271,7 @@ public sealed class V0Tools
                     .ToArray(),
                 CoverageThreshold: request.CoverageThreshold,
                 RangeMethod: request.RangeMethod,
-                FixturePath: _fixturePath));
+                FixturePath: fixturePath));
 
             var deterministicHash = _deterministicHashService.Compute(
                 result.DeterministicHashInput,
@@ -1285,6 +1315,11 @@ public sealed class V0Tools
 
     public object SummarizeWindowAggregates(SummarizeWindowAggregatesRequest request)
     {
+        if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+        {
+            return datasetError!;
+        }
+
         try
         {
             var (windowSize, endContestId) = WindowRequestResolver.Resolve(
@@ -1304,7 +1339,7 @@ public sealed class V0Tools
                             ? JsonSerializer.SerializeToElement(new Dictionary<string, object?>())
                             : aggregate.Params.Clone()))
                     .ToArray(),
-                FixturePath: _fixturePath));
+                FixturePath: fixturePath));
 
             var deterministicHash = _deterministicHashService.Compute(
                 result.DeterministicHashInput,
@@ -1347,6 +1382,11 @@ public sealed class V0Tools
 
     public object GenerateCandidateGames(GenerateCandidateGamesRequest request)
     {
+        if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+        {
+            return datasetError!;
+        }
+
         try
         {
             var (windowSize, endContestId) = WindowRequestResolver.Resolve(
@@ -1457,7 +1497,7 @@ public sealed class V0Tools
                         request.GenerationBudget.MaxAttempts,
                         request.GenerationBudget.PoolMultiplier),
                 GenerationMode: request.GenerationMode,
-                FixturePath: _fixturePath));
+                FixturePath: fixturePath));
 
             var deterministicHash = _deterministicHashService.Compute(
                 result.DeterministicHashInput,
@@ -1557,6 +1597,11 @@ public sealed class V0Tools
 
     public object ExplainCandidateGames(ExplainCandidateGamesRequest request)
     {
+        if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+        {
+            return datasetError!;
+        }
+
         try
         {
             var (windowSize, endContestId) = WindowRequestResolver.Resolve(
@@ -1573,7 +1618,7 @@ public sealed class V0Tools
                 GenerationMode: request.GenerationMode,
                 Seed: request.Seed,
                 ReplayGuaranteed: request.ReplayGuaranteed,
-                FixturePath: _fixturePath));
+                FixturePath: fixturePath));
 
             var deterministicHash = _deterministicHashService.Compute(
                 result.DeterministicHashInput,
@@ -1668,17 +1713,61 @@ public sealed class V0Tools
         }
     }
 
+    private bool TryGetFixturePath(out string fixturePath, out ContractErrorEnvelope? error)
+    {
+        error = null;
+        fixturePath = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(_drawsSourcePath))
+        {
+            error = ToContractError(
+                "DATASET_UNAVAILABLE",
+                "Dataset source is not configured.",
+                new Dictionary<string, object?>
+                {
+                    ["reason"] = "missing_env",
+                    ["missing_env"] = "Dataset__DrawsSourceUri",
+                    ["accepted_schemes"] = new[] { "file", "http", "https" },
+                    ["accepted_formats"] = new[] { "csv", "json" },
+                    ["examples"] = new[]
+                    {
+                        @"tests/fixtures/synthetic_min_window.json",
+                        @"file:///C:/_projeto/Lotofacil-IA/tests/fixtures/synthetic_min_window.json"
+                    }
+                });
+            return false;
+        }
+
+        var fullPath = Path.GetFullPath(_drawsSourcePath);
+        if (!File.Exists(fullPath))
+        {
+            error = ToContractError(
+                "DATASET_UNAVAILABLE",
+                "Dataset source is unreachable.",
+                new Dictionary<string, object?>
+                {
+                    ["reason"] = "unreachable",
+                    ["source"] = _drawsSourcePath,
+                    ["accepted_schemes"] = new[] { "file", "http", "https" },
+                    ["accepted_formats"] = new[] { "csv", "json" },
+                    ["examples"] = new[]
+                    {
+                        @"tests/fixtures/synthetic_min_window.json",
+                        @"file:///C:/_projeto/Lotofacil-IA/tests/fixtures/synthetic_min_window.json"
+                    }
+                });
+            return false;
+        }
+
+        fixturePath = fullPath;
+        return true;
+    }
+
     private static ContractErrorEnvelope ToContractError(
         string code,
         string message,
         IReadOnlyDictionary<string, object?> details)
     {
         return new ContractErrorEnvelope(new ContractError(code, message, details));
-    }
-
-    private static string GetDefaultFixturePath()
-    {
-        return Path.GetFullPath(
-            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "fixtures", "synthetic_min_window.json"));
     }
 }

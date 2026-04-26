@@ -16,7 +16,7 @@ public sealed class Phase20GenerationMode0020ContractTests
     [Fact]
     public void GenerateCandidateGames_LegacyImplicitMode_AppliesConservativeStructuralDefaultsInFilters()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new GenerateCandidateGamesRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -39,7 +39,7 @@ public sealed class Phase20GenerationMode0020ContractTests
     [Fact]
     public void GenerateCandidateGames_RandomUnrestricted_WithoutStructural_DoesNotInjectConservativeStructuralFilters()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new GenerateCandidateGamesRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -61,7 +61,7 @@ public sealed class Phase20GenerationMode0020ContractTests
     [Fact]
     public void GenerateCandidateGames_BehaviorFiltered_DeclaresOnlyNeighborCap_AppliesThatFilterAndEchoesResolvedDefaults()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         const int neighborCap = 10;
         var request = new GenerateCandidateGamesRequest(
             WindowSize: 5,

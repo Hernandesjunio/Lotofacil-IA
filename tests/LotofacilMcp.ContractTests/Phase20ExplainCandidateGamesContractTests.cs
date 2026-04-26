@@ -19,7 +19,7 @@ public sealed class Phase20ExplainCandidateGamesContractTests
     [Fact]
     public void ExplainCandidateGames_EmptyGames_ReturnsInvalidRequest()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new ExplainCandidateGamesRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -35,7 +35,7 @@ public sealed class Phase20ExplainCandidateGamesContractTests
     [Fact]
     public void ExplainCandidateGames_GoldenRequest_IsDeterministicAndContainsTraceableBreakdown()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = BuildGoldenRequest();
         var first = sut.ExplainCandidateGames(request);
         var second = sut.ExplainCandidateGames(request);
@@ -110,7 +110,7 @@ public sealed class Phase20ExplainCandidateGamesContractTests
     [Fact]
     public void ExplainCandidateGames_InvalidGenerationMode_ReturnsInvalidRequest()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new ExplainCandidateGamesRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -125,7 +125,7 @@ public sealed class Phase20ExplainCandidateGamesContractTests
     [Fact]
     public void ExplainCandidateGames_BehaviorFilteredNonReplay_AuditsIntersectionAndNonReplayableEpisode()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new ExplainCandidateGamesRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -145,7 +145,7 @@ public sealed class Phase20ExplainCandidateGamesContractTests
     [Fact]
     public void ExplainCandidateGames_WithSeedAndReplayGuaranteed_AuditsReplayPolicy()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         const ulong seed = 42u;
         var request = new ExplainCandidateGamesRequest(
             WindowSize: 5,

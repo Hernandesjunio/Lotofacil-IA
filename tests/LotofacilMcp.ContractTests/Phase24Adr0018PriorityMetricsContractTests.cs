@@ -7,7 +7,7 @@ public sealed class Phase24Adr0018PriorityMetricsContractTests
     [Fact]
     public void FamilyA_ParesImpares_IsImplementedInDiscovery_AndNotExposedInComputeWindowMetrics()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var discover = Assert.IsType<DiscoverCapabilitiesResponse>(sut.DiscoverCapabilities(new DiscoverCapabilitiesRequest()));
 
         Assert.Contains("pares_impares", discover.Metrics.ImplementedMetricNames);
@@ -17,7 +17,7 @@ public sealed class Phase24Adr0018PriorityMetricsContractTests
     [Fact]
     public void FamilyB_MatrizNumeroSlot_IsExposedInCompute_AndCandidateSlotMetricsStayOutOfCompute()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var response = sut.ComputeWindowMetrics(new ComputeWindowMetricsRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -42,7 +42,7 @@ public sealed class Phase24Adr0018PriorityMetricsContractTests
     [Fact]
     public void FamilyC_BlocosMetrics_AreExposedInComputeAndReturnExpectedContracts()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var response = sut.ComputeWindowMetrics(new ComputeWindowMetricsRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -78,7 +78,7 @@ public sealed class Phase24Adr0018PriorityMetricsContractTests
     [Fact]
     public void FamilyD_EstabilidadeRanking_IsExposedInCompute_WhileKlAndPersistenciaStayDiscoveryOnly()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var response = sut.ComputeWindowMetrics(new ComputeWindowMetricsRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -102,7 +102,7 @@ public sealed class Phase24Adr0018PriorityMetricsContractTests
     [Fact]
     public void FamilyE_RunsAndOutlier_AppearAsImplemented_InDiscovery_NotInCompute()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var discover = Assert.IsType<DiscoverCapabilitiesResponse>(sut.DiscoverCapabilities(new DiscoverCapabilitiesRequest()));
 
         Assert.Contains("estatistica_runs", discover.Metrics.ImplementedMetricNames);

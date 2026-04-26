@@ -304,7 +304,7 @@ public sealed class Phase22SummarizeWindowAggregatesContractRedTests
 
     private static object InvokeSummarizeWindowAggregates(Dictionary<string, object?> request, string? fixturePath = null)
     {
-        var tools = new V0Tools(fixturePath);
+        var tools = new V0Tools(fixturePath ?? ContractTestFixturePaths.SyntheticMinWindowJson());
         var method = typeof(V0Tools).GetMethod("SummarizeWindowAggregates");
         Assert.True(
             method is not null,

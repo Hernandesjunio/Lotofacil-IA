@@ -35,7 +35,7 @@ public sealed class Phase19SummarizeWindowPatternsContractTests
     [Fact]
     public void SummarizeWindowPatterns_IqrSingleFeature_DeterministicGoldenFixture()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = BuildGoldenRequest();
         var first = sut.SummarizeWindowPatterns(request);
         var second = sut.SummarizeWindowPatterns(request);
@@ -88,7 +88,7 @@ public sealed class Phase19SummarizeWindowPatternsContractTests
     [Fact]
     public void SummarizeWindowPatterns_UnsupportedRangeMethod_ReturnsUnsupportedRangeMethod()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new SummarizeWindowPatternsRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -107,7 +107,7 @@ public sealed class Phase19SummarizeWindowPatternsContractTests
     [Fact]
     public void SummarizeWindowPatterns_MultiplePrioritizedScalarFeatures_ReturnsDeterministicSummaries()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = BuildExpandedScalarRequest();
 
         var first = sut.SummarizeWindowPatterns(request);
@@ -141,7 +141,7 @@ public sealed class Phase19SummarizeWindowPatternsContractTests
     [Fact]
     public void SummarizeWindowPatterns_VectorFeatureWithoutAggregation_ReturnsCanonicalUnsupportedAggregation()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new SummarizeWindowPatternsRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -164,7 +164,7 @@ public sealed class Phase19SummarizeWindowPatternsContractTests
     [Fact]
     public void SummarizeWindowPatterns_VectorFeatureWithAggregationStillIncompatible_ReturnsGuidedCanonicalError()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new SummarizeWindowPatternsRequest(
             WindowSize: 5,
             EndContestId: 1005,

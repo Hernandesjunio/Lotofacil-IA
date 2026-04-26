@@ -8,7 +8,7 @@ public sealed class Phase23DiscoverCapabilitiesContractTests
     [Fact]
     public void DiscoverCapabilities_ReturnsDeterministicStructuredBuildSurface()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
 
         var first = sut.DiscoverCapabilities(new DiscoverCapabilitiesRequest());
         var second = sut.DiscoverCapabilities(new DiscoverCapabilitiesRequest());

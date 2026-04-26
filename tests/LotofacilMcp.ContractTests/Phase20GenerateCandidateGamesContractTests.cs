@@ -40,7 +40,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
     [Fact]
     public void GenerateCandidateGames_WithoutSeed_Stochastic_EmitsReplayNotGuaranteed_AndStableDeterministicHash()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new GenerateCandidateGamesRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -64,7 +64,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
     [Fact]
     public void GenerateCandidateGames_GoldenRequest_IsDeterministicAndIncludesAppliedConfiguration()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = BuildGoldenRequest();
         var first = sut.GenerateCandidateGames(request);
         var second = sut.GenerateCandidateGames(request);
@@ -111,7 +111,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
     [Fact]
     public void GenerateCandidateGames_ConfigurableFilters_AreAppliedDuringGeneration()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new GenerateCandidateGamesRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -145,7 +145,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
     [Fact]
     public void GenerateCandidateGames_UniqueGamesTrue_DoesNotReturnDuplicates()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new GenerateCandidateGamesRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -180,7 +180,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
     [Fact]
     public void GenerateCandidateGames_DifferentSeeds_ProduceDifferentDeterministicHash()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
 
         var requestA = new GenerateCandidateGamesRequest(
             WindowSize: 5,
@@ -209,7 +209,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
     [Fact]
     public void GenerateCandidateGames_MixedCriterionModes_ReturnsInvalidRequest()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new GenerateCandidateGamesRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -237,7 +237,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
     [Fact]
     public void GenerateCandidateGames_EmptyAllowedValues_ReturnsInvalidRequest()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new GenerateCandidateGamesRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -264,7 +264,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
     [Fact]
     public void GenerateCandidateGames_NonIntegerAllowedValuesForIntegerConstraint_ReturnsInvalidRequest()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new GenerateCandidateGamesRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -291,7 +291,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
     [Fact]
     public void GenerateCandidateGames_AllowedValuesAreNormalized_AndDefaultModeIsResolved()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new GenerateCandidateGamesRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -331,7 +331,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
     [Fact]
     public void GenerateCandidateGames_TypicalRangeIqr_ResolvesAndEchoesCoverageObservedMethodVersion()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new GenerateCandidateGamesRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -385,7 +385,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
     [Fact]
     public void GenerateCandidateGames_TypicalRangeInFilter_ResolvesAndEchoesDefaults()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new GenerateCandidateGamesRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -430,7 +430,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
     [Fact]
     public void GenerateCandidateGames_TypicalRangeUnknownMetric_ReturnsUnknownMetric()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new GenerateCandidateGamesRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -462,7 +462,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
     [Fact]
     public void GenerateCandidateGames_TypicalRangeWindowRefChangesHash()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var baseRequest = new GenerateCandidateGamesRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -517,7 +517,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
     [Fact]
     public void GenerateCandidateGames_TypicalRangeCoverageOutsideRange_ReturnsInvalidRequest()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new GenerateCandidateGamesRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -547,7 +547,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
     [Fact]
     public void GenerateCandidateGames_TypicalRangePercentileWithInvalidParams_ReturnsInvalidRequest()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new GenerateCandidateGamesRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -578,7 +578,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
     [Fact]
     public void GenerateCandidateGames_RangeAndAllowedValues_AreAppliedAsHardConstraints()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new GenerateCandidateGamesRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -630,7 +630,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
     [Fact]
     public void GenerateCandidateGames_HighCountWithExplicitBudget_EchoesDeterministicCounters()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new GenerateCandidateGamesRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -685,7 +685,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
     [Fact]
     public void GenerateCandidateGames_WhenInfeasible_ReturnsStructuralConflictWithDeterministicCollapseHint()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new GenerateCandidateGamesRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -727,7 +727,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
     [Fact]
     public void GenerateCandidateGames_SoftModeForNeighborAndRun_IsDeterministicAndEchoesPenalties()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new GenerateCandidateGamesRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -793,7 +793,7 @@ public sealed class Phase20GenerateCandidateGamesContractTests
     [Fact]
     public void GenerateCandidateGames_SoftModeForUnsupportedFilter_ReturnsInvalidRequest()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new GenerateCandidateGamesRequest(
             WindowSize: 5,
             EndContestId: 1005,

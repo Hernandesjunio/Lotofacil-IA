@@ -1,10 +1,10 @@
 namespace LotofacilMcp.Server.DependencyInjection;
 
-public sealed class V0DataOptions
+public sealed class DatasetOptions
 {
-    public const string SectionName = "V0Data";
+    public const string SectionName = "Dataset";
 
-    public string FixturePath { get; init; } = "tests/fixtures/synthetic_min_window.json";
+    public string? DrawsSourceUri { get; init; }
 }
 
 public sealed class AccessTogglesOptions

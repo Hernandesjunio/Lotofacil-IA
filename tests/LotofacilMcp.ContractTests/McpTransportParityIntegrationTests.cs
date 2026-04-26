@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
@@ -10,12 +11,26 @@ namespace LotofacilMcp.ContractTests;
 
 public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
 {
-    private readonly WebApplicationFactory<Program> _httpFactory = new();
+    private readonly WebApplicationFactory<Program> _httpFactory;
     private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
 
     private HttpClient _httpClient = default!;
     private McpClient _stdioMcpClient = default!;
     private McpClient _httpMcpClient = default!;
+
+    public McpTransportParityIntegrationTests()
+    {
+        _httpFactory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureAppConfiguration((_, config) =>
+            {
+                config.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Dataset:DrawsSourceUri"] = ContractTestFixturePaths.SyntheticMinWindowJson()
+                });
+            });
+        });
+    }
 
     public async Task InitializeAsync()
     {
@@ -23,21 +38,11 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
         _stdioMcpClient = await McpClient.CreateAsync(new StdioClientTransport(new StdioClientTransportOptions
         {
             Name = "LotofacilMcp.Server",
-            Command = "dotnet",
+            Command = "cmd",
             Arguments =
             [
-                "run",
-                "-c",
-#if DEBUG
-                "Debug",
-#else
-                "Release",
-#endif
-                "--no-build",
-                "--project",
-                GetServerProjectPath(),
-                "--",
-                "--mcp-stdio"
+                "/c",
+                BuildStdioLaunchCommand()
             ]
         }));
 
@@ -52,6 +57,20 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
             _httpClient,
             NullLoggerFactory.Instance,
             ownsHttpClient: false));
+    }
+
+    private static string BuildStdioLaunchCommand()
+    {
+        var fixturePath = ContractTestFixturePaths.SyntheticMinWindowJson();
+        var serverProjectPath = GetServerProjectPath();
+#if DEBUG
+        var configuration = "Debug";
+#else
+        var configuration = "Release";
+#endif
+        return
+            $"set Dataset__DrawsSourceUri={fixturePath} && " +
+            $"dotnet run -c {configuration} --no-build --project {serverProjectPath} -- --mcp-stdio";
     }
 
     public async Task DisposeAsync()
@@ -814,4 +833,5 @@ public sealed class McpTransportParityIntegrationTests : IAsyncLifetime
 
         return Path.Combine(repositoryRoot, "src", "LotofacilMcp.Server", "LotofacilMcp.Server.csproj");
     }
+
 }

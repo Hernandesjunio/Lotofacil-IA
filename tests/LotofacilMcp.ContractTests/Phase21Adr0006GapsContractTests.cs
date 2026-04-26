@@ -8,7 +8,7 @@ public sealed class Phase21Adr0006GapsContractTests
     [Fact]
     public void GapB_ExplainReferencesRepetitionMetricWhileComputeRouteStillRejectsIt()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var explainRequest = new ExplainCandidateGamesRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -48,7 +48,7 @@ public sealed class Phase21Adr0006GapsContractTests
     [Fact]
     public void GapE_PairsAndRowEntropySpearman_IsDeterministicAndMatchesGoldenMagnitude()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new AnalyzeIndicatorAssociationsRequest(
             WindowSize: 5,
             EndContestId: 1005,

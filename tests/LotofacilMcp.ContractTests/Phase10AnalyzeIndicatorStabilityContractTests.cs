@@ -8,7 +8,7 @@ public sealed class Phase10AnalyzeIndicatorStabilityContractTests
     [Fact]
     public void AnalyzeIndicatorStability_ResponseContainsEnvelopeAndRanking()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new AnalyzeIndicatorStabilityRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -56,7 +56,7 @@ public sealed class Phase10AnalyzeIndicatorStabilityContractTests
     [Fact]
     public void AnalyzeIndicatorStability_VectorWithoutAggregation_ReturnsUnsupportedAggregation()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new AnalyzeIndicatorStabilityRequest(
             WindowSize: 5,
             EndContestId: 1005,

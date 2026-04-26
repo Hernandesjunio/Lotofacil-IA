@@ -8,7 +8,7 @@ public sealed class Phase26DiscoverCapabilities0020ContractTests
     [Fact]
     public void DiscoverCapabilities_GenerationSurface_MatchesRequestLimits_And_SeedByPath_Policy()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var a = Assert.IsType<DiscoverCapabilitiesResponse>(sut.DiscoverCapabilities(new DiscoverCapabilitiesRequest()));
         var b = Assert.IsType<DiscoverCapabilitiesResponse>(sut.DiscoverCapabilities(new DiscoverCapabilitiesRequest()));
 
@@ -34,7 +34,7 @@ public sealed class Phase26DiscoverCapabilities0020ContractTests
     [Fact]
     public void GenerateCandidateGames_ToolDiscovery_Includes_GenerationMode_Enums()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var discover = Assert.IsType<DiscoverCapabilitiesResponse>(sut.DiscoverCapabilities(new DiscoverCapabilitiesRequest()));
         var gen = Assert.Single(discover.Tools, t => t.Name is "generate_candidate_games");
         var modes = gen.SupportedParameters["generation_mode"];

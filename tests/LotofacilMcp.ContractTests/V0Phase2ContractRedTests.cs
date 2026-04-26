@@ -8,7 +8,7 @@ public sealed class V0Phase6ContractTests
     [Fact]
     public void ComputeWindowMetrics_ResponseContainsMinimalEnvelopeAndMetricValueContract()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new ComputeWindowMetricsRequest(
             WindowSize: 3,
             EndContestId: 1003,
@@ -54,7 +54,7 @@ public sealed class V0Phase6ContractTests
     [Fact]
     public void ComputeWindowMetrics_WithUnknownMetric_ReturnsUnknownMetricErrorShape()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new ComputeWindowMetricsRequest(
             WindowSize: 3,
             EndContestId: 1003,
@@ -71,7 +71,7 @@ public sealed class V0Phase6ContractTests
     [Fact]
     public void ComputeWindowMetrics_WithCatalogMetricOutsideRouteAllowlist_ReturnsScenarioAErrorPayload()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new ComputeWindowMetricsRequest(
             WindowSize: 3,
             EndContestId: 1003,
@@ -92,7 +92,7 @@ public sealed class V0Phase6ContractTests
     [Fact]
     public void ComputeWindowMetrics_WithPendingMetricAndAllowPendingTrue_ReturnsMetricValue()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new ComputeWindowMetricsRequest(
             WindowSize: 3,
             EndContestId: 1003,
@@ -111,7 +111,7 @@ public sealed class V0Phase6ContractTests
     [Fact]
     public void ComputeWindowMetrics_WithoutMetrics_ReturnsInvalidRequestErrorShape()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new ComputeWindowMetricsRequest(
             WindowSize: 3,
             EndContestId: 1003,
@@ -127,7 +127,7 @@ public sealed class V0Phase6ContractTests
     [Fact]
     public void ComputeWindowMetrics_PreservesRequestCardinalityForDuplicateMetrics()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new ComputeWindowMetricsRequest(
             WindowSize: 3,
             EndContestId: 1003,

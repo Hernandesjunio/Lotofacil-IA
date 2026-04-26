@@ -21,7 +21,7 @@ public sealed class Phase18ComposeIndicatorAnalysisContractTests
     [Fact]
     public void ComposeIndicatorAnalysis_WeightedRankDezena_MatchesFixedGoldenOutputs()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = BuildGoldenRequest(topK: 10);
         var first = sut.ComposeIndicatorAnalysis(request);
         var second = sut.ComposeIndicatorAnalysis(request);
@@ -59,7 +59,7 @@ public sealed class Phase18ComposeIndicatorAnalysisContractTests
     [Fact]
     public void ComposeIndicatorAnalysis_WeightsNotSummingToOneWithinTolerance_ReturnsIncompatibleComposition()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new ComposeIndicatorAnalysisRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -81,7 +81,7 @@ public sealed class Phase18ComposeIndicatorAnalysisContractTests
     [Fact]
     public void ComposeIndicatorAnalysis_InvalidTransform_ReturnsInvalidRequest()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new ComposeIndicatorAnalysisRequest(
             WindowSize: 5,
             EndContestId: 1005,

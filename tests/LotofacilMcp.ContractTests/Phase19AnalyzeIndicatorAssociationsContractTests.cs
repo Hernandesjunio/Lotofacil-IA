@@ -22,7 +22,7 @@ public sealed class Phase19AnalyzeIndicatorAssociationsContractTests
     [Fact]
     public void AnalyzeIndicatorAssociations_ScalarSpearman_DeterministicGoldenFixture()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = BuildScalarSpearmanRequest(topK: 6);
         var first = sut.AnalyzeIndicatorAssociations(request);
         var second = sut.AnalyzeIndicatorAssociations(request);
@@ -59,7 +59,7 @@ public sealed class Phase19AnalyzeIndicatorAssociationsContractTests
     [Fact]
     public void AnalyzeIndicatorAssociations_VectorWithoutAggregation_ReturnsUnsupportedAggregation()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new AnalyzeIndicatorAssociationsRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -80,7 +80,7 @@ public sealed class Phase19AnalyzeIndicatorAssociationsContractTests
     [Fact]
     public void AnalyzeIndicatorAssociations_WithStabilityCheck_ReturnsDeterministicAssociationStability()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new AnalyzeIndicatorAssociationsRequest(
             WindowSize: 5,
             EndContestId: 1005,
@@ -121,7 +121,7 @@ public sealed class Phase19AnalyzeIndicatorAssociationsContractTests
     [Fact]
     public void AnalyzeIndicatorAssociations_WithInvalidStabilityCheckParameters_ReturnsInvalidRequest()
     {
-        var sut = new V0Tools();
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
         var request = new AnalyzeIndicatorAssociationsRequest(
             WindowSize: 5,
             EndContestId: 1005,

@@ -16,12 +16,26 @@ namespace LotofacilMcp.ContractTests;
 /// </summary>
 public sealed class PhaseB2Adr0008WindowD2AndInvalidRequestContractTests : IAsyncLifetime
 {
-    private readonly WebApplicationFactory<Program> _httpFactory = new();
+    private readonly WebApplicationFactory<Program> _httpFactory;
     private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
 
     private HttpClient _httpClient = null!;
     private McpClient _stdioMcpClient = null!;
     private McpClient _httpMcpClient = null!;
+
+    public PhaseB2Adr0008WindowD2AndInvalidRequestContractTests()
+    {
+        _httpFactory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureAppConfiguration((_, config) =>
+            {
+                config.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Dataset:DrawsSourceUri"] = ContractTestFixturePaths.SyntheticMinWindowJson()
+                });
+            });
+        });
+    }
 
     public async Task InitializeAsync()
     {
@@ -29,21 +43,11 @@ public sealed class PhaseB2Adr0008WindowD2AndInvalidRequestContractTests : IAsyn
         _stdioMcpClient = await McpClient.CreateAsync(new StdioClientTransport(new StdioClientTransportOptions
         {
             Name = "LotofacilMcp.Server",
-            Command = "dotnet",
+            Command = "cmd",
             Arguments =
             [
-                "run",
-                "-c",
-#if DEBUG
-                "Debug",
-#else
-                "Release",
-#endif
-                "--no-build",
-                "--project",
-                GetServerProjectPath(),
-                "--",
-                "--mcp-stdio"
+                "/c",
+                BuildStdioLaunchCommand()
             ]
         }));
 
@@ -58,6 +62,20 @@ public sealed class PhaseB2Adr0008WindowD2AndInvalidRequestContractTests : IAsyn
             _httpClient,
             NullLoggerFactory.Instance,
             ownsHttpClient: false));
+    }
+
+    private static string BuildStdioLaunchCommand()
+    {
+        var fixturePath = ContractTestFixturePaths.SyntheticMinWindowJson();
+        var serverProjectPath = GetServerProjectPath();
+#if DEBUG
+        var configuration = "Debug";
+#else
+        var configuration = "Release";
+#endif
+        return
+            $"set Dataset__DrawsSourceUri={fixturePath} && " +
+            $"dotnet run -c {configuration} --no-build --project {serverProjectPath} -- --mcp-stdio";
     }
 
     public async Task DisposeAsync()
@@ -726,6 +744,7 @@ public sealed class PhaseB2Adr0008WindowD2AndInvalidRequestContractTests : IAsyn
             Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
         return Path.Combine(repositoryRoot, "src", "LotofacilMcp.Server", "LotofacilMcp.Server.csproj");
     }
+
 }
 
 /// <summary>
@@ -774,7 +793,7 @@ public sealed class PhaseB2Adr0008TieHeavyTop10ContractTests
             builder.ConfigureAppConfiguration((_, config) =>
             {
                 config.AddInMemoryCollection(
-                    new Dictionary<string, string?> { ["V0Data:FixturePath"] = tieHeavy });
+                    new Dictionary<string, string?> { ["Dataset:DrawsSourceUri"] = tieHeavy });
             });
         });
 

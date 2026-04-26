@@ -10,18 +10,19 @@ public static class ServiceCollectionExtensions
         IConfiguration configuration,
         IHostEnvironment hostEnvironment)
     {
-        services.Configure<V0DataOptions>(configuration.GetSection(V0DataOptions.SectionName));
+        services.Configure<DatasetOptions>(configuration.GetSection(DatasetOptions.SectionName));
         services.Configure<AccessTogglesOptions>(configuration.GetSection(AccessTogglesOptions.SectionName));
 
         services.AddSingleton(sp =>
         {
-            var dataOptions = sp.GetRequiredService<IOptions<V0DataOptions>>().Value;
+            var datasetOptions = sp.GetRequiredService<IOptions<DatasetOptions>>().Value;
             var accessOptions = sp.GetRequiredService<IOptions<AccessTogglesOptions>>().Value;
 
             EnsureAccessTogglesAreDisabled(accessOptions);
 
-            var fixturePath = ResolveFixturePath(hostEnvironment.ContentRootPath, dataOptions.FixturePath);
-            return new V0Tools(fixturePath);
+            var sourceUri = datasetOptions.DrawsSourceUri;
+            var resolvedLocalPath = ResolveDrawsSourceUriToLocalPathOrNull(hostEnvironment.ContentRootPath, sourceUri);
+            return new V0Tools(resolvedLocalPath);
         });
 
         return services;
@@ -36,38 +37,26 @@ public static class ServiceCollectionExtensions
         }
     }
 
-    private static string ResolveFixturePath(string contentRootPath, string configuredFixturePath)
+    private static string? ResolveDrawsSourceUriToLocalPathOrNull(string contentRootPath, string? configuredDrawsSourceUri)
     {
-        if (string.IsNullOrWhiteSpace(configuredFixturePath))
+        if (string.IsNullOrWhiteSpace(configuredDrawsSourceUri))
         {
-            throw new InvalidOperationException(
-                $"Missing required configuration '{V0DataOptions.SectionName}:FixturePath'.");
+            return null;
         }
 
-        if (Path.IsPathRooted(configuredFixturePath))
+        var trimmed = configuredDrawsSourceUri.Trim();
+
+        if (Uri.TryCreate(trimmed, UriKind.Absolute, out var uri) && uri.IsFile)
         {
-            return configuredFixturePath;
+            return Path.GetFullPath(uri.LocalPath);
         }
 
-        var candidatePath = Path.GetFullPath(Path.Combine(contentRootPath, configuredFixturePath));
-        if (File.Exists(candidatePath))
+        if (Path.IsPathRooted(trimmed))
         {
-            return candidatePath;
+            return Path.GetFullPath(trimmed);
         }
 
-        var currentDirectory = new DirectoryInfo(contentRootPath);
-        while (currentDirectory is not null)
-        {
-            candidatePath = Path.GetFullPath(Path.Combine(currentDirectory.FullName, configuredFixturePath));
-            if (File.Exists(candidatePath))
-            {
-                return candidatePath;
-            }
-
-            currentDirectory = currentDirectory.Parent;
-        }
-
-        throw new InvalidOperationException(
-            $"Could not resolve fixture file '{configuredFixturePath}' from content root '{contentRootPath}'.");
+        // Deterministic resolution (ADR 0022): relative paths resolve against content root only.
+        return Path.GetFullPath(Path.Combine(contentRootPath, trimmed));        
     }
 }

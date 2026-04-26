@@ -37,7 +37,9 @@ public sealed class Phase28CanonicalMetricAuditTests
 
         // Explicit reference to the repo discovery mechanism:
         // V0Tools.DiscoverCapabilities is the deterministic build-surface publisher, and should match the registry.
-        var surface = Assert.IsType<DiscoverCapabilitiesResponse>(new V0Tools().DiscoverCapabilities(new DiscoverCapabilitiesRequest()));
+        var surface = Assert.IsType<DiscoverCapabilitiesResponse>(
+            new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson())
+                .DiscoverCapabilities(new DiscoverCapabilitiesRequest()));
         Assert.Equal(
             MetricAvailabilityCatalog.GetComputeWindowMetricsAllowedMetrics(allowPending: false),
             surface.Metrics.ComputeWindowMetricsAllowed);
