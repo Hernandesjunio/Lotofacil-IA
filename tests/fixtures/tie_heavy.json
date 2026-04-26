@@ -19,7 +19,9 @@
         23,
         24,
         25
-      ]
+      ],
+      "winners_15": 0,
+      "has_winner_15": false
     },
     {
       "contest_id": 5002,
@@ -40,7 +42,9 @@
         23,
         24,
         25
-      ]
+      ],
+      "winners_15": 0,
+      "has_winner_15": false
     },
     {
       "contest_id": 5003,
@@ -61,7 +65,9 @@
         23,
         24,
         25
-      ]
+      ],
+      "winners_15": 0,
+      "has_winner_15": false
     },
     {
       "contest_id": 5004,
@@ -82,7 +88,9 @@
         23,
         24,
         25
-      ]
+      ],
+      "winners_15": 0,
+      "has_winner_15": false
     },
     {
       "contest_id": 5005,
@@ -103,7 +111,9 @@
         23,
         24,
         25
-      ]
+      ],
+      "winners_15": 0,
+      "has_winner_15": false
     }
   ]
 }
