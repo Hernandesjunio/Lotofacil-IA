@@ -153,7 +153,6 @@ Regras:
 - não extrapolar além do recorte citado;
 - manter TDD;
 - o provider deve suportar `Dataset:DrawsSourceUri` (via env var `Dataset__DrawsSourceUri` em .NET) e falhar com `DATASET_UNAVAILABLE` quando a fonte estiver ausente/inválida, com `details` orientando o host;
-- nesta fase, o requisito **mínimo e obrigatório** é: aceitar **path local** e **URI `file://`**, e **não ter fallback** quando `Dataset__DrawsSourceUri` estiver ausente (ver ADR 0022 e Subfase 4.0 do guia);
 - não introduzir semântica estatística na infraestrutura.
 
 Critério de pronto:
@@ -1992,6 +1991,46 @@ Critério de pronto:
 - todas as métricas do Apêndice têm um texto reutilizável em PT no glossário (tabela A e B);
 - nenhuma métrica do Apêndice fica sem texto (lacuna) ou com texto que contradiga o catálogo;
 - (se aplicável) `ExplanationFor` não devolve a string genérica para métricas já canônicas e citadas no Apêndice.
+```
+
+## Fase 28A — ADR 0022: unificar `Dataset:DrawsSourceUri` (sem fallback) e aceitar `file://` (cirurgia de configuração)
+
+*Esta fase é **cirúrgica** e não altera a fixture usada pelos testes; ela só remove ambiguidade operacional e alinha a chave/config do runtime à ADR 0022 e ao contrato. A implementação deve seguir a Subfase 4.0 do guia.*
+
+### Template 28A.1 — Migração de chave/config do dataset (V0Data → Dataset) sem mudar fixtures
+
+```md
+Implemente apenas a migração de configuração para unificar a chave do dataset:
+
+- de `V0Data:FixturePath`
+- para `Dataset:DrawsSourceUri` (env var `Dataset__DrawsSourceUri`)
+
+com as regras normativas:
+
+- **sem fallback** (ausente/vazio deve falhar explicitamente; não “adivinhar fixture default”)
+- aceitar **path local** e **URI `file://`**
+- sem alterar o arquivo de fixture usado pelos testes (continuar apontando para `tests/fixtures/*.json`)
+
+Referências obrigatórias:
+- docs/adrs/0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md (D1 e “Obrigatoriedade (sem fallback)” + resolução determinística)
+- docs/spec-driven-execution-guide.md (Subfase 4.0)
+- docs/mcp-tool-contract.md (`DATASET_UNAVAILABLE` + `details.missing_env`)
+
+Arquivos esperados:
+- src/LotofacilMcp.Server/DependencyInjection/ (options + binding)
+- src/LotofacilMcp.Server/appsettings*.json
+- tests/LotofacilMcp.ContractTests/ (ajustes de override de config, se existirem)
+
+Regras:
+- não mudar fixtures, goldens ou semântica de métricas/janelas; o objetivo é apenas unificar chave/config e parsing de URI;
+- resolução de path relativo deve ser determinística (sem “subir diretórios procurando arquivo”), conforme ADR 0022;
+- erro por ausência deve ser explícito e rastreável (sem defaults ocultos).
+
+Critério de pronto:
+- `dotnet test` passa;
+- rodar com `Dataset__DrawsSourceUri` apontando para fixture por path funciona;
+- rodar com `Dataset__DrawsSourceUri` apontando para fixture por `file://` funciona;
+- rodar sem `Dataset__DrawsSourceUri` falha explicitamente (sem fallback).
 ```
 
 ## Fase 28 — Implementar métricas canônicas pendentes do catálogo (execução dirigida por plano)

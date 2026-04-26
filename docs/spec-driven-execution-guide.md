@@ -190,34 +190,7 @@ Passos atômicos:
 - Criar provider de fixture em `Infrastructure/Providers/`.
 - Evoluir o provider para ler a fonte configurada por **`Dataset:DrawsSourceUri`** (via env var **`Dataset__DrawsSourceUri`** em .NET), mantendo o **mesmo modelo canônico** de `Draw` e validações (ver [ADR 0022](adrs/0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md)).
 
-#### Subfase 4.0 — Cirurgia de configuração (obrigatória): `V0Data:FixturePath` → `Dataset:DrawsSourceUri` (sem fallback, com `file://`)
-
-**Objetivo:** remover ambiguidade entre `docs/` e runtime V0 **sem** trocar a fixture usada pelos testes.
-
-**Contrato desta subfase:**
-
-- A configuração **passa a ser obrigatória** (sem fallback). Ausente/vazia ⇒ falha explícita.
-- `Dataset:DrawsSourceUri` deve aceitar **path local** e **URI `file://`**.
-- Nesta subfase, o servidor pode continuar lendo **apenas JSON fixture local** (o ganho é a chave única + parsing `file://` + falha explícita, não ainda HTTP/CSV).
-
-**Passos atômicos (ordem recomendada):**
-
-1. Atualizar opções/binding no servidor: section `"V0Data"` → `"Dataset"`, propriedade `FixturePath` → `DrawsSourceUri`.
-2. Atualizar `appsettings*.json` para usar `Dataset:DrawsSourceUri` apontando para o mesmo `tests/fixtures/synthetic_min_window.json`.
-3. Atualizar testes que injetam configuração (ex.: overrides em `WebApplicationFactory`) trocando a chave antiga pela nova, sem mudar o path.
-4. Implementar parsing mínimo de `file://`:
-   - `file:///C:/...` ⇒ `C:\...` (Windows) + `Path.GetFullPath`.
-   - se a URI for inválida ⇒ `DATASET_UNAVAILABLE` com `reason="invalid_format"` (ou falha de inicialização equivalente; decidir na etapa de implementação).
-5. Remover qualquer fallback silencioso de fixture default quando a chave estiver ausente.
-
-**Checklist de validação:**
-
-- `dotnet test` passa (inclui contrato e paridade MCP/HTTP).
-- Rodar o servidor com `Dataset__DrawsSourceUri="{workspace}/tests/fixtures/synthetic_min_window.json"` funciona.
-- Rodar o servidor com `Dataset__DrawsSourceUri="file:///C:/.../tests/fixtures/synthetic_min_window.json"` funciona.
-- Rodar o servidor sem `Dataset__DrawsSourceUri` falha explicitamente (sem defaults ocultos).
-
-#### Continuação da Fase 4 (após Subfase 4.0)
+**Nota de alinhamento (ADR 0022):** a migração cirúrgica da chave/config do dataset (de `V0Data:FixturePath` para `Dataset:DrawsSourceUri`, sem fallback e com suporte a `file://`) é tratada como **fase dedicada** mais adiante (ver **Fase 28A** e o Template 28A.1 em `docs/fases-execucao-templates.md`).
 
 Passos atômicos:
 
@@ -842,6 +815,29 @@ Critério mínimo de aceite:
 - existe secção de suporte no glossário (ou documento claramente referenciado) com frases reutilizáveis alinhadas ao Apêndice da ADR 0021; se 27.1b for aplicada, a ponte *Vocabulário* e o *QtdFrequencia* estão coerentes entre catálogo, ADR 0021 e glossário, sem conflito de nomes, e as âncoras D3 (ex. `#vocab-ausencia-adr-0021`, `#export-legado-qtdfrequencia`, apêndice `#nota-ausencia-adr-0021`) resolvam-se;
 - a distinção D1/D5 (tabelas *vs.* interpretação; custo consciente de tokens) e D2 (mínimo léxico em séries) estão refletidas na documentação e, para agentes, em `AGENTS`/regras;
 - nenhuma frase de apresentação contradiz fórmulas do catálogo nem implica previsão de sorteio.
+
+### Fase 28A — ADR 0022: unificar `Dataset:DrawsSourceUri` (sem fallback) e aceitar `file://` (cirurgia de configuração)
+
+Objetivo: alinhar a chave/config do runtime ao que está fechado na [ADR 0022](adrs/0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md), removendo ambiguidades operacionais, **sem** mudar fixtures/goldens dos testes.
+
+Norma:
+
+- [ADR 0022](adrs/0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md) (obrigatoriedade sem fallback, `file://`, resolução determinística)
+- [mcp-tool-contract.md](mcp-tool-contract.md) (`DATASET_UNAVAILABLE` e `details.missing_env`)
+- [fases-execucao-templates.md](fases-execucao-templates.md) (Template 28A.1)
+
+Passos atômicos (ordem recomendada):
+
+- Migrar a configuração de `V0Data:FixturePath` para `Dataset:DrawsSourceUri` (env var `Dataset__DrawsSourceUri`).
+- Remover fallback silencioso quando `Dataset__DrawsSourceUri` estiver ausente.
+- Aceitar `file://` e path local, com resolução determinística (sem subir diretórios procurando arquivo).
+- Atualizar testes que injetam configuração para a chave nova, mantendo os mesmos paths de fixture.
+
+Critério mínimo de aceite:
+
+- `dotnet test` passa;
+- `Dataset__DrawsSourceUri` funciona por path e por `file://`;
+- ausência de `Dataset__DrawsSourceUri` falha explicitamente (sem defaults ocultos).
 
 ### Fase 28 — Implementar métricas canônicas pendentes do catálogo (execução dirigida por plano)
 
