@@ -5,6 +5,7 @@ using LotofacilMcp.Application.UseCases;
 using LotofacilMcp.Application.Validation;
 using LotofacilMcp.Application.Windows;
 using LotofacilMcp.Domain.Analytics;
+using LotofacilMcp.Domain.Models;
 using LotofacilMcp.Domain.Metrics;
 using LotofacilMcp.Domain.Normalization;
 using LotofacilMcp.Domain.Generation;
@@ -558,11 +559,13 @@ public sealed class V0Tools
     private readonly GenerateCandidateGamesUseCase _generateCandidateGamesUseCase;
     private readonly ExplainCandidateGamesUseCase _explainCandidateGamesUseCase;
     private readonly DeterministicHashService _deterministicHashService;
-    private readonly string? _drawsSourcePath;
+    private readonly string? _drawsSourceUri;
+    private readonly string _contentRootPath;
+    private readonly HttpJsonDatasetSnapshotCache? _httpSnapshotCache;
     private const string HelpToolVersion = "1.0.0";
     private const string DiscoverCapabilitiesToolVersion = "1.1.0";
 
-    public V0Tools(string? drawsSourcePath)
+    public V0Tools(string? drawsSourceUri, string? contentRootPath = null, HttpJsonDatasetSnapshotCache? httpSnapshotCache = null)
     {
         var mapper = new V0RequestMapper(new DrawNormalizer());
         var fixtureProvider = new SyntheticFixtureProvider();
@@ -671,7 +674,9 @@ public sealed class V0Tools
             new CanonicalJsonSerializer(),
             new Sha256Hasher());
 
-        _drawsSourcePath = drawsSourcePath;
+        _drawsSourceUri = drawsSourceUri;
+        _contentRootPath = string.IsNullOrWhiteSpace(contentRootPath) ? Directory.GetCurrentDirectory() : contentRootPath;
+        _httpSnapshotCache = httpSnapshotCache;
     }
 
     public object Help()
@@ -951,13 +956,13 @@ public sealed class V0Tools
 
     public object ComputeWindowMetrics(ComputeWindowMetricsRequest request)
     {
-        if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+        return ExecuteWithDatasetHandling(() =>
         {
-            return datasetError!;
-        }
+            if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+            {
+                return datasetError!;
+            }
 
-        try
-        {
             var (windowSize, endContestId) = WindowRequestResolver.Resolve(
                 request.WindowSize,
                 request.StartContestId,
@@ -997,22 +1002,18 @@ public sealed class V0Tools
                         metric.Value.ToArray(),
                         metric.Explanation))
                     .ToArray());
-        }
-        catch (ApplicationValidationException ex)
-        {
-            return ToContractError(ex.Code, ex.Message, ex.Details);
-        }
+        });
     }
 
     public object GetDrawWindow(GetDrawWindowRequest request)
     {
-        if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+        return ExecuteWithDatasetHandling(() =>
         {
-            return datasetError!;
-        }
+            if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+            {
+                return datasetError!;
+            }
 
-        try
-        {
             var (windowSize, endContestId) = WindowRequestResolver.Resolve(
                 request.WindowSize,
                 request.StartContestId,
@@ -1039,22 +1040,18 @@ public sealed class V0Tools
                 Draws: result.Draws
                     .Select(draw => new DrawDto(draw.ContestId, draw.DrawDate, draw.Numbers.ToArray()))
                     .ToArray());
-        }
-        catch (ApplicationValidationException ex)
-        {
-            return ToContractError(ex.Code, ex.Message, ex.Details);
-        }
+        });
     }
 
     public object AnalyzeIndicatorStability(AnalyzeIndicatorStabilityRequest request)
     {
-        if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+        return ExecuteWithDatasetHandling(() =>
         {
-            return datasetError!;
-        }
+            if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+            {
+                return datasetError!;
+            }
 
-        try
-        {
             var (windowSize, endContestId) = WindowRequestResolver.Resolve(
                 request.WindowSize,
                 request.StartContestId,
@@ -1095,22 +1092,18 @@ public sealed class V0Tools
                         entry.StabilityScore,
                         entry.Explanation))
                     .ToArray());
-        }
-        catch (ApplicationValidationException ex)
-        {
-            return ToContractError(ex.Code, ex.Message, ex.Details);
-        }
+        });
     }
 
     public object ComposeIndicatorAnalysis(ComposeIndicatorAnalysisRequest request)
     {
-        if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+        return ExecuteWithDatasetHandling(() =>
         {
-            return datasetError!;
-        }
+            if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+            {
+                return datasetError!;
+            }
 
-        try
-        {
             var (windowSize, endContestId) = WindowRequestResolver.Resolve(
                 request.WindowSize,
                 request.StartContestId,
@@ -1152,22 +1145,18 @@ public sealed class V0Tools
                         entry.Score,
                         entry.Explanation))
                     .ToArray());
-        }
-        catch (ApplicationValidationException ex)
-        {
-            return ToContractError(ex.Code, ex.Message, ex.Details);
-        }
+        });
     }
 
     public object AnalyzeIndicatorAssociations(AnalyzeIndicatorAssociationsRequest request)
     {
-        if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+        return ExecuteWithDatasetHandling(() =>
         {
-            return datasetError!;
-        }
+            if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+            {
+                return datasetError!;
+            }
 
-        try
-        {
             var (windowSize, endContestId) = WindowRequestResolver.Resolve(
                 request.WindowSize,
                 request.StartContestId,
@@ -1242,22 +1231,18 @@ public sealed class V0Tools
                                 entry.StdDev,
                                 entry.SignConsistencyRatio))
                             .ToArray()));
-        }
-        catch (ApplicationValidationException ex)
-        {
-            return ToContractError(ex.Code, ex.Message, ex.Details);
-        }
+        });
     }
 
     public object SummarizeWindowPatterns(SummarizeWindowPatternsRequest request)
     {
-        if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+        return ExecuteWithDatasetHandling(() =>
         {
-            return datasetError!;
-        }
+            if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+            {
+                return datasetError!;
+            }
 
-        try
-        {
             var (windowSize, endContestId) = WindowRequestResolver.Resolve(
                 request.WindowSize,
                 request.StartContestId,
@@ -1306,22 +1291,18 @@ public sealed class V0Tools
                         summary.CoverageThresholdMet,
                         summary.Explanation))
                     .ToArray());
-        }
-        catch (ApplicationValidationException ex)
-        {
-            return ToContractError(ex.Code, ex.Message, ex.Details);
-        }
+        });
     }
 
     public object SummarizeWindowAggregates(SummarizeWindowAggregatesRequest request)
     {
-        if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+        return ExecuteWithDatasetHandling(() =>
         {
-            return datasetError!;
-        }
+            if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+            {
+                return datasetError!;
+            }
 
-        try
-        {
             var (windowSize, endContestId) = WindowRequestResolver.Resolve(
                 request.WindowSize,
                 request.StartContestId,
@@ -1373,22 +1354,18 @@ public sealed class V0Tools
                             .ToArray(),
                         Matrix: aggregate.Matrix))
                     .ToArray());
-        }
-        catch (ApplicationValidationException ex)
-        {
-            return ToContractError(ex.Code, ex.Message, ex.Details);
-        }
+        });
     }
 
     public object GenerateCandidateGames(GenerateCandidateGamesRequest request)
     {
-        if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+        return ExecuteWithDatasetHandling(() =>
         {
-            return datasetError!;
-        }
+            if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+            {
+                return datasetError!;
+            }
 
-        try
-        {
             var (windowSize, endContestId) = WindowRequestResolver.Resolve(
                 request.WindowSize,
                 request.StartContestId,
@@ -1588,22 +1565,18 @@ public sealed class V0Tools
                                 .ToArray(),
                             ResolvedDefaults: game.AppliedConfiguration.ResolvedDefaults)))
                     .ToArray());
-        }
-        catch (ApplicationValidationException ex)
-        {
-            return ToContractError(ex.Code, ex.Message, ex.Details);
-        }
+        });
     }
 
     public object ExplainCandidateGames(ExplainCandidateGamesRequest request)
     {
-        if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+        return ExecuteWithDatasetHandling(() =>
         {
-            return datasetError!;
-        }
+            if (!TryGetFixturePath(out var fixturePath, out var datasetError))
+            {
+                return datasetError!;
+            }
 
-        try
-        {
             var (windowSize, endContestId) = WindowRequestResolver.Resolve(
                 request.WindowSize,
                 request.StartContestId,
@@ -1706,11 +1679,7 @@ public sealed class V0Tools
                                     .ToArray()))
                             .ToArray()))
                     .ToArray());
-        }
-        catch (ApplicationValidationException ex)
-        {
-            return ToContractError(ex.Code, ex.Message, ex.Details);
-        }
+        });
     }
 
     private bool TryGetFixturePath(out string fixturePath, out ContractErrorEnvelope? error)
@@ -1718,7 +1687,7 @@ public sealed class V0Tools
         error = null;
         fixturePath = string.Empty;
 
-        if (string.IsNullOrWhiteSpace(_drawsSourcePath))
+        if (string.IsNullOrWhiteSpace(_drawsSourceUri))
         {
             error = ToContractError(
                 "DATASET_UNAVAILABLE",
@@ -1738,7 +1707,46 @@ public sealed class V0Tools
             return false;
         }
 
-        var fullPath = Path.GetFullPath(_drawsSourcePath);
+        var trimmed = _drawsSourceUri.Trim();
+
+        if (Uri.TryCreate(trimmed, UriKind.Absolute, out var absoluteUri))
+        {
+            if (string.Equals(absoluteUri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(absoluteUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+            {
+                if (_httpSnapshotCache is null)
+                {
+                    error = ToDatasetUnavailable(
+                        reason: "unreachable",
+                        message: "HTTP dataset source is not available in this runtime configuration.",
+                        source: trimmed);
+                    return false;
+                }
+
+                var snapshot = _httpSnapshotCache.GetOrCreateSnapshot(trimmed);
+                if (!snapshot.Success || string.IsNullOrWhiteSpace(snapshot.SnapshotPath))
+                {
+                    error = ToDatasetUnavailable(
+                        reason: snapshot.FailureReason ?? "unreachable",
+                        message: "Unable to load dataset from remote HTTP source.",
+                        source: trimmed);
+                    return false;
+                }
+
+                fixturePath = snapshot.SnapshotPath;
+                return true;
+            }
+
+            if (absoluteUri.IsFile)
+            {
+                trimmed = absoluteUri.LocalPath;
+            }
+        }
+
+        var fullPath = Path.IsPathRooted(trimmed)
+            ? Path.GetFullPath(trimmed)
+            : Path.GetFullPath(Path.Combine(_contentRootPath, trimmed));
+
         if (!File.Exists(fullPath))
         {
             error = ToContractError(
@@ -1747,7 +1755,7 @@ public sealed class V0Tools
                 new Dictionary<string, object?>
                 {
                     ["reason"] = "unreachable",
-                    ["source"] = _drawsSourcePath,
+                    ["source"] = _drawsSourceUri,
                     ["accepted_schemes"] = new[] { "file", "http", "https" },
                     ["accepted_formats"] = new[] { "csv", "json" },
                     ["examples"] = new[]
@@ -1761,6 +1769,72 @@ public sealed class V0Tools
 
         fixturePath = fullPath;
         return true;
+    }
+
+    private object ExecuteWithDatasetHandling(Func<object> action)
+    {
+        try
+        {
+            return action();
+        }
+        catch (ApplicationValidationException ex)
+        {
+            return ToContractError(ex.Code, ex.Message, ex.Details);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return ToDatasetUnavailable(
+                reason: "invalid_format",
+                message: "Dataset JSON is invalid.",
+                source: _drawsSourceUri);
+        }
+        catch (DomainInvariantViolationException ex)
+        {
+            return ToDatasetUnavailable(
+                reason: "invalid_data",
+                message: ex.Message,
+                source: _drawsSourceUri);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // SyntheticFixtureProvider uses InvalidOperationException for schema issues (e.g., missing/empty draws)
+            return ToDatasetUnavailable(
+                reason: "invalid_data",
+                message: ex.Message,
+                source: _drawsSourceUri);
+        }
+        catch (IOException ex)
+        {
+            return ToDatasetUnavailable(
+                reason: "unreachable",
+                message: ex.Message,
+                source: _drawsSourceUri);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return ToDatasetUnavailable(
+                reason: "unreachable",
+                message: ex.Message,
+                source: _drawsSourceUri);
+        }
+    }
+
+    private static ContractErrorEnvelope ToDatasetUnavailable(string reason, string message, string? source)
+    {
+        var details = new Dictionary<string, object?>
+        {
+            ["reason"] = reason,
+            ["source"] = source ?? string.Empty,
+            ["accepted_schemes"] = new[] { "file", "http", "https" },
+            ["accepted_formats"] = new[] { "csv", "json" },
+            ["examples"] = new[]
+            {
+                @"tests/fixtures/synthetic_min_window.json",
+                @"file:///C:/_projeto/Lotofacil-IA/tests/fixtures/synthetic_min_window.json"
+            }
+        };
+
+        return ToContractError("DATASET_UNAVAILABLE", message, details);
     }
 
     private static ContractErrorEnvelope ToContractError(
