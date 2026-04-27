@@ -2033,6 +2033,46 @@ Critério de pronto:
 - rodar sem `Dataset__DrawsSourceUri` falha explicitamente (sem fallback).
 ```
 
+## Fase 28B — ADR 0022: habilitar `Dataset:DrawsSourceUri` por HTTP/HTTPS (JSON) com snapshot versionado
+
+*Esta fase habilita URL (HTTP/HTTPS) sem depender de extensão `.json` e sem introduzir heurísticas frágeis. O perfil normativo desta build assume que URL sempre retorna JSON no schema canônico (lista `draws`). A leitura HTTP deve ser tratada como snapshot: `dataset_version` depende do conteúdo efetivamente lido.*
+
+### Template 28B.1 — Leitura HTTP/HTTPS (JSON) + snapshot/cache por hash + erros canônicos
+
+```md
+Implemente apenas o suporte a `Dataset:DrawsSourceUri` por **HTTP/HTTPS** no perfil V0 (URL sempre JSON), preservando determinismo e erros canônicos:
+
+- detectar `http/https` por parsing de URI (scheme), sem regex e sem depender de `.json`;
+- baixar o conteúdo JSON e materializar um snapshot local (cache por hash do conteúdo);
+- alimentar o pipeline existente (que hoje lê fixture por path) a partir do snapshot local;
+- mapear falhas para `DATASET_UNAVAILABLE` com `details.reason` canônico.
+
+Referências obrigatórias:
+- docs/adrs/0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md (D1.1 e D1.2)
+- docs/mcp-tool-contract.md (`DATASET_UNAVAILABLE` e `details.reason`)
+- docs/spec-driven-execution-guide.md (Fase 28B)
+
+Arquivos esperados:
+- src/LotofacilMcp.Server/DependencyInjection/ (resolução da fonte por scheme e passagem de `Dataset:DrawsSourceUri`)
+- src/LotofacilMcp.Server/Tools/ (tratamento de URL vs path antes de tentar `File.Exists`)
+- (opcional) src/LotofacilMcp.Infrastructure/Providers/ (helper de snapshot/cache para leitura HTTP)
+- tests/LotofacilMcp.ContractTests/ (novos testes de contrato)
+
+Regras:
+- não depender de extensão `.json` em URLs (ex.: blob com SAS token ou rota dinâmica).
+- URL (`http/https`) é sempre tratada como JSON neste perfil; se não for JSON válido, falhar com `DATASET_UNAVAILABLE` `reason="invalid_format"`.
+- falhas de rede (timeout, 404, 403, DNS, conexão) devem falhar com `DATASET_UNAVAILABLE` `reason="unreachable"` e `details.source` preenchido com o valor configurado.
+- dados inválidos (schema, duplicatas, invariantes) devem falhar com `DATASET_UNAVAILABLE` `reason="invalid_data"`.
+- cache é permitido como otimização, mas deve ser endereçado por conteúdo (hash) e não pode alterar a semântica: `dataset_version` reflete o conteúdo efetivamente lido.
+- manter stateless por request (cache é transparência de performance; não introduz defaults semânticos).
+
+Critério de pronto:
+- existe pelo menos 1 teste de contrato que injeta `Dataset__DrawsSourceUri=https://...` apontando para um servidor de teste controlado e recebe sucesso.
+- repetir a chamada com o mesmo conteúdo remoto retorna o mesmo `dataset_version`.
+- alterar o conteúdo remoto (no servidor de teste) altera `dataset_version`.
+- falhas simuladas de rede e de JSON inválido retornam `DATASET_UNAVAILABLE` com `details.reason` correto.
+```
+
 ## Fase 28 — Implementar métricas canônicas pendentes do catálogo (execução dirigida por plano)
 
 *Extensão pós–Fase 27. Norma: [metric-catalog.md](metric-catalog.md) (Tabelas 1 e 2) + contrato MCP quando a métrica for exposta por tool. Esta fase existe para evitar implementação avulsa: o trabalho é executado por templates atômicos, sempre na ordem spec → teste → código.*

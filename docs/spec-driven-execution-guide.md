@@ -839,6 +839,38 @@ Critério mínimo de aceite:
 - `Dataset__DrawsSourceUri` funciona por path e por `file://`;
 - ausência de `Dataset__DrawsSourceUri` falha explicitamente (sem defaults ocultos).
 
+### Fase 28B — ADR 0022: habilitar `Dataset:DrawsSourceUri` por HTTP/HTTPS (JSON) com snapshot versionado
+
+Objetivo: habilitar a fonte remota HTTP/HTTPS para o dataset, preservando as invariantes de determinismo e rastreabilidade da ADR 0022 e do contrato MCP:
+
+- `dataset_version` deve refletir o **conteúdo efetivamente lido** (snapshot), não apenas a URL;
+- erros de rede e de formato devem resultar em `DATASET_UNAVAILABLE` com `details.reason` canônico;
+- nenhuma heurística frágil deve depender de extensão `.json` em URLs (ex.: blob com SAS token).
+
+Norma:
+
+- [ADR 0022](adrs/0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md) (D1.1 e D1.2; HTTP/HTTPS sempre JSON no perfil V0; snapshot versionado)
+- [mcp-tool-contract.md](mcp-tool-contract.md) (`DATASET_UNAVAILABLE` e `details.reason`)
+- (se necessário) [ADR 0001](adrs/0001-fechamento-semantico-e-determinismo-v1.md) (determinismo forte)
+
+Passos atômicos (ordem recomendada):
+
+- Implementar detecção de fonte por **scheme** (`file` vs `http/https`) usando parsing de URI (não regex, não extensão).
+- Para `http/https`, baixar o JSON e materializar um snapshot local (cache por hash de conteúdo) para alimentar o pipeline atual sem refatoração ampla.
+- Garantir que:
+  - falha de download (timeout, 404, 403, DNS, etc.) → `DATASET_UNAVAILABLE` `reason="unreachable"` com `details.source`;
+  - payload não‑JSON ou JSON inválido → `DATASET_UNAVAILABLE` `reason="invalid_format"`;
+  - JSON válido mas dados inválidos (duplicatas, invariantes violadas) → `DATASET_UNAVAILABLE` `reason="invalid_data"`.
+- Adicionar teste(s) de contrato que provem:
+  - sucesso com fonte HTTP/HTTPS controlada (servidor de teste) e `dataset_version` estável para o mesmo conteúdo;
+  - mudança de conteúdo remoto implica mudança de `dataset_version` (e, por consequência, de `deterministic_hash` quando aplicável).
+
+Critério mínimo de aceite:
+
+- `Dataset__DrawsSourceUri=https://...` funciona em execução local (HTTP/STDIO);
+- a mesma resposta de tool para o mesmo snapshot remoto é reprodutível em chamadas repetidas (mesmo `dataset_version`);
+- erros de rede/formato retornam `DATASET_UNAVAILABLE` com `details.reason` canônico, sem mensagens ambíguas.
+
 ### Fase 28 — Implementar métricas canônicas pendentes do catálogo (execução dirigida por plano)
 
 Objetivo: garantir que **todas as métricas canônicas** de `docs/metric-catalog.md` (Tabela 1/2) que ainda não estejam materializadas no código sejam implementadas via execução spec-driven, **sem implementação avulsa fora de uma fase** e mantendo rastreabilidade por testes.

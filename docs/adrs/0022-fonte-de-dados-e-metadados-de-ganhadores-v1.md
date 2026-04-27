@@ -52,9 +52,36 @@ Ambiguidade não resolvida (ex.: sem extensão e `Content-Type` genérico) deve 
 Para evitar ambiguidades e comportamento dependente do diretório atual, a resolução deve ser determinística:
 
 - Se `Dataset:DrawsSourceUri` for **URI `file://`**, o servidor deve convertê-la para um **path local** (Windows) e usar esse path.
+- Se for uma **URL HTTP/HTTPS** (URI absoluta com `scheme` `http` ou `https`), o servidor deve tratá-la como **fonte remota** (não como path local) e seguir o fluxo de leitura HTTP (ver D1.1).
 - Se for um **path absoluto**, usar diretamente.
 - Se for um **path relativo**, resolver **apenas** contra a raiz de conteúdo do servidor (ex.: `ContentRootPath`) — sem subir diretórios em busca de “um arquivo que exista”.
 - Se, após resolução, o arquivo não existir, falhar com `DATASET_UNAVAILABLE` (`reason="unreachable"`), incluindo `source` e `examples` em `details`.
+
+#### D1.1 — Perfil de implementação (V0 atual): URL HTTP/HTTPS sempre como JSON
+
+Este ADR define a **capacidade normativa** (CSV ou JSON em local ou HTTP). No entanto, uma build pode implementar um **subconjunto**.
+
+No perfil atual (V0/fixture-evoluída) definido por este repositório:
+
+- Para `Dataset:DrawsSourceUri` com `scheme` `http` ou `https`, o servidor deve assumir que o conteúdo é **JSON** no schema canônico descrito em D3 (lista `draws`), mesmo que:
+  - a URL não termine em `.json` (ex.: blob com SAS token, rota que retorna JSON),
+  - o `Content-Type` esteja ausente ou genérico.
+- Se o conteúdo baixado não for JSON válido (ou não respeitar o schema mínimo exigido), a tool deve falhar com `DATASET_UNAVAILABLE` com `reason="invalid_format"` (ver D4).
+
+Racional: evita dependência frágil de extensão de path e remove ambiguidade operacional para URLs que representam “resultado/snapshot” e não “arquivo nomeado”.
+
+#### D1.2 — Leitura HTTP como snapshot versionado (determinismo + cache)
+
+Quando `Dataset:DrawsSourceUri` for HTTP/HTTPS, a implementação deve tratar a leitura como **snapshot**:
+
+- **Determinismo observável**: `dataset_version` deve refletir o **conteúdo efetivamente lido** (não apenas a URL). Isso permite auditoria e cache seguro.
+- **Cache permitido (otimização, não semântica)**: é permitido cachear o snapshot localmente (ex.: em disco) para evitar downloads repetidos, desde que:
+  - o cache seja **endereçado por conteúdo** (ex.: nome do arquivo inclui hash SHA-256 dos bytes baixados ou do JSON canônico),
+  - o uso de cache não introduza defaults semânticos (não “trocar” silenciosamente de snapshot),
+  - falhas de download sejam reportadas como `DATASET_UNAVAILABLE` `reason="unreachable"` com `details.source` (a URL).
+- **Limites operacionais** (normativos, para evitar travamentos):
+  - a leitura HTTP deve ter timeout finito;
+  - payloads acima de um limite razoável devem falhar com `DATASET_UNAVAILABLE` `reason="invalid_format"`, com `details` suficiente para orientar o host (ex.: `details.subreason="too_large"`, sem vazar segredos).
 
 #### Obrigatoriedade (sem fallback)
 
