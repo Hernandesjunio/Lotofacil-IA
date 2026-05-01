@@ -1,0 +1,29 @@
+{
+  "id": "HF23-M04",
+  "tool": "summarize_window_patterns",
+  "fixture": "tests/fixtures/synthetic_min_window.json",
+  "request": {
+    "window_size": 5,
+    "end_contest_id": 1005,
+    "features": [{ "name": "pares_no_concurso" }],
+    "coverage_threshold": 0.8,
+    "range_method": "iqr",
+    "verbosity": "standard"
+  },
+  "expected_structured": {
+    "window": { "size": 5, "start_contest_id": 1001, "end_contest_id": 1005 },
+    "summary": {
+      "metric_name": "pares_no_concurso",
+      "mode": 8,
+      "median": 8,
+      "q1": 8,
+      "q3": 9,
+      "iqr": 1,
+      "coverage_observed": 0.6
+    }
+  },
+  "required_content": {
+    "must_include": ["pares_no_concurso", "8", "1", "0.6"],
+    "must_not_include_phrases": ["see structured", "See structured", "structured payload", "StructuredContent"]
+  }
+}

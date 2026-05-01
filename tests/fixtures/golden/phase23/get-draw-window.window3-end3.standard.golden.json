@@ -1,0 +1,19 @@
+{
+  "id": "HF23-M02",
+  "tool": "get_draw_window",
+  "fixture": "tests/fixtures/synthetic_min_window.json",
+  "request": { "window_size": 3, "end_contest_id": 3, "verbosity": "standard" },
+  "expected_structured": {
+    "window": { "size": 3, "start_contest_id": 1, "end_contest_id": 3 },
+    "draws_length": 3,
+    "last_draw": {
+      "contest_id": 3,
+      "draw_date": "2003-10-13",
+      "numbers": [1, 4, 6, 7, 8, 9, 10, 11, 12, 14, 16, 17, 20, 23, 24]
+    }
+  },
+  "required_content": {
+    "must_include": ["1", "3", "2003-10-13"],
+    "must_not_include_phrases": ["see structured", "See structured", "structured payload", "StructuredContent"]
+  }
+}

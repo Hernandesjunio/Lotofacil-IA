@@ -1,0 +1,14 @@
+{
+  "id": "HF23-M05",
+  "tool": "summarize_window_aggregates",
+  "fixture": "tests/fixtures/aggregates_canonical_small_window.json",
+  "request_reference": "tests/LotofacilMcp.ContractTests/Phase22SummarizeWindowAggregatesContractRedTests.cs::BuildCanonicalRequestForFixture",
+  "expected_structured": {
+    "expected_aggregate_ids": ["z_hist_pairs", "a_topk_rows", "m_matrix_rows"],
+    "evidence_reference": "tests/fixtures/golden/phase22/summarize-window-aggregates.canonical-small-window.golden.json"
+  },
+  "required_content": {
+    "must_include_any": ["z_hist_pairs", "a_topk_rows", "m_matrix_rows", "hist", "top", "matrix"],
+    "must_not_include_phrases": ["see structured", "See structured", "structured payload", "StructuredContent"]
+  }
+}

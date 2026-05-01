@@ -1,0 +1,21 @@
+{
+  "id": "HF23-M03",
+  "tool": "compute_window_metrics",
+  "fixture": "tests/fixtures/tie_heavy.json",
+  "request": {
+    "window_size": 5,
+    "end_contest_id": 5005,
+    "metrics": [{ "name": "top10_mais_sorteados" }],
+    "verbosity": "standard"
+  },
+  "expected_structured": {
+    "window": { "size": 5, "start_contest_id": 5001, "end_contest_id": 5005 },
+    "metric_name": "top10_mais_sorteados",
+    "top10": [11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+    "evidence_reference": "tests/fixtures/golden/phaseB2/tie-heavy-top10-mais-sorteados.golden.json"
+  },
+  "required_content": {
+    "must_include": ["top10_mais_sorteados", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"],
+    "must_not_include_phrases": ["Computed 1 metric", "computed 1 metric", "see structured", "See structured", "structured payload", "StructuredContent"]
+  }
+}
