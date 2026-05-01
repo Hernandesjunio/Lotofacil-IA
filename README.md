@@ -109,6 +109,44 @@ dotnet publish "{workspace}/src/LotofacilMcp.Server/LotofacilMcp.Server.csproj" 
 }
 ```
 
+### Opção C — Rodando via ZIP (sem código fonte)
+
+Esta opção é o modo **produto**: o usuário instala um ZIP contendo o executável do servidor e configura o host MCP (Cursor) para iniciar esse executável em modo `stdio`.
+
+Decisão normativa: [ADR 0024](docs/adrs/0024-distribuicao-zip-mcp-stdio-http-sem-codigo-fonte-v1.md).
+
+#### Conteúdo esperado do ZIP (Windows)
+
+- `LotofacilMcp.Server.exe` (self-contained)
+- (opcional) `README.txt` com o quickstart
+
+#### Configuração do Cursor (exemplo `mcpServers`)
+
+1) Extraia o ZIP para uma pasta fixa, por exemplo `C:\LotofacilIA\`.
+
+2) Configure o host MCP para executar o binário extraído.
+
+Exemplo:
+
+```json
+{
+  "mcpServers": {
+    "lotofacil-ia": {
+      "command": "C:\\LotofacilIA\\LotofacilMcp.Server.exe",
+      "env": {
+        "Dataset__DrawsSourceUri": "file:///C:/dados/lotofacil/draws.json"
+      },
+      "args": ["--mcp-stdio"]
+    }
+  }
+}
+```
+
+Notas importantes:
+
+- `Dataset__DrawsSourceUri` é **obrigatória** (ver [ADR 0022](docs/adrs/0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md)). Sem ela, tools que dependem do histórico devem retornar `DATASET_UNAVAILABLE` (sem fallback).
+- Para validar a instalação rapidamente, chame `help` e `discover_capabilities` no chat.
+
 ### Auditoria da superfície MCP STDIO (métricas expostas)
 
 Para auditar a **allowlist real** de métricas expostas por `compute_window_metrics` nesta build (via `discover_capabilities`) e validar invariantes simples por janela (ex.: tamanho/shape/somas), veja o runner `tools/McpMetricAudit` documentado em:
@@ -189,6 +227,29 @@ dotnet run --project "{workspace}/src/LotofacilMcp.Server/LotofacilMcp.Server.cs
 ```
 
 Observação: `/mcp` é o endpoint MCP real (protocolo). Já `/tools/*` e `/mcp/tools/*` continuam sendo rotas REST de compatibilidade.
+
+### Execução via Docker (HTTP)
+
+Para deploy do modo **HTTP** em container, execute o mesmo servidor dentro de uma imagem Docker e exponha a porta do endpoint MCP real (ex.: `/mcp`).
+
+Regras importantes:
+
+- `Dataset__DrawsSourceUri` continua **obrigatória** (ver [ADR 0022](docs/adrs/0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md)).
+- Esta opção cobre **MCP HTTP** (por URL). Para **MCP STDIO no Cursor**, o caminho principal continua sendo a distribuição por ZIP (Opção C) — o Cursor normalmente executa um comando local.
+
+### Deploy HTTP em IIS / Azure / AWS / GCP (visão geral)
+
+Sim, é coberto no sentido de que o mesmo servidor pode ser hospedado como **serviço HTTP** em diferentes alvos (IIS, PaaS, container, etc.), desde que:
+
+- o alvo consiga expor um **endpoint MCP real** (ex.: `/mcp` e/ou `/sse`, conforme [ADR 0005](docs/adrs/0005-transporte-mcp-e-superficie-tools-v1.md));
+- você consiga configurar `Dataset__DrawsSourceUri` no ambiente do processo;
+- o alvo seja compatível com o perfil de conexão do transporte MCP HTTP (SSE/streamable). Quando isso não for adequado, prefira container/app service.
+
+Decisão normativa de deploy HTTP: [ADR 0025](docs/adrs/0025-deploy-http-docker-iis-cloud-para-mcp-http-v1.md).
+
+## Distribuição (ZIP) — visão geral
+
+Para uso sem código fonte (Cursor/hosts MCP), a distribuição recomendada é um ZIP com executável self-contained (por plataforma), conforme [ADR 0024](docs/adrs/0024-distribuicao-zip-mcp-stdio-http-sem-codigo-fonte-v1.md).
 
 ## Integração real com OpenAI (live)
 
