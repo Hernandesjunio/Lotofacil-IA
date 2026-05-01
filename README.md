@@ -286,12 +286,66 @@ $env:ASPNETCORE_URLS = "http://127.0.0.1:5000"
 
 ### Execução via Docker (HTTP)
 
-Para deploy do modo **HTTP** em container, execute o mesmo servidor dentro de uma imagem Docker e exponha a porta do endpoint MCP real (ex.: `/mcp`).
+O repositório inclui um `Dockerfile` para publicar a mesma aplicação ASP.NET Core em **modo HTTP**. Isso cobre o caso de **MCP HTTP real por URL**, conforme [ADR 0025](docs/adrs/0025-deploy-http-docker-iis-cloud-para-mcp-http-v1.md).
+
+#### 1) Build da imagem
+
+Na raiz do repositório:
+
+```bash
+docker build -t lotofacil-ia-http .
+```
+
+#### 2) Suba o container com dataset explícito
+
+Exemplo usando a fixture do repositório montada como volume somente leitura:
+
+```bash
+docker run --rm \
+  -p 5000:8080 \
+  -e ASPNETCORE_URLS=http://+:8080 \
+  -e Dataset__DrawsSourceUri=file:///data/synthetic_min_window.json \
+  -v "$(pwd)/tests/fixtures:/data:ro" \
+  lotofacil-ia-http
+```
+
+Nesse exemplo:
+
+- o container escuta em `http://+:8080`;
+- a porta `5000` da máquina host é mapeada para a porta `8080` do container;
+- o dataset é lido do path **dentro do container** (`file:///data/synthetic_min_window.json`), não do path original da máquina host.
+
+Se preferir usar dataset remoto, continue informando a variável obrigatória e troque apenas o valor:
+
+```bash
+docker run --rm \
+  -p 5000:8080 \
+  -e ASPNETCORE_URLS=http://+:8080 \
+  -e Dataset__DrawsSourceUri=https://exemplo.com/lotofacil.json \
+  lotofacil-ia-http
+```
+
+#### 3) URL do endpoint MCP HTTP
+
+Com o mapeamento acima, o endpoint MCP real fica em:
+
+- `http://localhost:5000/mcp`
+
+Regra de composição da URL:
+
+- host/porta externos: definidos por `docker run -p <porta-host>:8080`
+- path MCP obrigatório: `/mcp`
+- exemplo: `-p 8088:8080` resulta em `http://localhost:8088/mcp`
+
+#### Variáveis de ambiente relevantes
+
+- `Dataset__DrawsSourceUri` (**obrigatória**): fonte do dataset, conforme [ADR 0022](docs/adrs/0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md). Sem essa variável, não existe fallback para fixture interna e tools dependentes do histórico devem retornar `DATASET_UNAVAILABLE`.
+- `ASPNETCORE_URLS` (recomendada no container): URL de bind do servidor HTTP. O `Dockerfile` define `http://+:8080` como valor padrão para expor a aplicação dentro do container.
 
 Regras importantes:
 
-- `Dataset__DrawsSourceUri` continua **obrigatória** (ver [ADR 0022](docs/adrs/0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md)).
 - Esta opção cobre **MCP HTTP** (por URL). Para **MCP STDIO no Cursor**, o caminho principal continua sendo a distribuição por ZIP (Opção C) — o Cursor normalmente executa um comando local.
+- O endpoint MCP real continua sendo **`/mcp`**. As rotas `/tools/*` seguem como espelho REST/diagnóstico e não substituem o protocolo MCP.
 
 ### Deploy HTTP em IIS / Azure / AWS / GCP (visão geral)
 
