@@ -359,6 +359,9 @@ public sealed record DiscoverCapabilitiesResponse(
     [property: JsonPropertyName("deterministic_hash")] string DeterministicHash,
     [property: JsonPropertyName("build_profile")] string BuildProfile,
     [property: JsonPropertyName("dataset_requirements")] IReadOnlyList<string> DatasetRequirements,
+    // ADR 0023 (D2/D5) hotfixes: declare UX invariants for Content channel and knobs usage.
+    [property: JsonPropertyName("content_channel_rules")] IReadOnlyList<string> ContentChannelRules,
+    [property: JsonPropertyName("knobs_quick_ux")] IReadOnlyList<string> KnobsQuickUx,
     [property: JsonPropertyName("window_modes_supported")] IReadOnlyList<WindowModesByToolEnvelope> WindowModesSupported,
     [property: JsonPropertyName("tools")] IReadOnlyList<ToolCapabilityEnvelope> Tools,
     [property: JsonPropertyName("metrics")] MetricsCapabilitiesEnvelope Metrics,
@@ -771,10 +774,17 @@ public sealed class V0Tools
                 "- `verbosity`: `minimal` | `standard` | `full`\n" +
                 "- `include_explanations`: `false` para omitir explicações, `true` para incluir\n" +
                 "- `fields`: lista de campos (projeção) para trazer só o necessário no JSON\n\n" +
+                "**Recomendação para chat:** use `verbosity=\"standard\"` como padrão (chat-safe).\n\n" +
+                "- Em `standard`, o servidor mantém no canal **Content** o **resultado principal** (um resumo humano útil), sem despejar JSON.\n" +
+                "- Em `minimal`, o Content fica econômico (ainda útil), e o JSON completo continua no `StructuredContent`.\n" +
+                "- Em `full`, o Content pode ser mais detalhado, mas respostas realmente extensas ainda dependem de **projeção** (`fields`) e/ou **paginação** (quando suportada).\n\n" +
                 "**Exemplos prontos para pedir:**\n\n" +
                 "- **Econômico / só o essencial**: `verbosity=\"minimal\"`, `include_explanations=false`, e (se a tool suportar) `fields=[\"dataset_version\",\"tool_version\",\"deterministic_hash\",\"window\", ...]`.\n" +
-                "- **Normal (recomendado)**: `verbosity=\"standard\"`, `include_explanations=true`.\n" +
+                "- **Humano interativo (recomendado)**: `verbosity=\"standard\"`, `include_explanations=true`.\n" +
                 "- **Detalhado**: `verbosity=\"full\"`, `include_explanations=true` e, se o payload ficar grande, use `fields` e/ou paginação (`page`/`page_size`, quando suportado).\n\n" +
+                "**Quando pedir projeção/paginação (em vez de esperar um dump no Content):**\n\n" +
+                "- Se você quer “só o topo” ou “só o ranking”, peça `fields` reduzindo o JSON.\n" +
+                "- Se você quer “todos os itens”, use `verbosity=\"full\"` e paginação determinística quando disponível.\n\n" +
                 "Dica: você pode abrir o onboarding em `lotofacil-ia://help/getting-started@1.0.0`.\n";
 
             return new HelpResponse(
@@ -822,6 +832,34 @@ public sealed class V0Tools
             .OrderBy(static metric => metric, StringComparer.Ordinal)
             .ToArray();
 
+        var contentChannelRules = new[]
+        {
+            "Hotfix 23.5.2: O resultado principal da tool não deve ser omitido do Content (mesmo quando StructuredContent existir).",
+            "ADR 0023 (D2): Content é um resumo humano útil e não deve duplicar o JSON canônico do StructuredContent.",
+            "ADR 0023 (D4): Respostas extensas devem usar projeção (fields) e/ou paginação determinística (quando suportada), em vez de dump completo no Content."
+        };
+
+        var knobsQuickUx = effectiveVerbosity switch
+        {
+            "minimal" => new[]
+            {
+                "Hotfix 23.5.1: Default recomendado para chat é verbosity=standard (chat-safe).",
+                "Modo econômico: verbosity=minimal + include_explanations=false + (quando suportado) fields=[dataset_version, tool_version, deterministic_hash, window, ...]."
+            },
+            "full" => new[]
+            {
+                "Hotfix 23.5.1: Default recomendado para chat é verbosity=standard (chat-safe).",
+                "Humano interativo: verbosity=standard + include_explanations=true.",
+                "Detalhado: verbosity=full + include_explanations=true; para payload grande use fields e/ou paginação (page/page_size quando suportado)."
+            },
+            _ => new[]
+            {
+                "Hotfix 23.5.1: Default recomendado para chat é verbosity=standard (chat-safe).",
+                "Econômico: verbosity=minimal + include_explanations=false (+ fields quando suportado).",
+                "Detalhado: verbosity=full (+ fields/paginação quando suportado)."
+            }
+        };
+
         var response = new DiscoverCapabilitiesResponse(
             ToolVersion: DiscoverCapabilitiesToolVersion,
             DeterministicHash: string.Empty,
@@ -830,6 +868,8 @@ public sealed class V0Tools
             [
                 "requires Dataset__DrawsSourceUri configured (path or file://) to load draws dataset"
             ],
+            ContentChannelRules: contentChannelRules,
+            KnobsQuickUx: knobsQuickUx,
             WindowModesSupported:
             [
                 new WindowModesByToolEnvelope("get_draw_window", ["window_size+end_contest_id", "start_contest_id+end_contest_id"]),
@@ -1067,6 +1107,8 @@ public sealed class V0Tools
                 verbosity = effectiveVerbosity,
                 build_profile = response.BuildProfile,
                 dataset_requirements = response.DatasetRequirements,
+                content_channel_rules = response.ContentChannelRules,
+                knobs_quick_ux = response.KnobsQuickUx,
                 window_modes_supported = response.WindowModesSupported,
                 tools = response.Tools.Select(tool => new
                 {
