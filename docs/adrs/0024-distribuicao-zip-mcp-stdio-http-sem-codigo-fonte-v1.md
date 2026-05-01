@@ -85,6 +85,20 @@ O ZIP deve conter (por plataforma):
 
 O ZIP não deve incluir datasets por padrão (para evitar defaults ocultos e para preservar escolha explícita do operador). Se for útil, um dataset de exemplo pode ser distribuído como “sample”, mas deve ser **opt-in** e não selecionado automaticamente.
 
+### D5.1 — Processo de publish self-contained (por plataforma)
+
+O executável distribuído deve ser produzido via `dotnet publish` com:
+
+- `-c Release`
+- `-r <RID>` (Runtime Identifier)
+- `--self-contained true` (sem SDK instalado no destino)
+- output em pasta dedicada por RID (ex.: `artifacts/publish/<rid>/`)
+
+Scripts de referência no repositório (fonte de verdade operacional para a build local/CI):
+
+- `scripts/publish-self-contained.ps1`
+- `scripts/publish-self-contained.sh`
+
 ### D6 — Publicação do ZIP (onde, como versionar, como nomear)
 
 O ZIP deve ser publicado como asset versionado (ex.: em “Releases”), com convenção de nome que inclua plataforma e versão.
@@ -99,10 +113,10 @@ Convenção sugerida (não-breaking):
 
 Para evitar expectativa implícita, esta ADR deve declarar quais plataformas são suportadas na v1 do ZIP (mínimo) e quais são planejadas.
 
-Exemplo (ajustar conforme decisão do projeto):
+**Matriz v1 (produto ZIP / self-contained):**
 
-- Obrigatório v1: **Windows x64**
-- Planejado: Linux x64, macOS x64/arm64
+- **Obrigatório v1:** `win-x64` (Windows x64)
+- **Planejado (não garantido nesta entrega):** `linux-x64`, `osx-x64`, `osx-arm64`
 
 ## Fora de escopo (desta ADR)
 

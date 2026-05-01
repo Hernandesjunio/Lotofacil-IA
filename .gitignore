@@ -9,6 +9,7 @@ bin/
 obj/
 [Dd]ebug/
 [Rr]elease/
+artifacts/
 
 # Test artifacts
 template-kit/

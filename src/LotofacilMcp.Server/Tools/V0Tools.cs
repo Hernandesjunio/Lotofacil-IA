@@ -720,7 +720,11 @@ public sealed class V0Tools
             new Sha256Hasher());
 
         _drawsSourceUri = drawsSourceUri;
-        _contentRootPath = string.IsNullOrWhiteSpace(contentRootPath) ? Directory.GetCurrentDirectory() : contentRootPath;
+        // For distributed (self-contained) builds, hosts may set an arbitrary working directory.
+        // Resolve relative dataset paths against the executable base directory by default.
+        _contentRootPath = string.IsNullOrWhiteSpace(contentRootPath)
+            ? AppContext.BaseDirectory
+            : contentRootPath;
         _httpSnapshotCache = httpSnapshotCache;
     }
 

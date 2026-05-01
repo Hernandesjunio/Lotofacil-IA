@@ -72,7 +72,9 @@ public static class ServiceCollectionExtensions
             var sourceUri = datasetOptions.DrawsSourceUri;
             return new V0Tools(
                 drawsSourceUri: sourceUri,
-                contentRootPath: hostEnvironment.ContentRootPath,
+                // Hosts (Cursor/MCP) may set an arbitrary working directory.
+                // For the distributed self-contained executable, resolve relative paths against the executable directory.
+                contentRootPath: AppContext.BaseDirectory,
                 httpSnapshotCache: httpSnapshotCache);
         });
 
