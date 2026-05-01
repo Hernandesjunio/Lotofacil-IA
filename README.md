@@ -229,7 +229,17 @@ Regras:
 
 ## Como executar no host MCP (HTTP)
 
-Para clientes MCP que conectam por URL, execute o servidor web normalmente e aponte para o endpoint MCP streamable:
+### Endpoint MCP HTTP mínimo (normativo)
+
+- **Endpoint MCP HTTP mínimo (v1)**: **`/mcp`**
+- **O que ele é**: **MCP HTTP real (protocolo MCP)** em transporte *streamable HTTP* (ver [ADR 0005](docs/adrs/0005-transporte-mcp-e-superficie-tools-v1.md) e [ADR 0025](docs/adrs/0025-deploy-http-docker-iis-cloud-para-mcp-http-v1.md)).
+- **O que ele NÃO é**: rotas HTTP REST que “espelham” o JSON do contrato (isso é compatibilidade/depuração e **não** implementa `tools/list` / `tools/call` do MCP).
+
+Em outras palavras: o host MCP deve apontar para **`http://<host>:<porta>/mcp`** (e não para `/tools/*`).
+
+### Como iniciar o servidor em modo HTTP
+
+Para clientes MCP que conectam por URL, execute o servidor web normalmente (sem `--mcp-stdio`) e aponte para o endpoint MCP streamable (`/mcp`).
 
 1) Inicie o servidor definindo `Dataset__DrawsSourceUri` no ambiente do processo.
 
@@ -252,7 +262,12 @@ dotnet run --project "{workspace}/src/LotofacilMcp.Server/LotofacilMcp.Server.cs
 }
 ```
 
-Observação: `/mcp` é o endpoint MCP real (protocolo). Já `/tools/*` e `/mcp/tools/*` continuam sendo rotas REST de compatibilidade.
+Observações importantes (sem ambiguidade):
+
+- **`/mcp`** é o endpoint **MCP HTTP real** (protocolo: `tools/list`, `tools/call`).
+- **`/tools/*`** são rotas **REST espelhadas (compatibilidade/depuração)**, não MCP (ver ADR 0005).
+- **`/mcp/tools/*`** (quando existir) continua sendo **REST espelhado com prefixo confuso** e não deve ser descrito como “MCP/HTTP” (ver ADR 0005).
+- **`Dataset__DrawsSourceUri` é obrigatória** e **não existe fallback/fixtures**: sem ela, tools que dependem do histórico devem retornar `DATASET_UNAVAILABLE` (ver [ADR 0022](docs/adrs/0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md)).
 
 ### Execução do binário (ZIP) em modo HTTP (sem flags)
 
