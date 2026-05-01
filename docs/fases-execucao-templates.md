@@ -96,6 +96,8 @@ Subetapas Hotfix:
 2. **Hotfix 23.5.2** — Declarar em discovery que o resultado principal não deve ser omitido do `Content`.
 3. **Hotfix 23.5.3** — Incluir exemplos que distingam uso econômico (`minimal`) de uso humano interativo (`standard/full`).
 4. **Hotfix 23.5.4** — Explicar os limites: `standard` melhora a utilidade do `Content`, mas respostas extensas continuam dependendo de `fields` e/ou paginação.
+5. **Hotfix 23.5.5** — Fechar quickstart do `help`: `help` deve orientar explicitamente como obter o último concurso com `get_draw_window(window_size=1)`, como começar com `compute_window_metrics` e quais campos mínimos de rastreabilidade preservar.
+6. **Hotfix 23.5.6** — Fechar constraints operacionais em `discover_capabilities`: para tools de janela, discovery deve declarar constraints suficientes para montar o request sem tentativa/erro evitável (ex.: `window_size > 0`, `start_contest_id` exige `end_contest_id`, coerência entre `window_size` e `start/end`).
 
 Referências obrigatórias:
 - docs/adrs/0023-controle-de-verbosidade-projecao-e-canais-mcp-para-eficiencia-v1.md
@@ -106,6 +108,8 @@ Critério de pronto:
 - Um leigo consegue pedir `minimal`/`full` com poucas tentativas e sem tentativa/erro de parâmetros.
 - Um leigo entende que `standard` preserva a resposta principal no canal `Content`.
 - Um leigo também entende quando precisa pedir projeção/paginação em vez de esperar dump completo no `Content`.
+- `help` deixa explícito o fluxo “último concurso” + “métricas básicas” + “campos mínimos”.
+- `discover_capabilities` deixa explícitas as constraints operacionais mínimas para tools de janela.
 ```
 
 ## Fase 23.6 — Evidências e testes (contrato + determinismo + custo)
@@ -124,6 +128,8 @@ Subetapas Hotfix:
 4. **Hotfix 23.6.4** — Fixar massa estática e revisável: usar fixtures/goldens versionados no repositório, sem dataset vivo ou “último concurso” dinâmico.
 5. **Hotfix 23.6.5** — Declarar insumo por cenário: cada teste deve informar fixture, request e saída esperada para revisão humana prévia.
 6. **Hotfix 23.6.6** — Para `Content`, preferir asserts fechados de presença/ausência de fatos obrigatórios e anti-padrões, evitando depender de texto livre gerado dinamicamente.
+7. **Hotfix 23.6.7** — Cobrir meta-tools com onboarding verificável: `help` não pode ser só índice administrativo; o `Content` precisa conter o quickstart mínimo auditável.
+8. **Hotfix 23.6.8** — Cobrir discovery com constraints verificáveis: `discover_capabilities` deve provar por teste que expõe constraints operacionais relevantes de janela, não apenas nomes de parâmetros.
 
 Referências obrigatórias:
 - docs/adrs/0023-controle-de-verbosidade-projecao-e-canais-mcp-para-eficiencia-v1.md
@@ -166,6 +172,14 @@ Matriz mínima de cenários:
 6. `HF23-M06` — anti-esvaziamento em `full`.
    - Reaproveitar `HF23-M01`, `HF23-M03` e `HF23-M04` com `verbosity = "full"`
    - Content esperado: continua trazendo o resultado principal; anti-padrão proibido: `"See structured payload for ..."` como resposta suficiente.
+7. `HF23-M07` — `help`, quickstart operacional.
+   - Request: `{}`
+   - Structured esperado: `getting_started_resource_uri`, `index_resource_uri`, `quick_start_markdown`, `templates[]`
+   - Content esperado: deve conter `get_draw_window(window_size=1)`, uma chamada inicial de `compute_window_metrics` e os campos `dataset_version`, `tool_version`, `deterministic_hash` e `window`.
+8. `HF23-M08` — `discover_capabilities`, constraints de janela.
+   - Request: `{}` ou `{ "verbosity": "standard" }`
+   - Structured esperado: `tools[]` inclui `get_draw_window` com constraints operacionais explícitas
+   - Content/shape esperado: não basta listar `window_size`/`start_contest_id`/`end_contest_id`; deve declarar o atalho `window_size=1`, a exigência de `end_contest_id` com `start_contest_id` e a coerência entre `window_size` e `start/end`.
 
 Artefatos recomendados:
 - `tests/fixtures/golden/phase23/get-draw-window.window1-end3.standard.golden.json`
@@ -187,7 +201,7 @@ Implemente apenas o fechamento do contrato operacional da ADR 0024 (sem repo):
 
 - Fixar o modo CLI mínimo do binário distribuído: `--mcp-stdio`.
 - Definir o comportamento padrão do executável (sem flags) no README para evitar ambiguidade.
-- Reforçar que discovery operacional vem de `tools/list` + tools meta (`help`, `discover_capabilities`) — não de descritores externos.
+- Reforçar que discovery operacional vem de `tools/list` + tools meta (`help`, `discover_capabilities`) + onboarding versionado por resource quando aplicável — não de descritores externos.
 - Reforçar que `Dataset__DrawsSourceUri` é obrigatório e não existe fallback/fixtures.
 
 Referências obrigatórias:
@@ -226,6 +240,10 @@ Implemente apenas o empacotamento ZIP v1 da ADR 0024:
   - configuração do host MCP (ex.: Cursor) para STDIO,
   - execução em modo HTTP (quando suportado),
   - env vars obrigatórias (dataset) e exemplos.
+- Preservar a mesma experiência mínima de onboarding do ambiente com repo:
+  - `help` com quickstart textual útil,
+  - `discover_capabilities` com constraints operacionais relevantes,
+  - `lotofacil-ia://help/getting-started@1.0.0` acessível quando o host suportar resources.
 - Definir convenção de nome do ZIP (plataforma + versão).
 - Definir política de dataset no ZIP (não incluir por padrão; sample apenas opt-in).
 
@@ -244,6 +262,7 @@ Implemente apenas a verificação de aceite da ADR 0024 no cenário sem repo:
 
 - Validar que `tools/list` funciona iniciando o servidor via executável com `--mcp-stdio`.
 - Validar que `help` e `discover_capabilities` funcionam sem repo.
+- Validar que o resource `lotofacil-ia://help/getting-started@1.0.0` permanece acessível sem repo quando o host suportar resources.
 - Validar que, sem `Dataset__DrawsSourceUri`, tools dependentes do histórico retornam `DATASET_UNAVAILABLE` (sem fallback).
 
 Referências obrigatórias:
@@ -264,6 +283,7 @@ Implemente apenas o fechamento do endpoint MCP HTTP mínimo (ADR 0025):
 - Definir no README o endpoint MCP HTTP mínimo (ex.: `/mcp`) e como iniciar o servidor em modo HTTP.
 - Garantir alinhamento com ADR 0005: MCP HTTP é protocolo MCP real (não REST espelhado).
 - Reforçar: `Dataset__DrawsSourceUri` é obrigatório e não existe fallback/fixtures.
+- Garantir que a documentação operacional preserve a mesma distinção entre tools meta e onboarding versionado acessível por resource quando o host suportar resources.
 
 Referências obrigatórias:
 - docs/adrs/0025-deploy-http-docker-iis-cloud-para-mcp-http-v1.md
@@ -297,6 +317,7 @@ Implemente apenas o recorte IIS da ADR 0025:
 
 - Documentar publicação/hospedagem ASP.NET Core atrás do IIS (reverse proxy).
 - Garantir que o endpoint exposto é MCP real e permanece compatível com host MCP (conexão e `tools/list`/`tools/call`).
+- Garantir que `help`, `discover_capabilities` e, quando suportado pelo host, o resource `lotofacil-ia://help/getting-started@1.0.0` continuam acessíveis com a mesma semântica operacional.
 
 Referências obrigatórias:
 - docs/adrs/0025-deploy-http-docker-iis-cloud-para-mcp-http-v1.md
@@ -328,6 +349,8 @@ Critério de pronto:
 Implemente apenas a verificação de aceite da ADR 0025:
 
 - Validar conexão de um host MCP via endpoint HTTP mínimo (definido no README) com `tools/list` e `tools/call`.
+- Validar que `help` e `discover_capabilities` preservam no HTTP a mesma semântica operacional esperada no stdio.
+- Validar que o onboarding versionado (`lotofacil-ia://help/getting-started@1.0.0`) continua acessível quando o host suportar resources.
 - Validar que, sem `Dataset__DrawsSourceUri`, tools dependentes do histórico retornam `DATASET_UNAVAILABLE`.
 
 Referências obrigatórias:
