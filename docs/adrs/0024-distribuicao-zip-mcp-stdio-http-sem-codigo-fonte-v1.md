@@ -48,7 +48,8 @@ Para o usuário final (sem código fonte), a descoberta deve funcionar com:
 
 - `tools/list` (protocolo MCP) para descobrir tools instaladas;
 - tool `help` para onboarding e índice de templates/resources (ver ADR 0009);
-- tool `discover_capabilities` para discovery técnico de capacidades reais da build (ver ADR 0011).
+- tool `discover_capabilities` para discovery técnico de capacidades reais da build (ver ADR 0011);
+- resource `lotofacil-ia://help/getting-started@1.0.0` para quickstart versionado, agnóstico ao host e sem dependência do repositório.
 
 Observação: arquivos JSON de “descrição de tool” podem existir no repositório ou em ambientes de desenvolvimento como **apoio** (ex.: lint/IDE), mas **não** são requisito de execução do produto distribuído.
 
@@ -82,6 +83,12 @@ O ZIP deve conter (por plataforma):
   - configuração do host MCP (Cursor) para STDIO;
   - execução em modo HTTP;
   - variáveis de ambiente obrigatórias (dataset).
+
+O conteúdo distribuído deve preservar a mesma experiência mínima de onboarding/documentação operacional do ambiente com repo:
+
+- `help` com quickstart textual útil;
+- `discover_capabilities` com constraints operacionais relevantes da build;
+- `getting-started@1.0.0` acessível via resource quando o host suportar resources.
 
 O ZIP não deve incluir datasets por padrão (para evitar defaults ocultos e para preservar escolha explícita do operador). Se for útil, um dataset de exemplo pode ser distribuído como “sample”, mas deve ser **opt-in** e não selecionado automaticamente.
 
@@ -144,9 +151,10 @@ Considera-se esta ADR implementada quando:
 1. Existe um ZIP publicado (Release) contendo um executável self-contained.
 2. Um usuário sem o repo consegue:
    - configurar um `mcpServers` no Cursor apontando para o executável e `--mcp-stdio`;
-   - executar `help` e `discover_capabilities` com sucesso.
+   - executar `help` e `discover_capabilities` com sucesso;
+   - obter o quickstart versionado em `lotofacil-ia://help/getting-started@1.0.0` quando o host suportar resources.
 3. Sem `Dataset__DrawsSourceUri`, tools que dependem do histórico retornam `DATASET_UNAVAILABLE` (sem fallback).
-4. O ZIP (produto STDIO) não depende de paths do workspace/editor nem de descritores externos para discovery: a descoberta ocorre via `tools/list` + tools meta (`help`, `discover_capabilities`).
+4. O ZIP (produto STDIO) não depende de paths do workspace/editor nem de descritores externos para discovery: a descoberta ocorre via `tools/list` + tools meta (`help`, `discover_capabilities`) + resource versionado de onboarding quando aplicável.
 
 ## Atualizações de documentação (normativas)
 
@@ -157,6 +165,6 @@ Considera-se esta ADR implementada quando:
   - seção “Sem repo” que feche:
     - **modo CLI mínimo** do ZIP (`--mcp-stdio`);
     - **comportamento default** do executável sem flags;
-    - **discovery operacional** via `tools/list` + tools meta (`help`, `discover_capabilities`), sem depender de descritores externos;
+    - **discovery operacional** via `tools/list` + tools meta (`help`, `discover_capabilities`) e onboarding versionado por resource, sem depender de descritores externos;
     - **dataset obrigatório** via `Dataset__DrawsSourceUri`, sem fallback/fixtures.
 

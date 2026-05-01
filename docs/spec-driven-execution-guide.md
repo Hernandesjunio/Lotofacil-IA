@@ -92,6 +92,8 @@ sem quebrar invariantes do contrato e do dataset.
 2. **Hotfix 23.5.2 — Declarar expectativa de utilidade:** `help` e `discover_capabilities` devem deixar claro que o resultado principal não será omitido no canal `Content`.
 3. **Hotfix 23.5.3 — Reduzir ambiguidade operacional:** exemplos devem mostrar quando usar `minimal` para economia e quando usar `standard/full` para obter resposta humana suficiente.
 4. **Hotfix 23.5.4 — Declarar limites do hotfix:** discovery deve deixar claro que utilidade adicional no `Content` não substitui `fields`/paginação em respostas extensas.
+5. **Hotfix 23.5.5 — Fechar quickstart do `help`:** `help` deve orientar explicitamente como obter o último concurso com `get_draw_window(window_size=1)`, como começar com `compute_window_metrics` e quais campos mínimos de rastreabilidade preservar.
+6. **Hotfix 23.5.6 — Fechar constraints operacionais em `discover_capabilities`:** para tools de janela, discovery deve declarar constraints suficientes para montar o request sem tentativa/erro evitável (ex.: `window_size > 0`, `start_contest_id` exige `end_contest_id`, coerência entre `window_size` e `start/end`).
 
 **Pronto quando:** um leigo consegue pedir `minimal/full` com poucas tentativas e entende que `standard` preserva o resultado principal.
 
@@ -111,6 +113,8 @@ sem quebrar invariantes do contrato e do dataset.
 4. **Hotfix 23.6.4 — Massa estática e revisável:** todos os cenários do hotfix devem usar fixtures/goldens versionados no repositório; sem dataset vivo, sem “último concurso” dinâmico e sem massa sintetizada em tempo de execução pela IA.
 5. **Hotfix 23.6.5 — Insumo explícito por cenário:** cada teste do hotfix deve declarar request de entrada, fixture usada e saída esperada suficiente para revisão humana antes da execução.
 6. **Hotfix 23.6.6 — Anti-fragilidade textual:** para `Content`, preferir asserções de presença/ausência de fatos obrigatórios e anti-padrões; usar golden textual literal apenas quando o wording fizer parte da decisão semântica.
+7. **Hotfix 23.6.7 — Meta-tools com onboarding verificável:** `help` deve provar por teste que não é só índice administrativo; o `Content` precisa conter o quickstart mínimo auditável.
+8. **Hotfix 23.6.8 — Discovery com constraints verificáveis:** `discover_capabilities` deve provar por teste que expõe constraints operacionais relevantes de janela, não apenas nomes de parâmetros.
 
 **Pronto quando:** regressões de duplicação, utilidade mínima ou knobs/hashing quebram testes.
 
@@ -153,6 +157,14 @@ sem quebrar invariantes do contrato e do dataset.
 6. `HF23-M06` — anti-esvaziamento em `full`.
    - Reaproveita `HF23-M01`, `HF23-M03` e `HF23-M04` com `verbosity = "full"`
    - Content esperado: mais detalhado, mas ainda contendo o resultado principal; proibido `"See structured payload for ..."` como resposta suficiente.
+7. `HF23-M07` — `help`, quickstart operacional.
+   - Request: `{}`
+   - Structured esperado: `getting_started_resource_uri`, `index_resource_uri`, `quick_start_markdown`, `templates[]`
+   - Content esperado: deve conter `get_draw_window(window_size=1)`, uma chamada inicial de `compute_window_metrics` e os campos `dataset_version`, `tool_version`, `deterministic_hash` e `window`.
+8. `HF23-M08` — `discover_capabilities`, constraints de janela.
+   - Request: `{}` ou `{ "verbosity": "standard" }`
+   - Structured esperado: `tools[]` inclui `get_draw_window` com constraints operacionais explícitas
+   - Content/shape esperado: não basta listar `window_size`/`start_contest_id`/`end_contest_id`; deve declarar o atalho `window_size=1`, a exigência de `end_contest_id` com `start_contest_id` e a coerência entre `window_size` e `start/end`.
 
 **Artefatos recomendados para materialização da matriz:**
 
@@ -207,6 +219,7 @@ sem quebrar invariantes do contrato e do dataset.
 
 - Validar que `tools/list` funciona iniciando o servidor via executável com `--mcp-stdio`.
 - Validar que `help` e `discover_capabilities` funcionam sem repo.
+- Validar que o resource `lotofacil-ia://help/getting-started@1.0.0` permanece acessível sem repo quando o host suportar resources.
 - Validar que, sem `Dataset__DrawsSourceUri`, tools dependentes do histórico retornam `DATASET_UNAVAILABLE` (sem fallback).
 
 **Pronto quando:** critérios de aceite da ADR 0024 são atendidos no cenário sem repo.
@@ -257,6 +270,8 @@ sem quebrar invariantes do contrato e do dataset.
 **Objetivo:** validar que o deploy HTTP atende o mínimo.
 
 - Validar conexão de um host MCP via endpoint HTTP mínimo (definido no README) com `tools/list` e `tools/call`.
+- Validar que `help` e `discover_capabilities` preservam no HTTP a mesma semântica operacional esperada no stdio.
+- Validar que o onboarding versionado (`lotofacil-ia://help/getting-started@1.0.0`) continua acessível quando o host suportar resources.
 - Validar que, sem `Dataset__DrawsSourceUri`, tools dependentes do histórico retornam `DATASET_UNAVAILABLE`.
 
 **Pronto quando:** critérios de aceite da ADR 0025 são atendidos no(s) alvo(s) escolhidos (container/IIS/cloud).

@@ -163,12 +163,14 @@ Cada família de [prompt-catalog.md](prompt-catalog.md) deve mapear para pelo me
 
 ## Fase 11 — Evidências do recorte V1 entregue (MCP + tools implementadas)
 
-Este fechamento cobre o recorte V1 efetivamente implementado no repositório: MCP `stdio` e MCP HTTP (`/mcp`, streamable) com paridade semântica contra HTTP REST para as tools já materializadas.
+Este fechamento cobre o recorte V1 efetivamente implementado no repositório: MCP `stdio` e MCP HTTP (`/mcp`, streamable) com paridade semântica contra HTTP REST para as tools já materializadas, incluindo as meta-tools de onboarding/discovery.
 
 ### Escopo entregue e transportes
 
 | Tool do contrato | HTTP `/tools/*` | HTTP `/mcp/tools/*` (REST **deprecado**) | MCP `stdio` | MCP HTTP `/mcp` | Status no recorte |
 |------------------|------------------|----------------------|-------------|------------------|-------------------|
+| `help` | Sim | Sim (deprecado) | Sim | Sim | Entregue (meta/onboarding) |
+| `discover_capabilities` | Sim | Sim (deprecado) | Sim | Sim | Entregue (meta/discovery) |
 | `get_draw_window` | Sim | Sim (deprecado) | Sim | Sim | Entregue (onda A) |
 | `compute_window_metrics` | Sim | Sim (deprecado) | Sim | Sim | Entregue (onda A) |
 | `analyze_indicator_stability` | Sim | Sim (deprecado) | Sim | Sim | Entregue (onda B, recorte inicial) |
@@ -193,6 +195,7 @@ Rastreabilidade principal:
 - Domínio e invariantes base: `tests/LotofacilMcp.Domain.Tests/`.
 - Casos de uso e validação cross-field: `tests/LotofacilMcp.Infrastructure.Tests/`.
 - Contrato e paridade MCP/HTTP (`tools/list` + `tools/call`) para stdio e `/mcp`: `tests/LotofacilMcp.ContractTests/McpTransportParityIntegrationTests.cs`.
+- Meta-tools e onboarding/discovery: o mesmo runner de paridade deve cobrir `help`, `discover_capabilities` e leitura do resource `lotofacil-ia://help/getting-started@1.0.0` quando o host de teste suportar resources.
 
 ## GAPS de contrato, coerência cruzada e interação pares–entropia (ADR 0006)
 
@@ -220,6 +223,17 @@ Este recorte fecha apenas a validação final de paridade e evidências da tool 
 
 | Critério do ADR 0005 | Evidência no recorte | Situação |
 |----------------------|----------------------|----------|
-| 1. Transporte MCP com testes de `tools/list` e `tools/call` para tools em escopo | `McpTransportParityIntegrationTests` valida descoberta e chamadas para as 3 tools entregues | Atendido |
+| 1. Transporte MCP com testes de `tools/list` e `tools/call` para tools em escopo | `McpTransportParityIntegrationTests` valida descoberta e chamadas para as tools analíticas e meta-tools entregues | Atendido |
 | 2. Paridade semântica MCP vs HTTP em sucesso/erro de contrato | `McpTransportParityIntegrationTests` usa `JsonElement.DeepEquals` para os dois caminhos | Atendido |
 | 3. Ondas B/C seguem execução spec-driven por tool | `analyze_indicator_stability` entrou com testes; demais tools de B/C permanecem fora deste fechamento | Parcial por escopo, sem declarar V1 completa |
+
+## Hotfix documental — ADR 0023 (`help` / `discover_capabilities` / onboarding)
+
+Esta bateria fecha o drift de clareza que motivou os hotfixes documentais: a implementação atual tornou `help` e `getting-started` mais operacionais e passou a expor constraints de janela em `discover_capabilities`; os testes de contrato devem refletir isso explicitamente.
+
+| Cenário | Objetivo | Referência mínima |
+|---------|----------|-------------------|
+| **HF23-DOC-01 — `help` com quickstart útil** | Provar que `help` não é só índice: deve mencionar `get_draw_window(window_size=1)`, uma chamada inicial de `compute_window_metrics` e os campos `dataset_version`, `tool_version`, `deterministic_hash`, `window`. | `McpTransportParityIntegrationTests` |
+| **HF23-DOC-02 — resource `getting-started` alinhado** | `resources/read` do URI `lotofacil-ia://help/getting-started@1.0.0` deve conter o atalho para o último concurso, métricas iniciais e erros básicos (`UNKNOWN_METRIC`, `INVALID_REQUEST`, `DATASET_UNAVAILABLE`). | `McpTransportParityIntegrationTests` + resource versionado |
+| **HF23-DOC-03 — discovery de constraints de janela** | `discover_capabilities` deve declarar, para `get_draw_window`, `window_size` como inteiro positivo, o atalho `window_size=1`, a exigência de `end_contest_id` quando `start_contest_id` vier, e a constraint de coerência entre `window_size` e `start/end`. | `Phase23DiscoverCapabilitiesContractTests` |
+| **HF23-DOC-04 — semântica cross-transport** | O mesmo conteúdo essencial de `help` e `getting-started` deve permanecer coerente entre stdio, MCP HTTP e HTTP REST espelhado. | `McpTransportParityIntegrationTests` |

@@ -6,6 +6,8 @@
 
 Documento pedagógico complementar ao catálogo técnico em [metric-catalog.md](metric-catalog.md). Aqui cada métrica tem **definição**, **o que observa** (interpretação em linguagem simples) e **exemplo de uso**. Fórmulas detalhadas, tipagem, versões e **léxico das colunas da Tabela 1** (Categoria, Status, Shape etc.) permanecem no catálogo.
 
+**Nota de alinhamento com onboarding/discovery:** definições curtas usadas em `help`, `getting-started@1.0.0` e resumos operacionais devem ser tratadas como portas de entrada leigo-first para este glossário e para o catálogo, não como fonte alternativa de semântica.
+
 **Nota sobre predição:** todas descrevem padrões no histórico ou estrutura de um jogo; nenhuma implica acerto futuro.
 
 **Nota sobre metadados do concurso (não métricas):** campos como `winners_15` e `has_winner_15` (ganhadores de 15 acertos no concurso histórico) pertencem ao `Draw` e são expostos em consultas de janela quando solicitados; não são `MetricValue` e não entram neste glossário de métricas (ver [ADR 0022](adrs/0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md)).
@@ -479,5 +481,6 @@ Texto padrão para o **modo resumo** ([ADR 0021 D5](adrs/0021-apresentacao-resum
 ## Manutenção
 
 - **Agregados canônicos (histogramas/padrões/matrizes):** não são “métricas novas” do catálogo. São derivações determinísticas sobre métricas canônicas, expostas pela tool `summarize_window_aggregates` conforme [mcp-tool-contract.md](mcp-tool-contract.md) e [ADR 0007](adrs/0007-agregados-canonicos-de-janela-v1.md). Isso evita acoplar o contrato a formatos de gráfico e garante ordenação/desempates canônicos no servidor.
+- **Help/resources:** se uma definição curta for reaproveitada em `help` ou no resource `getting-started`, ela deve continuar semanticamente coerente com este glossário e com o [metric-catalog.md](metric-catalog.md); ajustes editoriais no onboarding não reabrem fórmula nem versão.
 - Alterações de fórmula, versão ou tipo: editar primeiro [metric-catalog.md](metric-catalog.md), depois alinhar entradas aqui se a interpretação mudar.
 - Métricas novas: adicionar linha nas tabelas do catálogo e seção correspondente neste glossário.

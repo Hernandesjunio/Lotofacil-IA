@@ -66,7 +66,9 @@ Nota operacional: quando `Dataset__DrawsSourceUri` contiver credenciais (ex.: to
    - container (quando aplicável), e
    - IIS (quando aplicável).
 2. O endpoint MCP HTTP mínimo (definido no README) aceita conexão de um host MCP e permite `tools/list` e `tools/call`.
-3. Sem `Dataset__DrawsSourceUri`, tools dependentes do histórico retornam `DATASET_UNAVAILABLE`.
+3. As meta-tools `help` e `discover_capabilities` preservam no MCP HTTP a mesma semântica operacional esperada no stdio.
+4. Quando o host suportar resources, o onboarding versionado `lotofacil-ia://help/getting-started@1.0.0` continua acessível no modo HTTP.
+5. Sem `Dataset__DrawsSourceUri`, tools dependentes do histórico retornam `DATASET_UNAVAILABLE`.
 
 ## Fora de escopo
 

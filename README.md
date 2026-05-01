@@ -81,7 +81,7 @@ Para clientes MCP desktop (ex.: Cursor), execute o servidor em modo `stdio`.
 }
 ```
 
-Nesse modo o host MCP consegue descobrir e invocar as tools atualmente entregues no recorte V1 (`get_draw_window`, `compute_window_metrics` e `analyze_indicator_stability`) com a mesma semântica JSON usada nos POSTs HTTP `/tools/*`.
+Nesse modo o host MCP consegue descobrir e invocar as tools analíticas atualmente entregues no recorte V1 (`get_draw_window`, `compute_window_metrics` e `analyze_indicator_stability`) e também as meta-tools de onboarding/discovery (`help`, `discover_capabilities`), com a mesma semântica JSON usada nos POSTs HTTP `/tools/*`.
 
 ### Opção B — Rodando um executável publicado (`dotnet publish`)
 
@@ -183,9 +183,17 @@ Para auditar a **allowlist real** de métricas expostas por `compute_window_metr
 
 Para onboarding e discovery, a instância MCP expõe:
 
-- a tool `help` (índice curto de templates + markdown do índice)
-- o resource `lotofacil-ia://help/getting-started@1.0.0` (guia curto “por onde começo / quais opções”)
+- a tool `help` (onboarding operacional curto + índice de templates/resources)
+- o resource `lotofacil-ia://help/getting-started@1.0.0` (guia curto de primeiro uso: “por onde começo”, “como pegar o último concurso”, “quais métricas básicas pedir”)
 - o índice de templates em `lotofacil-ia://prompts/index@1.0.0`
+
+Fluxo rápido recomendado:
+
+1. Para ancorar no concurso mais recente disponível, use `get_draw_window(window_size=1)`.
+2. Para começar com métricas básicas, use `compute_window_metrics(window_size=20, metrics=[{"name":"frequencia_por_dezena"},{"name":"atraso_por_dezena"},{"name":"pares_no_concurso"}])`.
+3. Em respostas de sucesso, preserve pelo menos `dataset_version`, `tool_version`, `deterministic_hash` e `window`.
+
+Quando houver dúvida sobre parâmetros, constraints de janela ou superfície real da build, consulte `discover_capabilities`.
 
 ## Dataset: `Dataset:DrawsSourceUri` (local ou URL)
 
@@ -392,7 +400,9 @@ O aceite operacional do deploy IIS deve confirmar exatamente o que a ADR 0025 pe
 
 1. o host consegue conectar na URL MCP publicada (`.../mcp`);
 2. `tools/list` funciona nessa conexão;
-3. `tools/call` funciona nessa mesma conexão para pelo menos uma tool em escopo.
+3. `tools/call` funciona nessa mesma conexão para pelo menos uma tool em escopo;
+4. `help` e `discover_capabilities` preservam a mesma semântica operacional esperada no stdio;
+5. `resources/read` do onboarding versionado (`lotofacil-ia://help/getting-started@1.0.0`) continua acessível quando o host suportar resources.
 
 No repositório, a evidência automatizada que trava esse comportamento do endpoint MCP HTTP é a suíte `tests/LotofacilMcp.ContractTests/McpTransportParityIntegrationTests.cs`, que valida `tools/list` e `tools/call` em **MCP HTTP `/mcp`** com paridade semântica contra o HTTP REST espelhado.
 

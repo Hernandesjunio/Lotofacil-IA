@@ -88,11 +88,15 @@ Proposto.
 **Decisão:** Para reduzir tentativa/erro e permitir uso por leigos:
 
 - `help` deve explicar, em linguagem simples, como pedir `minimal/standard/full` e quando usar.
+- `help` deve também resolver o **primeiro uso operacional** sem exigir `verbosity="full"` nem leitura imediata do `StructuredContent`: como obter o último concurso, como começar com métricas básicas e quais campos mínimos de rastreabilidade preservar.
 - `discover_capabilities` deve declarar:
   - quais tools suportam `verbosity/include_explanations/fields`;
   - valores aceitos (enums) e defaults recomendados;
   - avisos de custo (“para respostas curtas no chat, use minimal”);
   - aviso de utilidade: `standard` é o default recomendado para chat e não deve ocultar o resultado principal.
+  - constraints operacionais relevantes para reduzir tentativa/erro, incluindo regras de janela por tool quando a build as expuser (ex.: `window_size=1` para ancorar no concurso mais recente, exigência de `end_contest_id` quando `start_contest_id` vier e coerência entre `window_size` e `start/end`).
+
+**Hotfix de clarificação pós-implementação:** no caso de `help`, a utilidade mínima não é satisfeita por um simples índice de URIs/templates; o conteúdo deve incluir um quickstart textual auditável. No caso de `discover_capabilities`, a utilidade mínima não é satisfeita apenas por enums genéricos; a resposta deve conter as constraints operacionais necessárias para montar requests válidos sem tentativa/erro evitável.
 
 **Alinhamento:** esta decisão complementa o modelo híbrido de descoberta do [ADR 0008](0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md) (instância/build via tool + norma via docs/resources).
 
@@ -128,6 +132,8 @@ Proposto.
 | `HF23-M04` | `summarize_window_patterns` com saída estatística curta e verificável | `tests/fixtures/synthetic_min_window.json` | `{ "window_size": 5, "end_contest_id": 1005, "features": [{ "name": "pares_no_concurso" }], "coverage_threshold": 0.8, "range_method": "iqr", "verbosity": "standard" }` | `summaries[0].metric_name = "pares_no_concurso"`, `mode = 8`, `q1 = 8`, `median = 8`, `q3 = 9`, `iqr = 1`, `coverage_observed = 0.6`, `coverage_threshold_met = false` | Deve conter o nome da feature e pelo menos os resultados salientes `mode/median = 8`, `iqr = 1` e/ou `coverage = 0.6`; não pode ocultar todos os números relevantes. |
 | `HF23-M05` | `summarize_window_aggregates` com agregados pequenos e revisáveis | `tests/fixtures/golden/phase22/summarize-window-aggregates.canonical-small-window.golden.json` como referência de saída; fixture do cenário conforme `phase22` | Request canônico igual ao cenário pequeno já coberto em `Phase22SummarizeWindowAggregatesContractRedTests` | `aggregates[0].id = "z_hist_pairs"`, `aggregates[1].id = "a_topk_rows"`, `aggregates[2].id = "m_matrix_rows"`; payload estruturado alinhado ao golden de `phase22` | Deve expor no `Content` ao menos os IDs/tipos salientes dos agregados ou um resumo factual equivalente; não pode responder apenas quantidade de agregados. |
 | `HF23-M06` | Anti-esvaziamento em `full` | Reutilizar `HF23-M01`, `HF23-M03` e `HF23-M04` | Mesmo request dos cenários acima, trocando `verbosity` para `"full"` | `StructuredContent` segue completo/canônico | `Content` pode ser mais detalhado, mas não pode se reduzir a texto genérico do tipo `"See structured payload for ..."` sem expor o resultado principal do cenário. |
+| `HF23-M07` | `help` com quickstart operacional auditável | N/A (meta-tool; sem fixture específica além da instância de teste) | `{}` | `getting_started_resource_uri`, `index_resource_uri`, `quick_start_markdown`, `templates[]` presentes e consistentes | Deve conter `get_draw_window(window_size=1)`, uma chamada inicial de `compute_window_metrics` e os campos `dataset_version`, `tool_version`, `deterministic_hash` e `window`; não pode se reduzir a “veja o índice” ou equivalente. |
+| `HF23-M08` | `discover_capabilities` com constraints operacionais de janela | N/A (meta-tool) | `{}` ou `{ "verbosity": "standard" }` | `tools[]` inclui `get_draw_window` com `supported_parameters` suficientes para montar a janela | Deve declarar `window_size > 0`, o atalho `window_size=1`, a exigência de `end_contest_id` quando `start_contest_id` vier e a constraint de coerência entre `window_size` e `start/end`; não pode expor apenas os nomes dos parâmetros sem as regras de uso. |
 
 **Convenção recomendada para artefatos de teste do hotfix:**
 
@@ -161,11 +167,12 @@ Proposto.
 2. **Ferramentas:** `discover_capabilities` expõe suporte e valores aceitos, sem payload excessivo (preferir projeção).
 3. **Tokens:** em `verbosity="minimal"`, `Content` não contém JSON completo; é um resumo curto **e ainda útil**. O JSON permanece em `StructuredContent`.
 4. **Determinismo:** duas chamadas idênticas (mesmo dataset + mesmos knobs) produzem respostas equivalentes e hash conforme política definida.
-5. **Leigo:** `help` contém exemplos de frases (“modo econômico”, “agora detalhado”) e como isso vira knobs.
-6. **Chat-safe:** em `verbosity="standard"`, consultas humanas comuns da tool podem ser respondidas a partir de `Content` sem inspeção manual do `StructuredContent`.
-7. **Tools factuais e analíticas:** cada classe de tool documenta quais fatos/resultados principais devem aparecer no `Content` para não haver perda de utilidade.
-8. **Sem efeitos colaterais implícitos:** o hotfix não introduz defaults ocultos de janela, paginação, projeção ou “intenção” inferida no servidor.
-9. **Massa estática:** os testes do hotfix usam fixtures/goldens estáticos do repositório, com entradas e expectativas revisáveis antes da execução.
+5. **Leigo:** `help` contém exemplos de frases (“modo econômico”, “agora detalhado”) e também um quickstart operacional explícito.
+6. **Discovery operacional:** `discover_capabilities` expõe knobs e constraints relevantes de montagem de request, não apenas enums soltos.
+7. **Chat-safe:** em `verbosity="standard"`, consultas humanas comuns da tool podem ser respondidas a partir de `Content` sem inspeção manual do `StructuredContent`.
+8. **Tools factuais, analíticas e meta-tools:** cada classe de tool documenta quais fatos/resultados principais devem aparecer no `Content` para não haver perda de utilidade.
+9. **Sem efeitos colaterais implícitos:** o hotfix não introduz defaults ocultos de janela, paginação, projeção ou “intenção” inferida no servidor.
+10. **Massa estática:** os testes do hotfix usam fixtures/goldens estáticos do repositório, com entradas e expectativas revisáveis antes da execução.
 
 ## Alternativas consideradas
 

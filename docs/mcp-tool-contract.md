@@ -488,7 +488,69 @@ Várias tools recebem um recorte temporal sobre o histórico canônico. Campos r
 
 **Legado “últimos N” na UI (ADR 0008 D4):** o servidor **não** mapeia automaticamente *N* de gráficos antigos para `window_size`; o cliente declara a janela.
 
+**Atalho operacional permitido (sem N mágico):** quando o consumidor quiser apenas “o último concurso disponível” no dataset carregado, pode usar `get_draw_window(window_size=1)` sem `end_contest_id`; isso ancora deterministicamente no extremo mais recente do snapshot carregado e **não** contradiz a proibição de defaults de UI legada, porque o tamanho da janela continua explicitamente declarado no request.
+
 Outras tools usam o mesmo ancoramento temporal implicitamente: a janela é sempre “os últimos `window_size` sorteios até `end_contest_id`”, salvo erro de histórico insuficiente.
+
+### 0. `help`
+
+#### Finalidade
+
+Fornecer onboarding operacional curto, quickstart e índice de templates/resources, sem executar cálculo analítico.
+
+#### Input
+
+```json
+{}
+```
+
+#### Regras
+
+- A tool não executa métricas, não resolve janela e não cria defaults semânticos.
+- O conteúdo humano deve ser **útil no primeiro uso**: orientar como obter o último concurso, como iniciar com métricas básicas e quais campos mínimos de rastreabilidade preservar.
+- O output deve apontar para resources versionados quando existirem.
+- O texto pode ser compacto, mas não deve se reduzir a um índice administrativo sem o passo inicial recomendado.
+
+#### Semântica e validação
+
+- **Output mínimo esperado:** `tool_version`, `getting_started_resource_uri`, `index_resource_uri`, `index_markdown`, `templates[]`.
+- **Extensão recomendada já materializada:** `quick_start_markdown` com:
+  - `get_draw_window(window_size=1)` para o último concurso;
+  - uma chamada inicial de `compute_window_metrics`;
+  - os campos mínimos `dataset_version`, `tool_version`, `deterministic_hash` e `window`.
+- **Canal textual (`Content`):** deve permanecer leigo-first e semanticamente suficiente para primeiro uso, alinhado à [ADR 0023](adrs/0023-controle-de-verbosidade-projecao-e-canais-mcp-para-eficiencia-v1.md).
+
+### 0.5. `discover_capabilities`
+
+#### Finalidade
+
+Expor a superfície real da build e as regras operacionais necessárias para reduzir tentativa/erro do consumidor.
+
+#### Input
+
+```json
+{
+  "verbosity": "standard"
+}
+```
+
+#### Regras
+
+- A tool não executa métricas; apenas descreve capacidades, knobs e constraints da build atual.
+- Deve declarar suporte por tool para `verbosity`, projeção e outros knobs quando existirem.
+- Deve expor constraints operacionais relevantes de janela, inclusive quando a build aceitar formas equivalentes (`window_size+end_contest_id` e `start_contest_id+end_contest_id`).
+- A resposta deve ser estável o suficiente para testes de contrato por build.
+
+#### Semântica e validação
+
+- **Output mínimo esperado:** `tool_version`, `build_profile`, `dataset_requirements`, `window_modes_supported`, `tools`, `metrics`, `generation`.
+- **Para `get_draw_window`, `supported_parameters` deve tornar explícito ao menos:**
+  - `window_size` como inteiro `> 0`;
+  - que `window_size` é obrigatório quando `start_contest_id` não vier;
+  - que `window_size=1` é o atalho para ancorar no concurso mais recente disponível;
+  - que `start_contest_id` exige `end_contest_id`;
+  - que combinações redundantes incompatíveis entre `window_size` e `start/end` são inválidas.
+- **Canal textual (`Content`):** segue a mesma regra de utilidade mínima da [ADR 0023](adrs/0023-controle-de-verbosidade-projecao-e-canais-mcp-para-eficiencia-v1.md): pode ser compacto, mas não deve esconder a utilidade principal da tool.
 
 ### 1. `get_draw_window`
 
@@ -1213,17 +1275,19 @@ O contrato exige:
 Cada item abaixo é um critério de aceite binário: sem ele, a implementação não cumpre o espírito do contrato, mesmo que compile.
 
 1. Mesmo input + mesmo `dataset_version` retornam o mesmo `deterministic_hash` **salvo** a política específica de `generate_candidate_games` com `replay_guaranteed: false` (hash estável **sem** exigir igualdade da lista de candidatos).
-2. `compute_window_metrics` retorna valores idênticos em execuções repetidas, com `shape` explícito.
-3. `analyze_indicator_stability` rejeita vetoriais sem `aggregation` e usa `madn` por default.
-4. `compose_indicator_analysis` rejeita pesos que não somam 1 e componentes incompatíveis.
-5. `analyze_indicator_associations` rejeita associação sem redução explícita de série vetorial; com `stability_check` no request e build sem suporte à estabilidade em subjanelas, emite `UNSUPPORTED_STABILITY_CHECK` (ADR 0006 D2).
-6. `summarize_window_patterns` calcula cobertura, moda e faixa típica de forma determinística.
-7. `summarize_window_aggregates` valida enum fechado de `aggregate_type`, parâmetros obrigatórios por tipo, compatibilidade de shape e ordenação/desempates canônicos de forma determinística.
-8. `generate_candidate_games` respeita `generation_mode`, interseção de restrições, orçamento (soma **≤ 1000**), `replay_guaranteed`, política de `seed`/`deterministic_hash`, e estratégia composta declarada.
-9. `explain_candidate_games` retorna ranking de estratégias e detalhamento de exclusões.
-10. `divergencia_kl` nunca retorna `+∞` ou `NaN` para janelas `N >= 5`.
-11. Toda família de prompt documentada em [prompt-catalog.md](prompt-catalog.md) deve ter ao menos um teste positivo e um negativo em [test-plan.md](test-plan.md).
-12. Em pelo menos um fluxo de integração (E2E ou teste de agente), um pedido **não** mapeável sem lacunas deve resultar em esclarecimento com campos explícitos ou em `INVALID_REQUEST` **sem** execução com parâmetros supostos pelo modelo.
+2. `help` retorna onboarding curto útil e aponta para os resources versionados corretos, sem executar cálculo nem decidir janela.
+3. `discover_capabilities` expõe a superfície mínima da build e, para tools de janela, declara constraints operacionais suficientes para reduzir tentativa/erro.
+4. `compute_window_metrics` retorna valores idênticos em execuções repetidas, com `shape` explícito.
+5. `analyze_indicator_stability` rejeita vetoriais sem `aggregation` e usa `madn` por default.
+6. `compose_indicator_analysis` rejeita pesos que não somam 1 e componentes incompatíveis.
+7. `analyze_indicator_associations` rejeita associação sem redução explícita de série vetorial; com `stability_check` no request e build sem suporte à estabilidade em subjanelas, emite `UNSUPPORTED_STABILITY_CHECK` (ADR 0006 D2).
+8. `summarize_window_patterns` calcula cobertura, moda e faixa típica de forma determinística.
+9. `summarize_window_aggregates` valida enum fechado de `aggregate_type`, parâmetros obrigatórios por tipo, compatibilidade de shape e ordenação/desempates canônicos de forma determinística.
+10. `generate_candidate_games` respeita `generation_mode`, interseção de restrições, orçamento (soma **≤ 1000**), `replay_guaranteed`, política de `seed`/`deterministic_hash`, e estratégia composta declarada.
+11. `explain_candidate_games` retorna ranking de estratégias e detalhamento de exclusões.
+12. `divergencia_kl` nunca retorna `+∞` ou `NaN` para janelas `N >= 5`.
+13. Toda família de prompt documentada em [prompt-catalog.md](prompt-catalog.md) deve ter ao menos um teste positivo e um negativo em [test-plan.md](test-plan.md).
+14. Em pelo menos um fluxo de integração (E2E ou teste de agente), um pedido **não** mapeável sem lacunas deve resultar em esclarecimento com campos explícitos ou em `INVALID_REQUEST` **sem** execução com parâmetros supostos pelo modelo.
 
 ## Avaliação de viabilidade
 

@@ -456,6 +456,8 @@ Ferramentas inconsistentes, respostas opacas e alto risco de acoplamento acident
 - `Em que cenario isso seria desnecessario ou poderia ser removido?`
 Se o projeto nunca expuser MCP e permanecer apenas como biblioteca local.
 
+Observacao adicional: esse contrato precisa cobrir nao so as tools analiticas, mas tambem as meta-tools de onboarding/discovery (`help`, `discover_capabilities`) e a relacao delas com resources versionados como `getting-started@1.0.0`; sem isso, a IA tende a preencher lacunas por tentativa e erro.
+
 ### `docs/generation-strategies.md`
 
 - `Qual problema isso resolve?`

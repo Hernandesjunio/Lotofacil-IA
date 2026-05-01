@@ -71,8 +71,9 @@ Exemplos adicionais de prompts de teste ficam em [prompt-catalog.md](prompt-cata
 
 Para reduzir ambiguidade de janela e padronizar combinações de métricas por objetivo, a instância MCP expõe:
 
-- a tool `help`, que retorna um índice básico de templates;
-- um resource de onboarding curto `lotofacil-ia://help/getting-started@1.0.0` (ponto de entrada agnóstico ao host);
+- a tool `help`, que entrega onboarding operacional curto e índice de templates/resources;
+- um resource de onboarding curto `lotofacil-ia://help/getting-started@1.0.0` (ponto de entrada agnóstico ao host, com quickstart para o último concurso, métricas básicas e rastreabilidade mínima);
+- a tool `discover_capabilities`, que expõe a superfície real da build, os knobs suportados e constraints operacionais relevantes (ex.: modos de janela);
 - resources Markdown sob `lotofacil-ia://prompts/` (incluindo `index@1.0.0`) prontos para copiar/colar no chat.
 
 Esses templates **não** substituem tools nem mudam o contrato: são conteúdo de referência para facilitar o mapeamento NL → JSON com janelas explícitas.
@@ -109,7 +110,7 @@ Esses templates **não** substituem tools nem mudam o contrato: são conteúdo d
 - O sistema deve permitir comparar estratégias e composições dinâmicas sem reescrever o cálculo canônico.
 - O contrato MCP deve ser claro o suficiente para automação por IA sem ambiguidade semântica.
 - O catálogo de prompts e o plano de testes devem cobrir 100% das famílias de cálculo do domínio documentado.
-- A **disponibilidade** de cada métrica em cada rota, o **pipeline mínimo** de tools (fluidez sem defaults ocultos) e a semântica de respostas parciais/erros (ex. estabilidade de associação) seguem [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md), em conjunto com o contrato MCP e o [metric-catalog.md](metric-catalog.md). A **descoberta** do que uma instância expõe (vs. norma do catálogo), **resources** vs **tools**, e a **janela por concurso inicial/final** seguem [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md).
+- A **disponibilidade** de cada métrica em cada rota, o **pipeline mínimo** de tools (fluidez sem defaults ocultos) e a semântica de respostas parciais/erros (ex. estabilidade de associação) seguem [ADR 0006](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md), em conjunto com o contrato MCP e o [metric-catalog.md](metric-catalog.md). A **descoberta** do que uma instância expõe (vs. norma do catálogo), **resources** vs **tools**, e a **janela por concurso inicial/final** seguem [ADR 0008](adrs/0008-descoberta-superficie-mcp-e-mapeamento-legado-top10-v1.md). A utilidade mínima do `Content`, a explicitação de quickstart em `help` e a clareza operacional dos knobs/constraints seguem [ADR 0023](adrs/0023-controle-de-verbosidade-projecao-e-canais-mcp-para-eficiencia-v1.md).
 
 ## Referências
 
@@ -144,5 +145,6 @@ Esses templates **não** substituem tools nem mudam o contrato: são conteúdo d
 - [adrs/0017-geracao-declarativa-de-candidatos-filtros-e-estrategias-v1.md](adrs/0017-geracao-declarativa-de-candidatos-filtros-e-estrategias-v1.md) — geração declarativa (critérios/filtros/estratégias) e rastreabilidade
 - [adrs/0018-pacote-de-metricas-prioritarias-slots-pares-blocos-outliers-v1.md](adrs/0018-pacote-de-metricas-prioritarias-slots-pares-blocos-outliers-v1.md) — pacote de métricas prioritárias para fechar “missing metrics”
 - [adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md](adrs/0021-apresentacao-resumos-metricas-janela-descricoes-acessiveis-v1.md) — tabelas resumidas de janela (escalares e séries), descrições legíveis e vocabulário acessível; glossário como fonte de texto
+- [adrs/0023-controle-de-verbosidade-projecao-e-canais-mcp-para-eficiencia-v1.md](adrs/0023-controle-de-verbosidade-projecao-e-canais-mcp-para-eficiencia-v1.md) — utilidade mínima do `Content`, quickstart em `help`, projeção/paginação e descoberta operacional dos knobs
 - [adrs/0024-distribuicao-zip-mcp-stdio-http-sem-codigo-fonte-v1.md](adrs/0024-distribuicao-zip-mcp-stdio-http-sem-codigo-fonte-v1.md) — distribuição do MCP como ZIP self-contained (STDIO) sem exigir código fonte
 - [adrs/0025-deploy-http-docker-iis-cloud-para-mcp-http-v1.md](adrs/0025-deploy-http-docker-iis-cloud-para-mcp-http-v1.md) — deploy do MCP em modo HTTP (Docker/IIS/cloud) e endpoint MCP mínimo
