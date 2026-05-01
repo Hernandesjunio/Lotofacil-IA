@@ -291,13 +291,23 @@ Algumas tools podem devolver payloads grandes (listas, matrizes, breakdowns). Pa
   - `true`: inclui explicações e/ou breakdowns explicativos onde a tool os tiver definido.
   - `false`: omite explicações/breakdowns explicativos (mantendo os dados necessários para auditoria e validação do resultado).
 - **Default (quando omitido):**
-  - Se a tool suportar o knob, o default recomendado é `true` em `verbosity="standard"` e `false` em `verbosity="minimal"`.
-  - **Regra de fechamento:** o servidor deve tratar o valor efetivo como **resolvido de forma determinística** e, quando houver derivação (`include_explanations` omitido), deve considerar esse default resolvido parte do `input` canônico para hash (ver *Canonização* → `deterministic_hash`).
+  - **Regra normativa (fechada):** se a tool suportar `include_explanations` e o campo vier omitido no request, o servidor **deve** resolver determinística e exclusivamente a partir de `verbosity`:
+    - `verbosity="minimal"` ⇒ `include_explanations=false`
+    - `verbosity="standard"` ⇒ `include_explanations=true`
+    - `verbosity="full"` ⇒ `include_explanations=true`
+  - **Proibição:** o servidor não pode escolher defaults por “preferência de sessão”, por heurística baseada em prompt, nem por tamanho da janela; a única derivação permitida (quando o campo é omitido) é a tabela acima.
+  - **Regra de fechamento para hash:** o valor **efetivo** (inclusive quando derivado por default) faz parte do `input` canônico para `deterministic_hash` (ver abaixo).
 
 #### `fields` / `response_projection`
 
 - **Tipo:** lista de seletores de campos (strings).
 - **Quando aplicável:** tools com respostas grandes onde o consumidor frequentemente precisa de apenas parte do payload.
+- **Sintaxe normativa (fechada):** cada seletor em `fields`/`response_projection` é um **path por nomes de campos**, com segmentos separados por `"."`, referindo-se ao **payload estruturado** (o objeto de `StructuredContent` daquela tool), por exemplo:
+  - `"window"` (campo de topo)
+  - `"window.end_contest_id"` (campo aninhado)
+  - `"metrics"` (lista inteira)
+  - `"metrics.0.metric_name"` **não é permitido** (índices de array não fazem parte da sintaxe normativa)
+  - curingas (`*`) e filtros não são permitidos.
 - **Semântica normativa:** projeção **server-side**: a resposta deve conter **apenas** os campos solicitados (mais o envelope mínimo de metadados exigidos pelo contrato), preservando:
   - nomes canônicos e tipos dos campos incluídos;
   - determinismo e ordenações canônicas;
