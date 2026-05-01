@@ -347,15 +347,67 @@ Regras importantes:
 - Esta opção cobre **MCP HTTP** (por URL). Para **MCP STDIO no Cursor**, o caminho principal continua sendo a distribuição por ZIP (Opção C) — o Cursor normalmente executa um comando local.
 - O endpoint MCP real continua sendo **`/mcp`**. As rotas `/tools/*` seguem como espelho REST/diagnóstico e não substituem o protocolo MCP.
 
-### Deploy HTTP em IIS / Azure / AWS / GCP (visão geral)
+### Deploy HTTP via IIS (reverse proxy)
 
-Sim, é coberto no sentido de que o mesmo servidor pode ser hospedado como **serviço HTTP** em diferentes alvos (IIS, PaaS, container, etc.), desde que:
+O recorte mínimo de IIS da [ADR 0025](docs/adrs/0025-deploy-http-docker-iis-cloud-para-mcp-http-v1.md) é hospedar a mesma aplicação ASP.NET Core atrás do IIS, preservando **MCP HTTP real** no endpoint **`/mcp`** (e não convertendo a integração em REST espelhado).
 
-- o alvo consiga expor um **endpoint MCP real** (ex.: `/mcp` e/ou `/sse`, conforme [ADR 0005](docs/adrs/0005-transporte-mcp-e-superficie-tools-v1.md));
-- você consiga configurar `Dataset__DrawsSourceUri` no ambiente do processo;
-- o alvo seja compatível com o perfil de conexão do transporte MCP HTTP (SSE/streamable). Quando isso não for adequado, prefira container/app service.
+#### 1) Publicar a aplicação ASP.NET Core
 
-Decisão normativa de deploy HTTP: [ADR 0025](docs/adrs/0025-deploy-http-docker-iis-cloud-para-mcp-http-v1.md).
+Em uma máquina com SDK .NET instalado, gere a pasta publicada:
+
+```bash
+dotnet publish src/LotofacilMcp.Server/LotofacilMcp.Server.csproj -c Release -o out/iis
+```
+
+O diretório publicado é o conteúdo a ser copiado para o servidor Windows/IIS.
+
+#### 2) Pré-requisitos no Windows Server
+
+- Instalar o **ASP.NET Core Hosting Bundle** compatível com a versão do runtime usado pela aplicação.
+- Garantir que o IIS atue como **reverse proxy** para o processo ASP.NET Core publicado.
+- Configurar a variável obrigatória **`Dataset__DrawsSourceUri`** no ambiente do processo/site. Sem ela, tools dependentes do histórico devem continuar retornando `DATASET_UNAVAILABLE`; não existe fallback para fixture interna.
+
+#### 3) Criar o site/aplicação no IIS
+
+- Apontar o site (ou application) para a pasta publicada em `out/iis`.
+- Usar **Application Pool** com **`No Managed Code`**.
+- Manter a configuração padrão do ASP.NET Core Module gerada no publish para encaminhar as requisições ao processo ASP.NET Core.
+- Não criar regra de rewrite que troque **`/mcp`** por **`/tools/*`**. O path **`/mcp`** precisa permanecer o endpoint MCP HTTP real exposto ao host.
+
+#### 4) URL que o host MCP deve usar
+
+Quando o site estiver publicado na raiz do host, a URL MCP é:
+
+- `https://<host-publico>/mcp`
+
+Se a aplicação for montada sob um caminho-base no IIS, a URL externa vira:
+
+- `https://<host-publico>/<base-path>/mcp`
+
+Regra importante: o segmento final **`/mcp`** continua sendo o endpoint MCP real; **`/tools/*`** continua sendo apenas REST espelhado para compatibilidade/diagnóstico, conforme [ADR 0005](docs/adrs/0005-transporte-mcp-e-superficie-tools-v1.md).
+
+#### 5) Verificação mínima de compatibilidade MCP
+
+O aceite operacional do deploy IIS deve confirmar exatamente o que a ADR 0025 pede para um host MCP:
+
+1. o host consegue conectar na URL MCP publicada (`.../mcp`);
+2. `tools/list` funciona nessa conexão;
+3. `tools/call` funciona nessa mesma conexão para pelo menos uma tool em escopo.
+
+No repositório, a evidência automatizada que trava esse comportamento do endpoint MCP HTTP é a suíte `tests/LotofacilMcp.ContractTests/McpTransportParityIntegrationTests.cs`, que valida `tools/list` e `tools/call` em **MCP HTTP `/mcp`** com paridade semântica contra o HTTP REST espelhado.
+
+Comandos úteis de verificação antes do deploy:
+
+```bash
+dotnet test tests/LotofacilMcp.ContractTests/LotofacilMcp.ContractTests.csproj --filter McpTransportParityIntegrationTests
+```
+
+Checklist rápido pós-publicação no IIS:
+
+- a URL configurada no host MCP termina em **`/mcp`**;
+- a conexão MCP abre sem apontar para `/tools/*`;
+- `tools/list` retorna o catálogo esperado;
+- `tools/call` responde com o payload MCP esperado para uma tool em escopo.
 
 ## Distribuição (ZIP) — visão geral
 

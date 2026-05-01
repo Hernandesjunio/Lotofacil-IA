@@ -36,10 +36,19 @@ O servidor pode ser publicado/hospedado como app ASP.NET Core atrás do IIS (rev
 É considerado “coberto” quando o alvo consegue:
 
 - expor um endpoint HTTP compatível com o transporte MCP HTTP escolhido;
-- manter o comportamento operacional estável (inclusive para conexões longas, quando aplicável);
-- receber `Dataset__DrawsSourceUri` por configuração de ambiente/secret.
+- manter o comportamento operacional estável (inclusive para **conexões longas/streaming** do transporte MCP HTTP, quando aplicável);
+- receber `Dataset__DrawsSourceUri` por **configuração do ambiente** (config/secret), conforme [ADR 0022](0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md).
 
-Quando a plataforma não for adequada a conexões longas/streaming do transporte MCP HTTP, o caminho preferencial é **container/app service** em vez de serverless.
+#### D3.1 — Critério operacional: quando **não** usar serverless
+
+Quando a plataforma serverless **não for adequada** a **conexões longas** e/ou **streaming** exigidos pelo transporte MCP HTTP (ex.: SSE / respostas streamadas), o caminho preferencial é **container/app service** (PaaS com processo/instância estável) em vez de serverless.
+
+Indicadores típicos de “não adequado” (não exaustivo):
+
+- **Timeouts rígidos** (request/function) que encerram a conexão antes do fim do streaming.
+- **Infra de front door/gateway** que faz buffer e **não entrega streaming** ao cliente.
+- **Cold start / escala para zero** que degrada a experiência de sessões longas.
+- **Restrições de conexões concorrentes** que tornam SSE/streaming instável sob carga.
 
 ### D4 — Endpoint MCP HTTP mínimo (para evitar ambiguidade)
 
@@ -47,7 +56,9 @@ O deploy HTTP deve expor ao menos **um endpoint MCP real** (protocolo) conforme 
 
 ### D5 — Configuração do dataset permanece obrigatória
 
-`Dataset__DrawsSourceUri` é obrigatória e não deve haver fallback para fixtures internas (ver ADR 0022).
+`Dataset__DrawsSourceUri` é obrigatória e **deve vir de configuração do ambiente** (ex.: variável de ambiente / secret do provider) — **não** deve haver fallback para fixtures internas (ver [ADR 0022](0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md)).
+
+Nota operacional: quando `Dataset__DrawsSourceUri` contiver credenciais (ex.: token/SAS em URL HTTP), tratar como **secret** (não logar o valor completo; armazenar em secret manager do ambiente).
 
 ## Critérios de verificação (aceite)
 
