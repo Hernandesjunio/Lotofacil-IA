@@ -53,7 +53,7 @@ public sealed class V0McpTools
         [Description("Concurso final inclusivo da janela.")] int? end_contest_id = null,
         [Description("Página 1-based para paginação determinística do payload (apenas em verbosity=full).")] int? page = null,
         [Description("Tamanho da página (1..500). Default quando paginando: 200 (apenas em verbosity=full).")] int? page_size = null,
-        [Description("Projeção server-side: lista de campos top-level a incluir no StructuredContent. Campos inválidos => INVALID_REQUEST com allowed_fields.")] IReadOnlyList<string>? fields = null,
+        [Description("Projeção server-side (ADR 0023): lista de paths por nomes de campos separados por '.', sem índices de array e sem curingas (ex.: 'window.end_contest_id', 'draws.numbers', 'metrics.metric_name'). Campos inválidos => INVALID_REQUEST com allowed_fields.")] IReadOnlyList<string>? fields = null,
         [Description("Controle de verbosidade do resumo humano no canal Content: minimal | standard | full.")] string? verbosity = null)
     {
         if (ParseVerbosity(verbosity) != VerbosityLevel.Full && (page is not null || page_size is not null))
@@ -89,7 +89,7 @@ public sealed class V0McpTools
         [Description("Página 1-based para paginação determinística do payload (apenas em verbosity=full).")] int? page = null,
         [Description("Tamanho da página (1..500). Default quando paginando: 200 (apenas em verbosity=full).")] int? page_size = null,
         [Description("Inclui campos explicativos (`explanation`) quando true. Default: true.")] bool include_explanations = true,
-        [Description("Projeção server-side: lista de campos top-level a incluir no StructuredContent.")] IReadOnlyList<string>? fields = null,
+        [Description("Projeção server-side (ADR 0023): lista de paths por nomes de campos separados por '.', sem índices de array e sem curingas.")] IReadOnlyList<string>? fields = null,
         [Description("Controle de verbosidade do resumo humano no canal Content: minimal | standard | full.")] string? verbosity = null)
     {
         if (ParseVerbosity(verbosity) != VerbosityLevel.Full && (page is not null || page_size is not null))
@@ -130,7 +130,7 @@ public sealed class V0McpTools
         [Description("Página 1-based para paginação determinística do payload (apenas em verbosity=full).")] int? page = null,
         [Description("Tamanho da página (1..500). Default quando paginando: 200 (apenas em verbosity=full).")] int? page_size = null,
         [Description("Inclui campos explicativos (`explanation`) quando true. Default: true.")] bool include_explanations = true,
-        [Description("Projeção server-side: lista de campos top-level a incluir no StructuredContent.")] IReadOnlyList<string>? fields = null,
+        [Description("Projeção server-side (ADR 0023): lista de paths por nomes de campos separados por '.', sem índices de array e sem curingas.")] IReadOnlyList<string>? fields = null,
         [Description("Controle de verbosidade do resumo humano no canal Content: minimal | standard | full.")] string? verbosity = null)
     {
         if (ParseVerbosity(verbosity) != VerbosityLevel.Full && (page is not null || page_size is not null))
@@ -173,7 +173,7 @@ public sealed class V0McpTools
         [Description("Página 1-based para paginação determinística do payload (apenas em verbosity=full).")] int? page = null,
         [Description("Tamanho da página (1..500). Default quando paginando: 200 (apenas em verbosity=full).")] int? page_size = null,
         [Description("Inclui campos explicativos (`explanation`) quando true. Default: true.")] bool include_explanations = true,
-        [Description("Projeção server-side: lista de campos top-level a incluir no StructuredContent.")] IReadOnlyList<string>? fields = null,
+        [Description("Projeção server-side (ADR 0023): lista de paths por nomes de campos separados por '.', sem índices de array e sem curingas.")] IReadOnlyList<string>? fields = null,
         [Description("Controle de verbosidade do resumo humano no canal Content: minimal | standard | full.")] string? verbosity = null)
     {
         if (ParseVerbosity(verbosity) != VerbosityLevel.Full && (page is not null || page_size is not null))
@@ -213,7 +213,7 @@ public sealed class V0McpTools
         [Description("Top pares por magnitude.")] int top_k = 5,
         [Description("Estabilidade em subjanelas; requer method=rolling_window, subwindow_size, stride e min_subwindows explicitos.")] AssociationStabilityCheckRequest? stability_check = null,
         [Description("Inclui campos explicativos (`explanation`) quando true. Default: true.")] bool include_explanations = true,
-        [Description("Projeção server-side: lista de campos top-level a incluir no StructuredContent.")] IReadOnlyList<string>? fields = null,
+        [Description("Projeção server-side (ADR 0023): lista de paths por nomes de campos separados por '.', sem índices de array e sem curingas.")] IReadOnlyList<string>? fields = null,
         [Description("Controle de verbosidade do resumo humano no canal Content: minimal | standard | full.")] string? verbosity = null)
     {
         var payload = tools.AnalyzeIndicatorAssociations(new AnalyzeIndicatorAssociationsRequest(
@@ -241,7 +241,7 @@ public sealed class V0McpTools
         [Description("Limiar de cobertura no intervalo [0,1].")] double coverage_threshold = 0.8,
         [Description("Metodo de faixa tipica (recorte: iqr).")] string? range_method = null,
         [Description("Inclui campos explicativos (`explanation`) quando true. Default: true.")] bool include_explanations = true,
-        [Description("Projeção server-side: lista de campos top-level a incluir no StructuredContent.")] IReadOnlyList<string>? fields = null,
+        [Description("Projeção server-side (ADR 0023): lista de paths por nomes de campos separados por '.', sem índices de array e sem curingas.")] IReadOnlyList<string>? fields = null,
         [Description("Controle de verbosidade do resumo humano no canal Content: minimal | standard | full.")] string? verbosity = null)
     {
         var payload = tools.SummarizeWindowPatterns(new SummarizeWindowPatternsRequest(
@@ -265,7 +265,7 @@ public sealed class V0McpTools
         int? start_contest_id = null,
         [Description("Concurso final inclusivo.")] int? end_contest_id = null,
         [Description("Lista de agregados canonicos com metrica fonte, tipo e params explicitos.")] IReadOnlyList<WindowAggregateRequestDto>? aggregates = null,
-        [Description("Projeção server-side: lista de campos top-level a incluir no StructuredContent.")] IReadOnlyList<string>? fields = null,
+        [Description("Projeção server-side (ADR 0023): lista de paths por nomes de campos separados por '.', sem índices de array e sem curingas.")] IReadOnlyList<string>? fields = null,
         [Description("Controle de verbosidade do resumo humano no canal Content: minimal | standard | full.")] string? verbosity = null)
     {
         var payload = tools.SummarizeWindowAggregates(new SummarizeWindowAggregatesRequest(
@@ -292,7 +292,7 @@ public sealed class V0McpTools
         [Description("Modo normativo: random_unrestricted | behavior_filtered (omitir = legado com defaults conservadores).")] string? generation_mode = null,
         [Description("Página 1-based para paginação determinística do payload (apenas em verbosity=full).")] int? page = null,
         [Description("Tamanho da página (1..500). Default quando paginando: 200 (apenas em verbosity=full).")] int? page_size = null,
-        [Description("Projeção server-side: lista de campos top-level a incluir no StructuredContent.")] IReadOnlyList<string>? fields = null,
+        [Description("Projeção server-side (ADR 0023): lista de paths por nomes de campos separados por '.', sem índices de array e sem curingas.")] IReadOnlyList<string>? fields = null,
         [Description("Controle de verbosidade do resumo humano no canal Content: minimal | standard | full.")] string? verbosity = null)
     {
         if (ParseVerbosity(verbosity) != VerbosityLevel.Full && (page is not null || page_size is not null))
@@ -336,7 +336,7 @@ public sealed class V0McpTools
         [Description("Página 1-based para paginação determinística do payload (apenas em verbosity=full).")] int? page = null,
         [Description("Tamanho da página (1..500). Default quando paginando: 200 (apenas em verbosity=full).")] int? page_size = null,
         [Description("Inclui campos explicativos (`explanation`) quando true. Default: true.")] bool include_explanations = true,
-        [Description("Projeção server-side: lista de campos top-level a incluir no StructuredContent.")] IReadOnlyList<string>? fields = null,
+        [Description("Projeção server-side (ADR 0023): lista de paths por nomes de campos separados por '.', sem índices de array e sem curingas.")] IReadOnlyList<string>? fields = null,
         [Description("Controle de verbosidade do resumo humano no canal Content: minimal | standard | full.")] string? verbosity = null)
     {
         if (ParseVerbosity(verbosity) != VerbosityLevel.Full && (page is not null || page_size is not null))

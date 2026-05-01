@@ -1096,14 +1096,30 @@ public sealed class V0Tools
                 "tool_version",
                 "deterministic_hash",
                 "window",
-                "metrics"
+                "window.size",
+                "window.start_contest_id",
+                "window.end_contest_id",
+                "metrics",
+                "metrics.metric_name",
+                "metrics.scope",
+                "metrics.shape",
+                "metrics.unit",
+                "metrics.version",
+                "metrics.window",
+                "metrics.window.size",
+                "metrics.window.start_contest_id",
+                "metrics.window.end_contest_id",
+                "metrics.value",
+                "metrics.explanation"
             };
             var requiredFields = new HashSet<string>(StringComparer.Ordinal)
             {
                 "dataset_version",
                 "tool_version",
                 "deterministic_hash",
-                "window"
+                "window.size",
+                "window.start_contest_id",
+                "window.end_contest_id"
             };
 
             var fieldsError = ResponseTransforms.ValidateFields("compute_window_metrics", requestedFields, allowedFields);
@@ -1186,36 +1202,6 @@ public sealed class V0Tools
                 return response;
             }
 
-            if (requestedFields is null && request.IncludeExplanations)
-            {
-                return response;
-            }
-
-            if (requestedFields is null && request.IncludeExplanations)
-            {
-                return response;
-            }
-
-            if (requestedFields is null && request.IncludeExplanations)
-            {
-                return response;
-            }
-
-            if (requestedFields is null && request.IncludeExplanations)
-            {
-                return response;
-            }
-
-            if (requestedFields is null && request.IncludeExplanations)
-            {
-                return response;
-            }
-
-            if (requestedFields is null && request.IncludeExplanations)
-            {
-                return response;
-            }
-
             var element = JsonSerializer.SerializeToElement(response);
             if (!request.IncludeExplanations)
             {
@@ -1229,7 +1215,7 @@ public sealed class V0Tools
                 {
                     keep.Add(f);
                 }
-                element = ResponseTransforms.ProjectTopLevel(element, keep);
+                element = ResponseTransforms.Project(element, keep);
             }
 
             return element;
@@ -1247,14 +1233,23 @@ public sealed class V0Tools
                 "tool_version",
                 "deterministic_hash",
                 "window",
+                "window.size",
+                "window.start_contest_id",
+                "window.end_contest_id",
                 "draws"
+                ,
+                "draws.contest_id",
+                "draws.draw_date",
+                "draws.numbers"
             };
             var requiredFields = new HashSet<string>(StringComparer.Ordinal)
             {
                 "dataset_version",
                 "tool_version",
                 "deterministic_hash",
-                "window"
+                "window.size",
+                "window.start_contest_id",
+                "window.end_contest_id"
             };
 
             var fieldsError = ResponseTransforms.ValidateFields("get_draw_window", requestedFields, allowedFields);
@@ -1329,7 +1324,7 @@ public sealed class V0Tools
             {
                 keep.Add(f);
             }
-            element = ResponseTransforms.ProjectTopLevel(element, keep);
+            element = ResponseTransforms.Project(element, keep);
             return element;
         });
     }
@@ -1345,15 +1340,27 @@ public sealed class V0Tools
                 "tool_version",
                 "deterministic_hash",
                 "window",
+                "window.size",
+                "window.start_contest_id",
+                "window.end_contest_id",
                 "normalization_method",
-                "ranking"
+                "ranking",
+                "ranking.indicator_name",
+                "ranking.aggregation",
+                "ranking.component_index",
+                "ranking.shape",
+                "ranking.dispersion",
+                "ranking.stability_score",
+                "ranking.explanation"
             };
             var requiredFields = new HashSet<string>(StringComparer.Ordinal)
             {
                 "dataset_version",
                 "tool_version",
                 "deterministic_hash",
-                "window",
+                "window.size",
+                "window.start_contest_id",
+                "window.end_contest_id",
                 "normalization_method"
             };
 
@@ -1451,7 +1458,7 @@ public sealed class V0Tools
                 {
                     keep.Add(f);
                 }
-                element = ResponseTransforms.ProjectTopLevel(element, keep);
+                element = ResponseTransforms.Project(element, keep);
             }
 
             return element;
@@ -1469,16 +1476,25 @@ public sealed class V0Tools
                 "tool_version",
                 "deterministic_hash",
                 "window",
+                "window.size",
+                "window.start_contest_id",
+                "window.end_contest_id",
                 "target",
                 "operator",
-                "ranking"
+                "ranking",
+                "ranking.dezena",
+                "ranking.rank",
+                "ranking.score",
+                "ranking.explanation"
             };
             var requiredFields = new HashSet<string>(StringComparer.Ordinal)
             {
                 "dataset_version",
                 "tool_version",
                 "deterministic_hash",
-                "window",
+                "window.size",
+                "window.start_contest_id",
+                "window.end_contest_id",
                 "target",
                 "operator"
             };
@@ -1577,7 +1593,7 @@ public sealed class V0Tools
                 {
                     keep.Add(f);
                 }
-                element = ResponseTransforms.ProjectTopLevel(element, keep);
+                element = ResponseTransforms.Project(element, keep);
             }
 
             return element;
@@ -1595,16 +1611,46 @@ public sealed class V0Tools
                 "tool_version",
                 "deterministic_hash",
                 "window",
+                "window.size",
+                "window.start_contest_id",
+                "window.end_contest_id",
                 "method",
                 "association_magnitude",
-                "association_stability"
+                "association_magnitude.method",
+                "association_magnitude.top_pairs",
+                "association_magnitude.top_pairs.indicator_a",
+                "association_magnitude.top_pairs.aggregation_a",
+                "association_magnitude.top_pairs.component_index_a",
+                "association_magnitude.top_pairs.indicator_b",
+                "association_magnitude.top_pairs.aggregation_b",
+                "association_magnitude.top_pairs.component_index_b",
+                "association_magnitude.top_pairs.association_strength",
+                "association_magnitude.top_pairs.explanation",
+                "association_stability",
+                "association_stability.method",
+                "association_stability.subwindow_size",
+                "association_stability.stride",
+                "association_stability.min_subwindows",
+                "association_stability.subwindows_count",
+                "association_stability.top_pairs",
+                "association_stability.top_pairs.indicator_a",
+                "association_stability.top_pairs.aggregation_a",
+                "association_stability.top_pairs.component_index_a",
+                "association_stability.top_pairs.indicator_b",
+                "association_stability.top_pairs.aggregation_b",
+                "association_stability.top_pairs.component_index_b",
+                "association_stability.top_pairs.association_strength",
+                "association_stability.top_pairs.stability_score",
+                "association_stability.top_pairs.explanation"
             };
             var requiredFields = new HashSet<string>(StringComparer.Ordinal)
             {
                 "dataset_version",
                 "tool_version",
                 "deterministic_hash",
-                "window",
+                "window.size",
+                "window.start_contest_id",
+                "window.end_contest_id",
                 "method",
                 "association_magnitude"
             };
@@ -1718,7 +1764,7 @@ public sealed class V0Tools
                 {
                     keep.Add(f);
                 }
-                element = ResponseTransforms.ProjectTopLevel(element, keep);
+                element = ResponseTransforms.Project(element, keep);
             }
 
             return element;
@@ -1736,16 +1782,36 @@ public sealed class V0Tools
                 "tool_version",
                 "deterministic_hash",
                 "window",
+                "window.size",
+                "window.start_contest_id",
+                "window.end_contest_id",
                 "range_method",
                 "coverage_threshold",
-                "summaries"
+                "summaries",
+                "summaries.metric_name",
+                "summaries.aggregation",
+                "summaries.mode",
+                "summaries.q1",
+                "summaries.median",
+                "summaries.q3",
+                "summaries.iqr",
+                "summaries.coverage_observed",
+                "summaries.coverage_count",
+                "summaries.total_count",
+                "summaries.outlier_count",
+                "summaries.outlier_lower_fence",
+                "summaries.outlier_upper_fence",
+                "summaries.coverage_threshold_met",
+                "summaries.explanation"
             };
             var requiredFields = new HashSet<string>(StringComparer.Ordinal)
             {
                 "dataset_version",
                 "tool_version",
                 "deterministic_hash",
-                "window",
+                "window.size",
+                "window.start_contest_id",
+                "window.end_contest_id",
                 "range_method",
                 "coverage_threshold"
             };
@@ -1833,7 +1899,7 @@ public sealed class V0Tools
                 {
                     keep.Add(f);
                 }
-                element = ResponseTransforms.ProjectTopLevel(element, keep);
+                element = ResponseTransforms.Project(element, keep);
             }
 
             return element;
@@ -1851,14 +1917,31 @@ public sealed class V0Tools
                 "tool_version",
                 "deterministic_hash",
                 "window",
-                "aggregates"
+                "window.size",
+                "window.start_contest_id",
+                "window.end_contest_id",
+                "aggregates",
+                "aggregates.id",
+                "aggregates.source_metric_name",
+                "aggregates.aggregate_type",
+                "aggregates.buckets",
+                "aggregates.buckets.x",
+                "aggregates.buckets.count",
+                "aggregates.buckets.ratio",
+                "aggregates.items",
+                "aggregates.items.pattern",
+                "aggregates.items.count",
+                "aggregates.items.ratio",
+                "aggregates.matrix"
             };
             var requiredFields = new HashSet<string>(StringComparer.Ordinal)
             {
                 "dataset_version",
                 "tool_version",
                 "deterministic_hash",
-                "window"
+                "window.size",
+                "window.start_contest_id",
+                "window.end_contest_id"
             };
 
             var fieldsError = ResponseTransforms.ValidateFields("summarize_window_aggregates", requestedFields, allowedFields);
@@ -1939,7 +2022,7 @@ public sealed class V0Tools
             {
                 keep.Add(f);
             }
-            element = ResponseTransforms.ProjectTopLevel(element, keep);
+            element = ResponseTransforms.Project(element, keep);
             return element;
         });
     }
@@ -1956,7 +2039,58 @@ public sealed class V0Tools
                 "deterministic_hash",
                 "replay_guaranteed",
                 "window",
-                "candidate_games"
+                "window.size",
+                "window.start_contest_id",
+                "window.end_contest_id",
+                "candidate_games",
+                "candidate_games.numbers",
+                "candidate_games.strategy_name",
+                "candidate_games.strategy_version",
+                "candidate_games.search_method",
+                "candidate_games.tie_break_rule",
+                "candidate_games.seed_used",
+                "candidate_games.applied_configuration",
+                "candidate_games.applied_configuration.criteria",
+                "candidate_games.applied_configuration.criteria.name",
+                "candidate_games.applied_configuration.criteria.value",
+                "candidate_games.applied_configuration.criteria.range",
+                "candidate_games.applied_configuration.criteria.range.min",
+                "candidate_games.applied_configuration.criteria.range.max",
+                "candidate_games.applied_configuration.criteria.range.inclusive",
+                "candidate_games.applied_configuration.criteria.allowed_values",
+                "candidate_games.applied_configuration.criteria.allowed_values.values",
+                "candidate_games.applied_configuration.criteria.typical_range",
+                "candidate_games.applied_configuration.criteria.typical_range.metric_name",
+                "candidate_games.applied_configuration.criteria.typical_range.method",
+                "candidate_games.applied_configuration.criteria.typical_range.coverage",
+                "candidate_games.applied_configuration.criteria.typical_range.params",
+                "candidate_games.applied_configuration.criteria.typical_range.window_ref",
+                "candidate_games.applied_configuration.criteria.typical_range.inclusive",
+                "candidate_games.applied_configuration.criteria.mode",
+                "candidate_games.applied_configuration.weights",
+                "candidate_games.applied_configuration.weights.name",
+                "candidate_games.applied_configuration.weights.weight",
+                "candidate_games.applied_configuration.filters",
+                "candidate_games.applied_configuration.filters.name",
+                "candidate_games.applied_configuration.filters.value",
+                "candidate_games.applied_configuration.filters.min",
+                "candidate_games.applied_configuration.filters.max",
+                "candidate_games.applied_configuration.filters.range",
+                "candidate_games.applied_configuration.filters.range.min",
+                "candidate_games.applied_configuration.filters.range.max",
+                "candidate_games.applied_configuration.filters.range.inclusive",
+                "candidate_games.applied_configuration.filters.allowed_values",
+                "candidate_games.applied_configuration.filters.allowed_values.values",
+                "candidate_games.applied_configuration.filters.typical_range",
+                "candidate_games.applied_configuration.filters.typical_range.metric_name",
+                "candidate_games.applied_configuration.filters.typical_range.method",
+                "candidate_games.applied_configuration.filters.typical_range.coverage",
+                "candidate_games.applied_configuration.filters.typical_range.params",
+                "candidate_games.applied_configuration.filters.typical_range.window_ref",
+                "candidate_games.applied_configuration.filters.typical_range.inclusive",
+                "candidate_games.applied_configuration.filters.mode",
+                "candidate_games.applied_configuration.filters.version",
+                "candidate_games.applied_configuration.resolved_defaults"
             };
             var requiredFields = new HashSet<string>(StringComparer.Ordinal)
             {
@@ -1964,7 +2098,9 @@ public sealed class V0Tools
                 "tool_version",
                 "deterministic_hash",
                 "replay_guaranteed",
-                "window"
+                "window.size",
+                "window.start_contest_id",
+                "window.end_contest_id"
             };
 
             var fieldsError = ResponseTransforms.ValidateFields("generate_candidate_games", requestedFields, allowedFields);
@@ -2211,7 +2347,7 @@ public sealed class V0Tools
             {
                 keep.Add(f);
             }
-            element = ResponseTransforms.ProjectTopLevel(element, keep);
+            element = ResponseTransforms.Project(element, keep);
             return element;
         });
     }
@@ -2228,14 +2364,74 @@ public sealed class V0Tools
                 "deterministic_hash",
                 "window",
                 "candidate_generation_audit",
-                "explanations"
+                "window.size",
+                "window.start_contest_id",
+                "window.end_contest_id",
+                "candidate_generation_audit.requested_generation_mode",
+                "candidate_generation_audit.effective_generation_mode",
+                "candidate_generation_audit.context_supplied",
+                "candidate_generation_audit.seed_declared",
+                "candidate_generation_audit.replay_guaranteed",
+                "candidate_generation_audit.intersection_and_restrictions",
+                "candidate_generation_audit.replay_and_seed_policy",
+                "explanations",
+                "explanations.game",
+                "explanations.candidate_strategies",
+                "explanations.candidate_strategies.strategy_name",
+                "explanations.candidate_strategies.strategy_version",
+                "explanations.candidate_strategies.search_method",
+                "explanations.candidate_strategies.tie_break_rule",
+                "explanations.candidate_strategies.score",
+                "explanations.candidate_strategies.metric_breakdown",
+                "explanations.candidate_strategies.metric_breakdown.metric_name",
+                "explanations.candidate_strategies.metric_breakdown.metric_version",
+                "explanations.candidate_strategies.metric_breakdown.value",
+                "explanations.candidate_strategies.metric_breakdown.contribution",
+                "explanations.candidate_strategies.metric_breakdown.explanation",
+                "explanations.candidate_strategies.exclusion_breakdown",
+                "explanations.candidate_strategies.exclusion_breakdown.exclusion_name",
+                "explanations.candidate_strategies.exclusion_breakdown.exclusion_version",
+                "explanations.candidate_strategies.exclusion_breakdown.passed",
+                "explanations.candidate_strategies.exclusion_breakdown.observed_value",
+                "explanations.candidate_strategies.exclusion_breakdown.threshold",
+                "explanations.candidate_strategies.exclusion_breakdown.explanation",
+                "explanations.candidate_strategies.constraint_breakdown",
+                "explanations.candidate_strategies.constraint_breakdown.kind",
+                "explanations.candidate_strategies.constraint_breakdown.name",
+                "explanations.candidate_strategies.constraint_breakdown.mode",
+                "explanations.candidate_strategies.constraint_breakdown.observed_value",
+                "explanations.candidate_strategies.constraint_breakdown.applied",
+                "explanations.candidate_strategies.constraint_breakdown.applied.value",
+                "explanations.candidate_strategies.constraint_breakdown.applied.range",
+                "explanations.candidate_strategies.constraint_breakdown.applied.range.min",
+                "explanations.candidate_strategies.constraint_breakdown.applied.range.max",
+                "explanations.candidate_strategies.constraint_breakdown.applied.range.inclusive",
+                "explanations.candidate_strategies.constraint_breakdown.applied.allowed_values",
+                "explanations.candidate_strategies.constraint_breakdown.applied.allowed_values.values",
+                "explanations.candidate_strategies.constraint_breakdown.applied.typical_range",
+                "explanations.candidate_strategies.constraint_breakdown.applied.typical_range.metric_name",
+                "explanations.candidate_strategies.constraint_breakdown.applied.typical_range.method",
+                "explanations.candidate_strategies.constraint_breakdown.applied.typical_range.coverage",
+                "explanations.candidate_strategies.constraint_breakdown.applied.typical_range.resolved_range",
+                "explanations.candidate_strategies.constraint_breakdown.applied.typical_range.resolved_range.min",
+                "explanations.candidate_strategies.constraint_breakdown.applied.typical_range.resolved_range.max",
+                "explanations.candidate_strategies.constraint_breakdown.applied.typical_range.resolved_range.inclusive",
+                "explanations.candidate_strategies.constraint_breakdown.applied.typical_range.coverage_observed",
+                "explanations.candidate_strategies.constraint_breakdown.applied.typical_range.method_version",
+                "explanations.candidate_strategies.constraint_breakdown.result",
+                "explanations.candidate_strategies.constraint_breakdown.result.passed",
+                "explanations.candidate_strategies.constraint_breakdown.result.penalty",
+                "explanations.candidate_strategies.constraint_breakdown.explanation",
+                "explanations.candidate_strategies.explanation"
             };
             var requiredFields = new HashSet<string>(StringComparer.Ordinal)
             {
                 "dataset_version",
                 "tool_version",
                 "deterministic_hash",
-                "window"
+                "window.size",
+                "window.start_contest_id",
+                "window.end_contest_id"
             };
 
             var fieldsError = ResponseTransforms.ValidateFields("explain_candidate_games", requestedFields, allowedFields);
@@ -2393,7 +2589,7 @@ public sealed class V0Tools
                 {
                     keep.Add(f);
                 }
-                element = ResponseTransforms.ProjectTopLevel(element, keep);
+                element = ResponseTransforms.Project(element, keep);
             }
 
             return element;
