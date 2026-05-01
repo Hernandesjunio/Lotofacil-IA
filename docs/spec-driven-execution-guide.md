@@ -47,12 +47,19 @@ sem quebrar invariantes do contrato e do dataset.
 
 ### Fase 23.2 — Separar canais (StructuredContent vs Content) sem duplicar JSON
 
-**Objetivo:** `StructuredContent` é a fonte canônica; `Content` é resumo humano curto.
+**Objetivo:** `StructuredContent` é a fonte canônica; `Content` é resumo humano curto e útil.
 
 - Garantir que `Content` não repita o JSON completo do `StructuredContent` por padrão.
 - Mapear `verbosity` → tamanho/estilo do resumo humano em `Content`.
 
-**Pronto quando:** em `minimal`, `Content` é curto e não contém JSON completo.
+**Subetapas Hotfix:**
+
+1. **Hotfix 23.2.1 — Fechar utilidade mínima do `Content`:** definir que eficiência não permite respostas genéricas sem o fato principal.
+2. **Hotfix 23.2.2 — Definir comportamento chat-safe de `standard`:** exigir que `standard` responda consultas humanas comuns sem inspeção manual do `StructuredContent`.
+3. **Hotfix 23.2.3 — Diferenciar classes de tool:** tools factuais devem expor fatos principais; tools analíticas devem expor nomes e resultados salientes.
+4. **Hotfix 23.2.4 — Conter efeitos colaterais:** garantir que o hotfix não introduza inferência implícita de intenção, nem aumente `Content` para dump disfarçado em janelas grandes.
+
+**Pronto quando:** em `minimal`, `Content` é curto e não contém JSON completo; em `standard`, continua útil por si só para chat.
 
 ### Fase 23.3 — Projeção (`fields`) e explicações opt-in
 
@@ -79,17 +86,82 @@ sem quebrar invariantes do contrato e do dataset.
 - `help` explica “modo econômico” vs detalhado (mapeando para knobs).
 - `discover_capabilities` declara suporte por tool (knobs, enums aceitos, defaults recomendados) sem payload excessivo.
 
-**Pronto quando:** um leigo consegue pedir `minimal/full` com poucas tentativas.
+**Subetapas Hotfix:**
+
+1. **Hotfix 23.5.1 — Tornar `standard` explícito como default de chat:** discovery deve dizer que `standard` é recomendado para uso humano interativo.
+2. **Hotfix 23.5.2 — Declarar expectativa de utilidade:** `help` e `discover_capabilities` devem deixar claro que o resultado principal não será omitido no canal `Content`.
+3. **Hotfix 23.5.3 — Reduzir ambiguidade operacional:** exemplos devem mostrar quando usar `minimal` para economia e quando usar `standard/full` para obter resposta humana suficiente.
+4. **Hotfix 23.5.4 — Declarar limites do hotfix:** discovery deve deixar claro que utilidade adicional no `Content` não substitui `fields`/paginação em respostas extensas.
+
+**Pronto quando:** um leigo consegue pedir `minimal/full` com poucas tentativas e entende que `standard` preserva o resultado principal.
 
 ### Fase 23.6 — Evidências e testes (contrato + determinismo + custo)
 
-**Objetivo:** travar eficiência e determinismo por testes.
+**Objetivo:** travar eficiência, utilidade mínima e determinismo por testes.
 
 - Testes cobrindo ao menos `minimal` e `full` nas tools alvo.
 - Testes garantindo: `Content` não duplica JSON; `StructuredContent` permanece canônico.
 - Testes cobrindo a regra de `deterministic_hash` definida na Fase 23.1.
 
-**Pronto quando:** regressões de duplicação/knobs/hashing quebram testes.
+**Subetapas Hotfix:**
+
+1. **Hotfix 23.6.1 — Testes de utilidade factual:** tools como `get_draw_window` devem provar que `Content` expõe concurso final e dados principais do recorte curto.
+2. **Hotfix 23.6.2 — Testes de utilidade analítica:** tools de métricas/ranking devem provar que `Content` expõe pelo menos nomes e resultados salientes.
+3. **Hotfix 23.6.3 — Testes anti-esvaziamento:** frases genéricas do tipo "see structured payload" não bastam como aceite quando omitirem o resultado principal.
+4. **Hotfix 23.6.4 — Massa estática e revisável:** todos os cenários do hotfix devem usar fixtures/goldens versionados no repositório; sem dataset vivo, sem “último concurso” dinâmico e sem massa sintetizada em tempo de execução pela IA.
+5. **Hotfix 23.6.5 — Insumo explícito por cenário:** cada teste do hotfix deve declarar request de entrada, fixture usada e saída esperada suficiente para revisão humana antes da execução.
+6. **Hotfix 23.6.6 — Anti-fragilidade textual:** para `Content`, preferir asserções de presença/ausência de fatos obrigatórios e anti-padrões; usar golden textual literal apenas quando o wording fizer parte da decisão semântica.
+
+**Pronto quando:** regressões de duplicação, utilidade mínima ou knobs/hashing quebram testes.
+
+**Massa mínima recomendada para os testes do hotfix:**
+
+1. `tests/fixtures/synthetic_min_window.json` para:
+   - `get_draw_window` com `window_size=1` e `window_size=3`;
+   - `compute_window_metrics` com 1 métrica escalar ou lista curta.
+2. `tests/fixtures/tie_heavy.json` para:
+   - rankings/listas com empates e escolha determinística do subconjunto saliente no `Content`.
+3. `tests/fixtures/golden/phase23/` para:
+   - goldens de payload estruturado e snapshots pequenos de cenários específicos do hotfix.
+
+**Matriz mínima de cenários do hotfix (para revisão antes da execução):**
+
+1. `HF23-M01` — `get_draw_window`, factual curto.
+   - Fixture: `tests/fixtures/synthetic_min_window.json`
+   - Request: `{ "window_size": 1, "end_contest_id": 3, "verbosity": "standard" }`
+   - Structured esperado: concurso `3`, data `2003-10-13`, dezenas `[1,4,6,7,8,9,10,11,12,14,16,17,20,23,24]`
+   - Content esperado: concurso, data e 15 dezenas; proibido responder só com contagem de janela ou remeter ao payload estruturado.
+2. `HF23-M02` — `get_draw_window`, janela curta auditável.
+   - Fixture: `tests/fixtures/synthetic_min_window.json`
+   - Request: `{ "window_size": 3, "end_contest_id": 3, "verbosity": "standard" }`
+   - Structured esperado: `window = 1..3`, `draws.length = 3`
+   - Content esperado: deve mencionar a janela curta e expor os dados principais do concurso final.
+3. `HF23-M03` — `compute_window_metrics`, lista curta determinística.
+   - Fixture: `tests/fixtures/tie_heavy.json`
+   - Request: `{ "window_size": 5, "end_contest_id": 5005, "metrics": [{ "name": "top10_mais_sorteados" }], "verbosity": "standard" }`
+   - Structured esperado: top 10 `[11,12,13,14,15,16,17,18,19,20]`, alinhado ao golden já existente de `phaseB2`
+   - Content esperado: nome da métrica + top 10; proibido `"Computed 1 metric"` sem o resultado.
+4. `HF23-M04` — `summarize_window_patterns`, resumo estatístico verificável.
+   - Fixture: `tests/fixtures/synthetic_min_window.json`
+   - Request: `{ "window_size": 5, "end_contest_id": 1005, "features": [{ "name": "pares_no_concurso" }], "coverage_threshold": 0.8, "range_method": "iqr", "verbosity": "standard" }`
+   - Structured esperado: `mode = 8`, `median = 8`, `iqr = 1`, `coverage_observed = 0.6`
+   - Content esperado: feature + resultados salientes; proibido ocultar todos os números relevantes.
+5. `HF23-M05` — `summarize_window_aggregates`, agregados pequenos.
+   - Fixture/golden: cenário pequeno já coberto em `phase22`
+   - Structured esperado: IDs `z_hist_pairs`, `a_topk_rows`, `m_matrix_rows`
+   - Content esperado: ao menos os agregados salientes ou resumo factual equivalente; proibido responder apenas a quantidade.
+6. `HF23-M06` — anti-esvaziamento em `full`.
+   - Reaproveita `HF23-M01`, `HF23-M03` e `HF23-M04` com `verbosity = "full"`
+   - Content esperado: mais detalhado, mas ainda contendo o resultado principal; proibido `"See structured payload for ..."` como resposta suficiente.
+
+**Artefatos recomendados para materialização da matriz:**
+
+1. `tests/fixtures/golden/phase23/get-draw-window.window1-end3.standard.golden.json`
+2. `tests/fixtures/golden/phase23/get-draw-window.window3-end3.standard.golden.json`
+3. `tests/fixtures/golden/phase23/compute-window-metrics.top10-mais-sorteados.tie-heavy.standard.golden.json`
+4. `tests/fixtures/golden/phase23/summarize-window-patterns.pares-iqr.standard.golden.json`
+
+**Gate adicional de execução:** a implementação do hotfix só deve começar depois que a matriz acima estiver revisada e aceita por humano responsável.
 
 ---
 
