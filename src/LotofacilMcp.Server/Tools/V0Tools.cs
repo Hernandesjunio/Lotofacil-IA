@@ -135,7 +135,8 @@ public sealed record ComposeIndicatorAnalysisRequest(
     [property: JsonPropertyName("page")] int? Page = null,
     [property: JsonPropertyName("page_size")] int? PageSize = null,
     [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null,
-    [property: JsonPropertyName("include_explanations")] bool IncludeExplanations = true);
+    [property: JsonPropertyName("include_explanations")] bool IncludeExplanations = true,
+    [property: JsonPropertyName("verbosity"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Verbosity = null);
 
 public sealed record WeightedDezenaRankingEntryEnvelope(
     [property: JsonPropertyName("dezena")] int Dezena,
@@ -451,7 +452,8 @@ public sealed record GenerateCandidateGamesRequest(
     [property: JsonPropertyName("generation_mode")] string? GenerationMode = null,
     [property: JsonPropertyName("page")] int? Page = null,
     [property: JsonPropertyName("page_size")] int? PageSize = null,
-    [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null);
+    [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null,
+    [property: JsonPropertyName("verbosity"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Verbosity = null);
 
 public sealed record AppliedConfigurationEnvelope(
     [property: JsonPropertyName("criteria")] IReadOnlyList<GenerateCandidateCriterionRequest> Criteria,
@@ -492,7 +494,8 @@ public sealed record ExplainCandidateGamesRequest(
     [property: JsonPropertyName("page")] int? Page = null,
     [property: JsonPropertyName("page_size")] int? PageSize = null,
     [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null,
-    [property: JsonPropertyName("include_explanations")] bool IncludeExplanations = true);
+    [property: JsonPropertyName("include_explanations")] bool IncludeExplanations = true,
+    [property: JsonPropertyName("verbosity"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Verbosity = null);
 
 public sealed record MetricBreakdownEntryEnvelope(
     [property: JsonPropertyName("metric_name")] string MetricName,
@@ -1145,7 +1148,7 @@ public sealed class V0Tools
                 AllowPending: request.AllowPending,
                 FixturePath: fixturePath));
 
-            var hasPagination = TryResolvePagination(request.Page, request.PageSize, out var pagination, out var paginationError);
+            var hasPagination = TryResolvePagination(request.Verbosity, request.Page, request.PageSize, out var pagination, out var paginationError);
             if (paginationError is not null)
             {
                 return paginationError;
@@ -1273,7 +1276,7 @@ public sealed class V0Tools
                 EndContestId: endContestId,
                 FixturePath: fixturePath));
 
-            var hasPagination = TryResolvePagination(request.Page, request.PageSize, out var pagination, out var paginationError);
+            var hasPagination = TryResolvePagination(request.Verbosity, request.Page, request.PageSize, out var pagination, out var paginationError);
             if (paginationError is not null)
             {
                 return paginationError;
@@ -1391,7 +1394,7 @@ public sealed class V0Tools
                 MinHistory: request.MinHistory,
                 FixturePath: fixturePath));
 
-            var hasPagination = TryResolvePagination(request.Page, request.PageSize, out var pagination, out var paginationError);
+            var hasPagination = TryResolvePagination(request.Verbosity, request.Page, request.PageSize, out var pagination, out var paginationError);
             if (paginationError is not null)
             {
                 return paginationError;
@@ -1529,7 +1532,7 @@ public sealed class V0Tools
                 TopK: request.TopK,
                 FixturePath: fixturePath));
 
-            var hasPagination = TryResolvePagination(request.Page, request.PageSize, out var pagination, out var paginationError);
+            var hasPagination = TryResolvePagination(request.Verbosity, request.Page, request.PageSize, out var pagination, out var paginationError);
             if (paginationError is not null)
             {
                 return paginationError;
@@ -1539,7 +1542,8 @@ public sealed class V0Tools
             {
                 ["core"] = result.DeterministicHashInput,
                 ["include_explanations"] = request.IncludeExplanations,
-                ["fields"] = requestedFields
+                ["fields"] = requestedFields,
+                ["verbosity"] = ResolveVerbosity(request.Verbosity)
             };
             if (hasPagination && pagination is not null)
             {
@@ -2224,7 +2228,7 @@ public sealed class V0Tools
                 GenerationMode: request.GenerationMode,
                 FixturePath: fixturePath));
 
-            var hasPagination = TryResolvePagination(request.Page, request.PageSize, out var pagination, out var paginationError);
+            var hasPagination = TryResolvePagination(request.Verbosity, request.Page, request.PageSize, out var pagination, out var paginationError);
             if (paginationError is not null)
             {
                 return paginationError;
@@ -2233,7 +2237,8 @@ public sealed class V0Tools
             var hashInput = new Dictionary<string, object?>
             {
                 ["core"] = result.DeterministicHashInput,
-                ["fields"] = requestedFields
+                ["fields"] = requestedFields,
+                ["verbosity"] = ResolveVerbosity(request.Verbosity)
             };
             if (hasPagination && pagination is not null)
             {
@@ -2461,7 +2466,7 @@ public sealed class V0Tools
                 ReplayGuaranteed: request.ReplayGuaranteed,
                 FixturePath: fixturePath));
 
-            var hasPagination = TryResolvePagination(request.Page, request.PageSize, out var pagination, out var paginationError);
+            var hasPagination = TryResolvePagination(request.Verbosity, request.Page, request.PageSize, out var pagination, out var paginationError);
             if (paginationError is not null)
             {
                 return paginationError;
@@ -2471,7 +2476,8 @@ public sealed class V0Tools
             {
                 ["core"] = result.DeterministicHashInput,
                 ["include_explanations"] = request.IncludeExplanations,
-                ["fields"] = requestedFields
+                ["fields"] = requestedFields,
+                ["verbosity"] = ResolveVerbosity(request.Verbosity)
             };
             if (hasPagination && pagination is not null)
             {
@@ -2734,6 +2740,7 @@ public sealed class V0Tools
     }
 
     private static bool TryResolvePagination(
+        string? verbosity,
         int? page,
         int? pageSize,
         out PaginationSpec? spec,
@@ -2744,6 +2751,21 @@ public sealed class V0Tools
 
         if (page is null && pageSize is null)
         {
+            return false;
+        }
+
+        // ADR 0023 / mcp-tool-contract: paginação é suportada apenas para respostas grandes em verbosity="full".
+        if (!string.Equals(ResolveVerbosity(verbosity), "full", StringComparison.Ordinal))
+        {
+            error = ToContractError(
+                code: "INVALID_REQUEST",
+                message: "Pagination requires verbosity=full.",
+                details: new Dictionary<string, object?>
+                {
+                    ["field"] = "page",
+                    ["constraint"] = "page/page_size are only allowed when verbosity=full",
+                    ["verbosity"] = ResolveVerbosity(verbosity)
+                });
             return false;
         }
 

@@ -207,6 +207,32 @@ public sealed class Phase23Adr0023EfficiencyKnobsContractTests : IAsyncLifetime
         Assert.NotEqual(h0, h3);
     }
 
+    [Fact]
+    public async Task Pagination_IsRejected_WhenVerbosityIsNotFull()
+    {
+        // ADR 0023 / mcp-tool-contract: page/page_size only allowed for responses large in verbosity="full".
+        var response = await _httpMcpClient.CallToolAsync("compute_window_metrics", new Dictionary<string, object?>
+        {
+            ["window_size"] = 3,
+            ["end_contest_id"] = 1003,
+            ["metrics"] = new object[]
+            {
+                new Dictionary<string, object?> { ["name"] = "frequencia_por_dezena" }
+            },
+            ["verbosity"] = "standard",
+            ["page"] = 1,
+            ["page_size"] = 1
+        });
+
+        Assert.True(response.IsError);
+        var structured = ReadStructured(response);
+        var error = structured.GetProperty("error");
+        Assert.Equal("INVALID_REQUEST", error.GetProperty("code").GetString());
+
+        var details = error.GetProperty("details");
+        Assert.Equal("page", details.GetProperty("field").GetString());
+    }
+
     private static JsonElement ReadStructured(CallToolResult response)
     {
         if (response.StructuredContent is JsonElement structuredContent)

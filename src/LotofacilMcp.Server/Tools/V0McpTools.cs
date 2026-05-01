@@ -61,7 +61,11 @@ public sealed class V0McpTools
             var err = new ContractErrorEnvelope(new ContractError(
                 "INVALID_REQUEST",
                 "Pagination requires verbosity=full.",
-                new Dictionary<string, object?> { ["constraint"] = "page/page_size are only allowed when verbosity=full" }));
+                new Dictionary<string, object?>
+                {
+                    ["field"] = "page",
+                    ["constraint"] = "page/page_size are only allowed when verbosity=full"
+                }));
             return ToToolResult(err, isError: true, verbosity);
         }
 
@@ -97,7 +101,11 @@ public sealed class V0McpTools
             var err = new ContractErrorEnvelope(new ContractError(
                 "INVALID_REQUEST",
                 "Pagination requires verbosity=full.",
-                new Dictionary<string, object?> { ["constraint"] = "page/page_size are only allowed when verbosity=full" }));
+                new Dictionary<string, object?>
+                {
+                    ["field"] = "page",
+                    ["constraint"] = "page/page_size are only allowed when verbosity=full"
+                }));
             return ToToolResult(err, isError: true, verbosity);
         }
 
@@ -138,7 +146,11 @@ public sealed class V0McpTools
             var err = new ContractErrorEnvelope(new ContractError(
                 "INVALID_REQUEST",
                 "Pagination requires verbosity=full.",
-                new Dictionary<string, object?> { ["constraint"] = "page/page_size are only allowed when verbosity=full" }));
+                new Dictionary<string, object?>
+                {
+                    ["field"] = "page",
+                    ["constraint"] = "page/page_size are only allowed when verbosity=full"
+                }));
             return ToToolResult(err, isError: true, verbosity);
         }
 
@@ -181,7 +193,11 @@ public sealed class V0McpTools
             var err = new ContractErrorEnvelope(new ContractError(
                 "INVALID_REQUEST",
                 "Pagination requires verbosity=full.",
-                new Dictionary<string, object?> { ["constraint"] = "page/page_size are only allowed when verbosity=full" }));
+                new Dictionary<string, object?>
+                {
+                    ["field"] = "page",
+                    ["constraint"] = "page/page_size are only allowed when verbosity=full"
+                }));
             return ToToolResult(err, isError: true, verbosity);
         }
 
@@ -196,7 +212,8 @@ public sealed class V0McpTools
             Page: page,
             PageSize: page_size,
             Fields: fields,
-            IncludeExplanations: include_explanations));
+            IncludeExplanations: include_explanations,
+            Verbosity: verbosity));
 
         return ToToolResult(payload, payload is ContractErrorEnvelope, verbosity);
     }
@@ -300,7 +317,11 @@ public sealed class V0McpTools
             var err = new ContractErrorEnvelope(new ContractError(
                 "INVALID_REQUEST",
                 "Pagination requires verbosity=full.",
-                new Dictionary<string, object?> { ["constraint"] = "page/page_size are only allowed when verbosity=full" }));
+                new Dictionary<string, object?>
+                {
+                    ["field"] = "page",
+                    ["constraint"] = "page/page_size are only allowed when verbosity=full"
+                }));
             return ToToolResult(err, isError: true, verbosity);
         }
 
@@ -315,7 +336,8 @@ public sealed class V0McpTools
             GenerationMode: generation_mode,
             Page: page,
             PageSize: page_size,
-            Fields: fields));
+            Fields: fields,
+            Verbosity: verbosity));
 
         return ToToolResult(payload, payload is ContractErrorEnvelope, verbosity);
     }
@@ -344,7 +366,11 @@ public sealed class V0McpTools
             var err = new ContractErrorEnvelope(new ContractError(
                 "INVALID_REQUEST",
                 "Pagination requires verbosity=full.",
-                new Dictionary<string, object?> { ["constraint"] = "page/page_size are only allowed when verbosity=full" }));
+                new Dictionary<string, object?>
+                {
+                    ["field"] = "page",
+                    ["constraint"] = "page/page_size are only allowed when verbosity=full"
+                }));
             return ToToolResult(err, isError: true, verbosity);
         }
 
@@ -361,7 +387,8 @@ public sealed class V0McpTools
             Page: page,
             PageSize: page_size,
             Fields: fields,
-            IncludeExplanations: include_explanations));
+            IncludeExplanations: include_explanations,
+            Verbosity: verbosity));
 
         return ToToolResult(payload, payload is ContractErrorEnvelope, verbosity);
     }

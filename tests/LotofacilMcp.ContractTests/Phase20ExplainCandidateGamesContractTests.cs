@@ -181,7 +181,8 @@ public sealed class Phase20ExplainCandidateGamesContractTests
             Games: games,
             IncludeMetricBreakdown: false,
             IncludeExclusionBreakdown: false,
-            IncludeExplanations: true);
+            IncludeExplanations: true,
+            Verbosity: "full");
 
         var full = Assert.IsType<ExplainCandidateGamesResponse>(sut.ExplainCandidateGames(baseRequest));
         Assert.Equal(25, full.Explanations.Count);
