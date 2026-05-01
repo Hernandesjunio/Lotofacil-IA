@@ -254,6 +254,7 @@ Cada item é uma obrigação de comportamento; testes de contrato devem assertar
 
 7. **Hash determinístico** — Regra por defeito: `deterministic_hash = SHA256(canonical_json({input, dataset_version, tool_version}))`, com `input` o pedido canónico da tool (ver *Canonização*).  
    *Qualificação (`generate_candidate_games`):* quando `replay_guaranteed: false`, o objeto hashed **exclui** a sequência concreta de candidatos gerados e outras parcelas puramente estocásticas da saída; inclui insumos não aleatórios (janela, `generation_mode`, plano e restrições **resolvidas**, versões) de forma a permanecer **idêntico** entre duas execuções com o mesmo request **mesmo** que as listas de dezenas diferirem. Quando `replay_guaranteed: true`, o `input` hashed **deve** incluir tudo o que fixa o episódio reprodutível (incluindo `seed` e parâmetros relevantes), de modo que o mesmo pedido ⇒ mesmo hash **e** mesma lista ordenada de candidatos.  
+   *Qualificação (controle de apresentação; ADR 0023):* quando a tool suportar parâmetros de apresentação/projeção (`verbosity`, `include_explanations`, `fields`/`response_projection`), esses valores (incluindo defaults resolvidos) **fazem parte do `input` canônico** para efeito de hash — isto é, mudar qualquer um desses knobs **deve** mudar o `deterministic_hash`, mesmo quando a mudança afetar apenas a apresentação (ex.: texto do canal `Content`, presença/ausência de explicações, ou projeção de campos em respostas grandes).  
    *Validação:* `canonical_json` segue JSON canônico (RFC 8785); hash estável para fixture fixa segundo a política de `replay_guaranteed`. Ver [ADR 0001 D1](adrs/0001-fechamento-semantico-e-determinismo-v1.md) (núcleo de determinismo) e [ADR 0020 D7](adrs/0020-flexibilidade-geracao-aleatoria-filtros-opt-in-e-intersecao-v1.md) (qualificação da rota de geração).
 
 8. **Composição totalmente declarada** — Toda composição dinâmica deve declarar componentes, transformações, agregações, pesos e operador.  
@@ -265,6 +266,61 @@ Cada item é uma obrigação de comportamento; testes de contrato devem assertar
 ## Canonização e metadados comuns
 
 Esta seção fecha os termos usados pelos invariantes (`dataset_version`, `tool_version`, `canonical_json` e o envelope mínimo de metadados). Implementações podem ter campos adicionais, mas os itens abaixo são o contrato estável.
+
+### Parâmetros transversais de economia e projeção (ADR 0023)
+
+Algumas tools podem devolver payloads grandes (listas, matrizes, breakdowns). Para permitir eficiência **sem** defaults ocultos no servidor e **sem** duplicação de JSON no canal textual, quando uma tool declarar suporte ela deve aceitar os knobs abaixo com semântica consistente.
+
+> **Norma de suporte:** nem toda tool é obrigada a suportar estes knobs; quando suportar, deve declarar isso em `discover_capabilities` (ver ADR 0023 D5) e obedecer às regras desta seção.
+
+#### `verbosity`
+
+- **Tipo:** enum fechado: `"minimal" | "standard" | "full"`.
+- **Quando aplicável:** tools que devolvem texto humano em `Content` e/ou payloads estruturados com campos “redundantes” (metadados verbosos, breakdowns longos).
+- **Semântica normativa:**
+  - **`minimal`**: deve **omitir** explicações longas e campos redundantes; deve priorizar **dados mínimos auditáveis**. O texto em `Content` (quando presente) deve ser curto e não deve repetir o JSON completo do `StructuredContent`.
+  - **`standard`**: comportamento padrão recomendado (compatível com o comportamento atual ou próximo), com explicações curtas quando disponíveis.
+  - **`full`**: inclui detalhamento completo; quando o volume crescer, a tool deve oferecer mecanismos determinísticos de contenção como **projeção** (`fields`/`response_projection`) e/ou paginação determinística (ADR 0023 D4).
+- **Default (quando omitido):** `"standard"`.
+
+#### `include_explanations`
+
+- **Tipo:** boolean.
+- **Quando aplicável:** tools que possuem campos explicativos (`explanation`, `rationale`, `definitions`, breakdowns textuais ou estruturais com finalidade de explicabilidade).
+- **Semântica normativa:**
+  - `true`: inclui explicações e/ou breakdowns explicativos onde a tool os tiver definido.
+  - `false`: omite explicações/breakdowns explicativos (mantendo os dados necessários para auditoria e validação do resultado).
+- **Default (quando omitido):**
+  - Se a tool suportar o knob, o default recomendado é `true` em `verbosity="standard"` e `false` em `verbosity="minimal"`.
+  - **Regra de fechamento:** o servidor deve tratar o valor efetivo como **resolvido de forma determinística** e, quando houver derivação (`include_explanations` omitido), deve considerar esse default resolvido parte do `input` canônico para hash (ver *Canonização* → `deterministic_hash`).
+
+#### `fields` / `response_projection`
+
+- **Tipo:** lista de seletores de campos (strings).
+- **Quando aplicável:** tools com respostas grandes onde o consumidor frequentemente precisa de apenas parte do payload.
+- **Semântica normativa:** projeção **server-side**: a resposta deve conter **apenas** os campos solicitados (mais o envelope mínimo de metadados exigidos pelo contrato), preservando:
+  - nomes canônicos e tipos dos campos incluídos;
+  - determinismo e ordenações canônicas;
+  - validade do JSON resultante (sem campos “meio presentes”).
+- **Naming:** o contrato aceita dois nomes equivalentes para o mesmo propósito; cada tool deve escolher **um** nome e mantê-lo estável no seu schema:
+  - `fields` (preferido quando a resposta é um objeto com campos diretos), ou
+  - `response_projection` (preferido quando a projeção precisa de estrutura futura).
+- **Defaults (quando omitido):** “sem projeção” (resposta completa conforme `verbosity/include_explanations`).
+- **Campos não reconhecidos:** se o consumidor pedir um campo inválido/inexistente para aquela tool, a tool deve falhar com `INVALID_REQUEST` (ou código mais específico quando existir) e incluir em `details` uma lista curta e fechada de `allowed_fields` (quando viável), para guiar o cliente sem tentativa/erro.
+
+#### Regra de hash quando knobs alteram a apresentação
+
+Para evitar ambiguidade entre “hash da semântica” vs “hash da apresentação”, este contrato fecha:
+
+- `deterministic_hash` é sempre calculado sobre `canonical_json({ input, dataset_version, tool_version })`.
+- `input` deve ser o **pedido canônico efetivo** (request após validação e resolução determinística de defaults documentados), e **inclui**:
+  - `verbosity` (valor efetivo),
+  - `include_explanations` (valor efetivo),
+  - `fields`/`response_projection` (valor efetivo).
+- Consequência normativa: mudar qualquer um desses knobs (ou o default resolvido) **deve** mudar o `deterministic_hash`, mesmo que a mudança afete apenas:
+  - o texto humano do canal `Content`, e/ou
+  - a presença/ausência de explicações/breakdowns, e/ou
+  - a projeção (subset) de campos em `StructuredContent`.
 
 ### `dataset_version`
 
