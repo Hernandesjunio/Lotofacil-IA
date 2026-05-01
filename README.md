@@ -120,6 +120,11 @@ Decisão normativa: [ADR 0024](docs/adrs/0024-distribuicao-zip-mcp-stdio-http-se
 - `LotofacilMcp.Server.exe` (self-contained)
 - (opcional) `README.txt` com o quickstart
 
+#### Modo CLI mínimo e comportamento default (sem ambiguidade)
+
+- **Modo CLI mínimo (produto ZIP, Cursor/hosts MCP)**: executar com **`--mcp-stdio`**.
+- **Comportamento padrão (sem flags)**: o executável inicia em **modo HTTP**, expondo **MCP HTTP real** em `/mcp` e endpoints REST espelhados em `/tools/*` (ver [ADR 0005](docs/adrs/0005-transporte-mcp-e-superficie-tools-v1.md)).
+
 #### Configuração do Cursor (exemplo `mcpServers`)
 
 1) Extraia o ZIP para uma pasta fixa, por exemplo `C:\LotofacilIA\`.
@@ -144,8 +149,29 @@ Exemplo:
 
 Notas importantes:
 
-- `Dataset__DrawsSourceUri` é **obrigatória** (ver [ADR 0022](docs/adrs/0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md)). Sem ela, tools que dependem do histórico devem retornar `DATASET_UNAVAILABLE` (sem fallback).
-- Para validar a instalação rapidamente, chame `help` e `discover_capabilities` no chat.
+- `Dataset__DrawsSourceUri` é **obrigatória** e **não existe fallback/fixtures** (ver [ADR 0022](docs/adrs/0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md)). Sem ela, tools que dependem do histórico devem retornar `DATASET_UNAVAILABLE`.
+- **Discovery operacional** não depende de descritores externos. A fonte de verdade é o **protocolo MCP**:
+  - `tools/list` (o host usa isso para listar tools),
+  - tool `help` (onboarding/índice; ver [ADR 0009](docs/adrs/0009-help-e-catalogo-de-templates-resources-v1.md)),
+  - tool `discover_capabilities` (discovery técnico por build; ver [ADR 0011](docs/adrs/0011-tool-de-discovery-de-capacidades-por-build-v1.md)).
+
+#### Execução manual (STDIO) sem host (Windows)
+
+Para depurar localmente sem um host MCP, rode o binário em STDIO e forneça o dataset por env var.
+
+`cmd.exe`:
+
+```bat
+set Dataset__DrawsSourceUri=file:///C:/dados/lotofacil/draws.json
+C:\LotofacilIA\LotofacilMcp.Server.exe --mcp-stdio
+```
+
+PowerShell:
+
+```powershell
+$env:Dataset__DrawsSourceUri = "file:///C:/dados/lotofacil/draws.json"
+& "C:\LotofacilIA\LotofacilMcp.Server.exe" --mcp-stdio
+```
 
 ### Auditoria da superfície MCP STDIO (métricas expostas)
 
@@ -227,6 +253,21 @@ dotnet run --project "{workspace}/src/LotofacilMcp.Server/LotofacilMcp.Server.cs
 ```
 
 Observação: `/mcp` é o endpoint MCP real (protocolo). Já `/tools/*` e `/mcp/tools/*` continuam sendo rotas REST de compatibilidade.
+
+### Execução do binário (ZIP) em modo HTTP (sem flags)
+
+Quando você executa o binário **sem flags**, ele inicia em **modo HTTP** (com MCP HTTP real em `/mcp`).
+
+- Para controlar a URL/porta de bind no Windows, use a variável padrão do ASP.NET Core:
+  - `ASPNETCORE_URLS` (ex.: `http://127.0.0.1:5000`)
+
+Exemplo (PowerShell):
+
+```powershell
+$env:Dataset__DrawsSourceUri = "file:///C:/dados/lotofacil/draws.json"
+$env:ASPNETCORE_URLS = "http://127.0.0.1:5000"
+& "C:\LotofacilIA\LotofacilMcp.Server.exe"
+```
 
 ### Execução via Docker (HTTP)
 

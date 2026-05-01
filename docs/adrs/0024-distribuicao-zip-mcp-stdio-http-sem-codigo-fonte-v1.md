@@ -58,7 +58,20 @@ O executável distribuído deve suportar ao menos:
 
 - `--mcp-stdio`: inicia o servidor MCP sobre stdin/stdout.
 
-O comportamento padrão (sem flags) deve ser definido de forma explícita no `README.md` para evitar ambiguidade.
+#### D4.1 — Modo CLI mínimo (produto ZIP)
+
+- O **modo CLI mínimo** do binário distribuído é **`--mcp-stdio`**.
+- Para uso em hosts MCP desktop (ex.: Cursor), a configuração **deve** invocar o executável com `--mcp-stdio`.
+
+#### D4.2 — Comportamento padrão do executável (sem flags)
+
+Para evitar ambiguidade operacional (e para não depender de leitura do código fonte), o comportamento padrão **sem flags** deve ser descrito no `README.md` e deve ser tratado como parte do “contrato operacional” do artefato ZIP:
+
+- **Sem flags**: inicia o servidor em **modo HTTP**, expondo:
+  - um endpoint **MCP HTTP real** (ex.: `/mcp`, streamable), e
+  - endpoints HTTP REST espelhados em `/tools/*` (compatibilidade).
+
+Observação: a distinção “MCP HTTP real” vs “REST espelhado” é normativa e está fechada em [ADR 0005](0005-transporte-mcp-e-superficie-tools-v1.md).
 
 ### D5 — Conteúdo do ZIP e convenções de instalação
 
@@ -126,5 +139,10 @@ Considera-se esta ADR implementada quando:
 - Atualizar o [brief.md](../brief.md) para referenciar esta ADR.
 - Atualizar o `README.md` com:
   - instruções explícitas de execução por **ZIP** (STDIO e HTTP);
-  - exemplos completos de `mcpServers` com `command`, `args` e `env`.
+  - exemplos completos de `mcpServers` com `command`, `args` e `env`;
+  - seção “Sem repo” que feche:
+    - **modo CLI mínimo** do ZIP (`--mcp-stdio`);
+    - **comportamento default** do executável sem flags;
+    - **discovery operacional** via `tools/list` + tools meta (`help`, `discover_capabilities`), sem depender de descritores externos;
+    - **dataset obrigatório** via `Dataset__DrawsSourceUri`, sem fallback/fixtures.
 
