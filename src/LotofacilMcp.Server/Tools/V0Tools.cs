@@ -28,7 +28,8 @@ public sealed record ComputeWindowMetricsRequest(
     [property: JsonPropertyName("page")] int? Page = null,
     [property: JsonPropertyName("page_size")] int? PageSize = null,
     [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null,
-    [property: JsonPropertyName("include_explanations")] bool IncludeExplanations = true);
+    [property: JsonPropertyName("include_explanations")] bool IncludeExplanations = true,
+    [property: JsonPropertyName("verbosity"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Verbosity = null);
 
 public sealed record GetDrawWindowRequest(
     [property: JsonPropertyName("window_size")] int? WindowSize = null,
@@ -36,9 +37,11 @@ public sealed record GetDrawWindowRequest(
     [property: JsonPropertyName("end_contest_id")] int? EndContestId = null,
     [property: JsonPropertyName("page")] int? Page = null,
     [property: JsonPropertyName("page_size")] int? PageSize = null,
-    [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null);
+    [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null,
+    [property: JsonPropertyName("verbosity"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Verbosity = null);
 
-public sealed record DiscoverCapabilitiesRequest();
+public sealed record DiscoverCapabilitiesRequest(
+    [property: JsonPropertyName("verbosity"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Verbosity = null);
 
 public sealed record StabilityIndicatorRequestDto(
     [property: JsonPropertyName("name")] string Name,
@@ -55,7 +58,8 @@ public sealed record AnalyzeIndicatorStabilityRequest(
     [property: JsonPropertyName("page")] int? Page = null,
     [property: JsonPropertyName("page_size")] int? PageSize = null,
     [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null,
-    [property: JsonPropertyName("include_explanations")] bool IncludeExplanations = true);
+    [property: JsonPropertyName("include_explanations")] bool IncludeExplanations = true,
+    [property: JsonPropertyName("verbosity"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Verbosity = null);
 
 public sealed record ContractError(
     [property: JsonPropertyName("code")] string Code,
@@ -595,6 +599,16 @@ public sealed class V0Tools
     private const int MaxPageSizeFull = 500;
 
     private readonly record struct PaginationSpec(int Page, int PageSize);
+    private static string ResolveVerbosity(string? verbosity)
+    {
+        var normalized = verbosity?.Trim().ToLowerInvariant();
+        return normalized switch
+        {
+            "minimal" => "minimal",
+            "full" => "full",
+            _ => "standard"
+        };
+    }
 
     public V0Tools(string? drawsSourceUri, string? contentRootPath = null, HttpJsonDatasetSnapshotCache? httpSnapshotCache = null)
     {
@@ -778,7 +792,7 @@ public sealed class V0Tools
 
     public object DiscoverCapabilities(DiscoverCapabilitiesRequest request)
     {
-        var _ = request;
+        var effectiveVerbosity = ResolveVerbosity(request.Verbosity);
         var implementedMetricNames = MetricAvailabilityCatalog.GetImplementedMetricNames()
             .OrderBy(static metric => metric, StringComparer.Ordinal)
             .ToArray();
@@ -1043,6 +1057,7 @@ public sealed class V0Tools
         var deterministicHash = _deterministicHashService.Compute(
             new
             {
+                verbosity = effectiveVerbosity,
                 build_profile = response.BuildProfile,
                 dataset_requirements = response.DatasetRequirements,
                 window_modes_supported = response.WindowModesSupported,
@@ -1120,7 +1135,8 @@ public sealed class V0Tools
             {
                 ["core"] = result.DeterministicHashInput,
                 ["include_explanations"] = request.IncludeExplanations,
-                ["fields"] = requestedFields
+                ["fields"] = requestedFields,
+                ["verbosity"] = ResolveVerbosity(request.Verbosity)
             };
             if (hasPagination && pagination is not null)
             {
@@ -1267,7 +1283,8 @@ public sealed class V0Tools
             var hashInput = new Dictionary<string, object?>
             {
                 ["core"] = result.DeterministicHashInput,
-                ["fields"] = requestedFields
+                ["fields"] = requestedFields,
+                ["verbosity"] = ResolveVerbosity(request.Verbosity)
             };
             if (hasPagination && pagination is not null)
             {
@@ -1373,7 +1390,8 @@ public sealed class V0Tools
             {
                 ["core"] = result.DeterministicHashInput,
                 ["include_explanations"] = request.IncludeExplanations,
-                ["fields"] = requestedFields
+                ["fields"] = requestedFields,
+                ["verbosity"] = ResolveVerbosity(request.Verbosity)
             };
             if (hasPagination && pagination is not null)
             {

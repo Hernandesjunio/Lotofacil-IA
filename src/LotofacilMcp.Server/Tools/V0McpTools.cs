@@ -31,7 +31,7 @@ public sealed class V0McpTools
         V0Tools tools,
         [Description("Controle de verbosidade do resumo humano no canal Content: minimal | standard | full.")] string? verbosity = null)
     {
-        var payload = tools.DiscoverCapabilities(new DiscoverCapabilitiesRequest());
+        var payload = tools.DiscoverCapabilities(new DiscoverCapabilitiesRequest(Verbosity: verbosity));
         return ToToolResult(payload, payload is ContractErrorEnvelope, verbosity);
     }
 
@@ -71,7 +71,8 @@ public sealed class V0McpTools
             EndContestId: end_contest_id,
             Page: page,
             PageSize: page_size,
-            Fields: fields));
+            Fields: fields,
+            Verbosity: verbosity));
 
         return ToToolResult(payload, payload is ContractErrorEnvelope, verbosity);
     }
@@ -109,7 +110,8 @@ public sealed class V0McpTools
             Page: page,
             PageSize: page_size,
             Fields: fields,
-            IncludeExplanations: include_explanations));
+            IncludeExplanations: include_explanations,
+            Verbosity: verbosity));
 
         return ToToolResult(payload, payload is ContractErrorEnvelope, verbosity);
     }
@@ -151,7 +153,8 @@ public sealed class V0McpTools
             Page: page,
             PageSize: page_size,
             Fields: fields,
-            IncludeExplanations: include_explanations));
+            IncludeExplanations: include_explanations,
+            Verbosity: verbosity));
 
         return ToToolResult(payload, payload is ContractErrorEnvelope, verbosity);
     }
