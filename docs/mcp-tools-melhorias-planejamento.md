@@ -442,6 +442,73 @@ Critérios de aceitação (gerais):
 - `minimal` reduz o tamanho do payload e o consumo total de tokens em **≥ 10%** em cenários de referência.
 - defaults não quebram compatibilidade (quando houver mudança, versionar tool ou parâmetro).
 
+#### B.2.0 Diretriz de UX (leigos): “modo econômico” e “modo detalhado”
+
+Objetivo: tornar o consumo intuitivo no chat (Cursor hoje; agente dedicado no futuro) sem exigir que o usuário saiba MCP/JSON.
+
+**Regras normativas:**
+
+- O nível de detalhe é sempre escolha de quem opera o chat: o host/agente deve mapear frases naturais do usuário para `verbosity` e parâmetros correlatos.
+- O servidor permanece stateless; “preferência de modo” não é persistida no servidor, apenas no host (sessão do chat/agente).
+- `verbosity` deve afetar principalmente:
+  - presença/tamanho de texto explicativo (campos `explanation`, descrições extensas);
+  - tamanho de listas grandes (via paginação determinística quando aplicável);
+  - inclusão de campos redundantes.
+
+**Mini‑guia de UX (frases prontas):**
+
+- “**Use modo econômico a partir de agora**” → `verbosity="minimal"` (e `include_explanations=false`).
+- “**Me dê só o essencial**” → `verbosity="minimal"` + `fields` com os campos mínimos (quando suportado).
+- “**Agora quero detalhado**” → `verbosity="full"` (e `include_explanations=true`), podendo ativar paginação se necessário.
+- “**Volte ao padrão**” → `verbosity="standard"`.
+- “**Quero os números, sem texto**” → `verbosity="minimal"` + `include_explanations=false`.
+
+**Descoberta e ajuda (para reduzir tentativa/erro):**
+
+- `help` deve listar, em linguagem simples, o que muda em `minimal|standard|full` e exemplos de pedidos acima.
+- `discover_capabilities` deve declarar explicitamente:
+  - `supported_parameters.verbosity = ["minimal","standard","full"]`
+  - `supported_parameters.include_explanations = ["false","true"]` (quando aplicável)
+  - (quando implementado) `supported_parameters.fields` / `response_projection`
+  - `recommended_defaults` (p.ex. `standard`) e recomendações de economia (“use minimal para respostas curtas no chat”).
+
+**Nota de eficiência para MCP STDIO (Cursor chat):**
+
+- Para evitar duplicação de tokens, a resposta deve privilegiar JSON em `StructuredContent` e manter `Content` como texto **curto** (resumo humano) conforme `verbosity` — nunca repetir o JSON completo em ambos os canais.
+
+### B.2.1 Forma mais eficiente: tool direta para “últimos X concursos” (1 tool call)
+
+**Motivação**: no contrato atual, `get_draw_window` exige `end_contest_id` (ou `start+end`). Para obter “último”/“últimos X”, o consumidor precisa primeiro descobrir o `latest_contest_id` do dataset (o que hoje não é exposto de forma pequena), gerando **mais tool calls** e mais tokens.
+
+**Proposta (recomendada para velocidade)**: nova tool `get_latest_draws`.
+
+- **Request (mínimo)**:
+  - `count`: `integer` (1..N, com limite definido em spec; p.ex. 1..200)
+  - `verbosity`: `"minimal" | "standard" | "full"` (default `"minimal"`)
+  - `fields`: lista opcional para projeção (p.ex. `["draws.contest_id","draws.draw_date","draws.numbers","window"]`)
+- **Semântica (normativa)**:
+  - resolve internamente `latest_contest_id` do dataset carregado
+  - retorna a janela canônica \([latest-count+1..latest]\), com concursos em ordem cronológica
+  - em `verbosity="minimal"`, retorna apenas metadados e o essencial do draw (sem textos de explicação)
+- **Response (mínimo)**:
+  - `dataset_version`, `tool_version`, `deterministic_hash`
+  - `window`: `{ size, start_contest_id, end_contest_id }`
+  - `draws[]`: `{ contest_id, draw_date, numbers }`
+
+**Por que é a mais eficiente**:
+
+- reduz para **1** tool call o fluxo “último concurso / últimos X” (sem etapa de descoberta)
+- elimina tentativa/erro com `end_contest_id`
+- permite respostas curtas previsíveis (`verbosity="minimal"` + `fields`)
+
+**Teste de contrato sugerido**:
+
+- `get_latest_draws({count:10, verbosity:"minimal"})`:
+  - `window.size == 10`
+  - `draws.length == 10`
+  - `draws[9].contest_id == window.end_contest_id`
+  - determinismo: mesma fixture ⇒ mesma saída e `deterministic_hash`
+
 ### B.3 Tool: descrições das métricas do último concurso (brief/detailed/full)
 
 #### B.3.1 Motivação
@@ -498,6 +565,11 @@ Quando a intenção do usuário solicitar muitos itens (métricas * grandes jane
   - matriz: 375 números (ou mais, dependendo do encoding)
   - séries: `window_size` pontos por métrica
 - perguntar: “isso pode consumir muitos tokens; deseja continuar em modo completo, ou prefere resumo?”
+
+**Nota importante (limite do servidor MCP):**
+
+- O **servidor MCP** (tools) não possui um “canal de conversa” para **perguntar e aguardar resposta** no meio de uma execução. A decisão “continuar vs resumir” precisa ocorrer **no host/agente/cliente** antes da chamada da tool.
+- Logo, a melhoria “pergunta direta ao usuário antes de continuar” é **implementável apenas no lado cliente/host**, não como comportamento interativo do servidor.
 
 #### B.4.2 No servidor (limitado mas útil)
 
@@ -571,8 +643,15 @@ Reforço (ver Anexo A.6):
   - `value_encoding` (p.ex. `sparse_triplets`) para `matriz_numero_slot`
   - `describe_latest_metrics` com templates determinísticos (`brief/detailed`)
 - **Alta**
-  - paginação/streaming para `full` detalhado (matrizes/séries grandes)
+  - paginação para `full` detalhado (matrizes/séries grandes)
   - tool composta “pipeline” de geração baseada em janela com seleção mínima de métricas e auditoria completa
+
+**Nota (limite do transporte atual):**
+
+- “Streaming” de resultados dentro do **mesmo** call de tool não é um alvo realista no transporte atual (tool retorna um único payload JSON por execução).
+- Para obter o mesmo benefício (economia e latência), preferir:
+  - **paginação determinística** (ex.: `page`/`page_size`/`cursor` estável por ordenação canônica), e/ou
+  - **projeção de campos** (`fields` / `response_projection`) + modos (`verbosity` / `response_format`).
 
 ## Plano de execução por fases (spec-driven)
 
