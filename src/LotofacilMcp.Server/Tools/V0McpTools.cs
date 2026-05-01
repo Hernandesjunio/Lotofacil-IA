@@ -387,86 +387,292 @@ public sealed class V0McpTools
     private static string BuildHumanSummary(object payload, VerbosityLevel verbosity)
     {
         // ADR 0023 (D2): Content é texto humano curto e não duplica o JSON canônico do StructuredContent.
+        // Hotfix 23.2.x: "minimal" segue útil, "standard" é chat-safe, e "full" não degrada para aviso genérico.
         return payload switch
         {
             ContractErrorEnvelope e => verbosity switch
             {
                 VerbosityLevel.Minimal => $"Error {e.Error.Code}: {e.Error.Message}",
-                VerbosityLevel.Full => $"Error {e.Error.Code}: {e.Error.Message} (see structured payload for details).",
+                VerbosityLevel.Full => $"Error {e.Error.Code}: {e.Error.Message}.",
                 _ => $"Error {e.Error.Code}: {e.Error.Message}"
             },
             DiscoverCapabilitiesResponse r => verbosity switch
             {
                 VerbosityLevel.Minimal => $"Capabilities: build={r.BuildProfile}, tools={r.Tools.Count}, metrics={r.Metrics.ImplementedMetricNames.Count}.",
-                VerbosityLevel.Full => $"Capabilities: build={r.BuildProfile}, tool_version={r.ToolVersion}, tools={r.Tools.Count}, implemented_metrics={r.Metrics.ImplementedMetricNames.Count}. See structured payload for full allowlists.",
+                VerbosityLevel.Full => LimitSummary($"Capabilities: build={r.BuildProfile}, tool_version={r.ToolVersion}, tools={r.Tools.Count}, implemented_metrics={r.Metrics.ImplementedMetricNames.Count}, generation_strategies={r.Generation.Strategies.Count}.", verbosity),
                 _ => $"Capabilities: build={r.BuildProfile}, tools={r.Tools.Count}, implemented_metrics={r.Metrics.ImplementedMetricNames.Count}."
             },
             HelpResponse r => verbosity switch
             {
                 VerbosityLevel.Minimal => $"Help: templates={r.Templates.Count}, index={r.IndexResourceUri}.",
-                VerbosityLevel.Full => $"Help: templates={r.Templates.Count}, index={r.IndexResourceUri} (tool_version={r.ToolVersion}). See structured payload for markdown and resources.",
+                VerbosityLevel.Full => LimitSummary($"Help: templates={r.Templates.Count}, index={r.IndexResourceUri}, getting_started={r.GettingStartedResourceUri ?? "(none)"}.", verbosity),
                 _ => $"Help: templates={r.Templates.Count}, index={r.IndexResourceUri}."
             },
             GetDrawWindowResponse r => verbosity switch
             {
-                VerbosityLevel.Minimal => $"Window {r.Window.Size} ({r.Window.StartContestId}..{r.Window.EndContestId}), draws={r.Draws.Count}.",
-                VerbosityLevel.Full => $"Window {r.Window.Size} ({r.Window.StartContestId}..{r.Window.EndContestId}), draws={r.Draws.Count}, dataset={r.DatasetVersion}, tool={r.ToolVersion}. See structured payload for draws.",
-                _ => $"Window {r.Window.Size} ({r.Window.StartContestId}..{r.Window.EndContestId}), draws={r.Draws.Count}."
+                VerbosityLevel.Minimal => LimitSummary(BuildGetDrawWindowSummary(r, includeNumbers: true, includeWindowSpan: true), verbosity),
+                VerbosityLevel.Full => LimitSummary(BuildGetDrawWindowSummary(r, includeNumbers: true, includeWindowSpan: true), verbosity),
+                _ => LimitSummary(BuildGetDrawWindowSummary(r, includeNumbers: true, includeWindowSpan: true), verbosity)
             },
             ComputeWindowMetricsResponse r => verbosity switch
             {
-                VerbosityLevel.Minimal => $"Computed {r.Metrics.Count} metric(s) for window {r.Window.Size} ({r.Window.StartContestId}..{r.Window.EndContestId}).",
-                VerbosityLevel.Full => $"Computed {r.Metrics.Count} metric(s) for window {r.Window.Size} ({r.Window.StartContestId}..{r.Window.EndContestId}), dataset={r.DatasetVersion}, tool={r.ToolVersion}. See structured payload for values.",
-                _ => $"Computed {r.Metrics.Count} metric(s) for window {r.Window.Size} ({r.Window.StartContestId}..{r.Window.EndContestId})."
+                VerbosityLevel.Minimal => LimitSummary(BuildComputeWindowMetricsSummary(r, verbosity), verbosity),
+                VerbosityLevel.Full => LimitSummary(BuildComputeWindowMetricsSummary(r, verbosity), verbosity),
+                _ => LimitSummary(BuildComputeWindowMetricsSummary(r, verbosity), verbosity)
             },
             AnalyzeIndicatorStabilityResponse r => verbosity switch
             {
-                VerbosityLevel.Minimal => $"Stability ranking: {r.Ranking.Count} item(s), normalization={r.NormalizationMethod}.",
-                VerbosityLevel.Full => $"Stability ranking: {r.Ranking.Count} item(s) for window {r.Window.Size} ({r.Window.StartContestId}..{r.Window.EndContestId}), normalization={r.NormalizationMethod}. See structured payload for scores.",
-                _ => $"Stability ranking: {r.Ranking.Count} item(s), normalization={r.NormalizationMethod}."
+                VerbosityLevel.Minimal => LimitSummary(BuildStabilitySummary(r), verbosity),
+                VerbosityLevel.Full => LimitSummary(BuildStabilitySummary(r), verbosity),
+                _ => LimitSummary(BuildStabilitySummary(r), verbosity)
             },
             ComposeIndicatorAnalysisResponse r => verbosity switch
             {
-                VerbosityLevel.Minimal => $"Composition ranking: target={r.Target}, operator={r.Operator}, items={r.Ranking.Count}.",
-                VerbosityLevel.Full => $"Composition ranking: target={r.Target}, operator={r.Operator}, items={r.Ranking.Count}, window {r.Window.Size} ({r.Window.StartContestId}..{r.Window.EndContestId}). See structured payload for ranking.",
-                _ => $"Composition ranking: target={r.Target}, operator={r.Operator}, items={r.Ranking.Count}."
+                VerbosityLevel.Minimal => LimitSummary(BuildCompositionSummary(r), verbosity),
+                VerbosityLevel.Full => LimitSummary(BuildCompositionSummary(r), verbosity),
+                _ => LimitSummary(BuildCompositionSummary(r), verbosity)
             },
             AnalyzeIndicatorAssociationsResponse r => verbosity switch
             {
-                VerbosityLevel.Minimal => $"Associations: top_pairs={r.AssociationMagnitude.TopPairs.Count}, method={r.Method}.",
-                VerbosityLevel.Full => $"Associations: top_pairs={r.AssociationMagnitude.TopPairs.Count}, method={r.Method}, window {r.Window.Size} ({r.Window.StartContestId}..{r.Window.EndContestId}). See structured payload for magnitude/stability.",
-                _ => $"Associations: top_pairs={r.AssociationMagnitude.TopPairs.Count}, method={r.Method}."
+                VerbosityLevel.Minimal => LimitSummary(BuildAssociationsSummary(r), verbosity),
+                VerbosityLevel.Full => LimitSummary(BuildAssociationsSummary(r), verbosity),
+                _ => LimitSummary(BuildAssociationsSummary(r), verbosity)
             },
             SummarizeWindowPatternsResponse r => verbosity switch
             {
-                VerbosityLevel.Minimal => $"Pattern summary: features={r.Summaries.Count}, range_method={r.RangeMethod}.",
-                VerbosityLevel.Full => $"Pattern summary: features={r.Summaries.Count}, range_method={r.RangeMethod}, window {r.Window.Size} ({r.Window.StartContestId}..{r.Window.EndContestId}). See structured payload for stats.",
-                _ => $"Pattern summary: features={r.Summaries.Count}, range_method={r.RangeMethod}."
+                VerbosityLevel.Minimal => LimitSummary(BuildPatternsSummary(r), verbosity),
+                VerbosityLevel.Full => LimitSummary(BuildPatternsSummary(r), verbosity),
+                _ => LimitSummary(BuildPatternsSummary(r), verbosity)
             },
             SummarizeWindowAggregatesResponse r => verbosity switch
             {
-                VerbosityLevel.Minimal => $"Aggregates: {r.Aggregates.Count} item(s).",
-                VerbosityLevel.Full => $"Aggregates: {r.Aggregates.Count} item(s), window {r.Window.Size} ({r.Window.StartContestId}..{r.Window.EndContestId}). See structured payload for aggregates.",
-                _ => $"Aggregates: {r.Aggregates.Count} item(s)."
+                VerbosityLevel.Minimal => LimitSummary(BuildAggregatesSummary(r), verbosity),
+                VerbosityLevel.Full => LimitSummary(BuildAggregatesSummary(r), verbosity),
+                _ => LimitSummary(BuildAggregatesSummary(r), verbosity)
             },
             GenerateCandidateGamesResponse r => verbosity switch
             {
-                VerbosityLevel.Minimal => $"Generated {r.CandidateGames.Count} candidate game(s), replay_guaranteed={r.ReplayGuaranteed}.",
-                VerbosityLevel.Full => $"Generated {r.CandidateGames.Count} candidate game(s), replay_guaranteed={r.ReplayGuaranteed}, window {r.Window.Size} ({r.Window.StartContestId}..{r.Window.EndContestId}). See structured payload for candidates.",
-                _ => $"Generated {r.CandidateGames.Count} candidate game(s), replay_guaranteed={r.ReplayGuaranteed}."
+                VerbosityLevel.Minimal => LimitSummary(BuildGenerateCandidatesSummary(r, verbosity), verbosity),
+                VerbosityLevel.Full => LimitSummary(BuildGenerateCandidatesSummary(r, verbosity), verbosity),
+                _ => LimitSummary(BuildGenerateCandidatesSummary(r, verbosity), verbosity)
             },
             ExplainCandidateGamesResponse r => verbosity switch
             {
-                VerbosityLevel.Minimal => $"Explained {r.Explanations.Count} game(s).",
-                VerbosityLevel.Full => $"Explained {r.Explanations.Count} game(s), window {r.Window.Size} ({r.Window.StartContestId}..{r.Window.EndContestId}). See structured payload for breakdowns.",
-                _ => $"Explained {r.Explanations.Count} game(s)."
+                VerbosityLevel.Minimal => LimitSummary(BuildExplainCandidatesSummary(r, verbosity), verbosity),
+                VerbosityLevel.Full => LimitSummary(BuildExplainCandidatesSummary(r, verbosity), verbosity),
+                _ => LimitSummary(BuildExplainCandidatesSummary(r, verbosity), verbosity)
             },
             _ => verbosity switch
             {
-                VerbosityLevel.Minimal => "OK (see structured payload).",
-                VerbosityLevel.Full => $"OK: {payload.GetType().Name} (see structured payload).",
-                _ => "OK (see structured payload)."
+                VerbosityLevel.Minimal => LimitSummary($"OK: {payload.GetType().Name}.", verbosity),
+                VerbosityLevel.Full => LimitSummary($"OK: {payload.GetType().Name}.", verbosity),
+                _ => LimitSummary($"OK: {payload.GetType().Name}.", verbosity)
             }
         };
     }
+
+    private static string BuildGetDrawWindowSummary(GetDrawWindowResponse r, bool includeNumbers, bool includeWindowSpan)
+    {
+        var last = r.Draws.LastOrDefault();
+        if (last is null)
+        {
+            return $"Window {r.Window.Size} ({r.Window.StartContestId}..{r.Window.EndContestId}), draws=0.";
+        }
+
+        var windowPart = includeWindowSpan
+            ? $"Window {r.Window.Size} ({r.Window.StartContestId}..{r.Window.EndContestId}). "
+            : string.Empty;
+
+        var numbersPart = includeNumbers
+            ? $" Numbers={FormatIntList(last.Numbers, maxItems: 15)}."
+            : ".";
+
+        return $"{windowPart}Last draw: contest {last.ContestId} on {last.DrawDate}.{numbersPart}";
+    }
+
+    private static string BuildComputeWindowMetricsSummary(ComputeWindowMetricsResponse r, VerbosityLevel verbosity)
+    {
+        if (r.Metrics.Count == 0)
+        {
+            return $"Computed 0 metrics for window {r.Window.Size} ({r.Window.StartContestId}..{r.Window.EndContestId}).";
+        }
+
+        // Hotfix 23.2.3: tool analítica => expor nomes + resultados salientes.
+        var maxMetrics = verbosity switch
+        {
+            VerbosityLevel.Minimal => 1,
+            VerbosityLevel.Full => 3,
+            _ => 2
+        };
+
+        var parts = new List<string>(capacity: 1 + maxMetrics)
+        {
+            $"Window {r.Window.Size} ({r.Window.StartContestId}..{r.Window.EndContestId}):"
+        };
+
+        foreach (var m in r.Metrics.Take(maxMetrics))
+        {
+            parts.Add(FormatMetricSalient(m));
+        }
+
+        if (r.Metrics.Count > maxMetrics)
+        {
+            parts.Add($"+{r.Metrics.Count - maxMetrics} more");
+        }
+
+        return string.Join(' ', parts);
+    }
+
+    private static string FormatMetricSalient(MetricValueEnvelope m)
+    {
+        // Determinístico e compacto; nunca retorna JSON.
+        if (string.Equals(m.Shape, "vector_by_dezena", StringComparison.OrdinalIgnoreCase) && m.Value.Count == 25)
+        {
+            var top = TopKDezenasByValue(m.Value, k: 5);
+            return $"{m.MetricName}: top5={FormatDezenaValuePairs(top)}";
+        }
+
+        if (string.Equals(m.Shape, "scalar", StringComparison.OrdinalIgnoreCase) && m.Value.Count >= 1)
+        {
+            return $"{m.MetricName}: {FormatNumber(m.Value[0])}";
+        }
+
+        if (m.Value.Count > 0)
+        {
+            var preview = m.Value.Take(5).Select(FormatNumber).ToArray();
+            var suffix = m.Value.Count > 5 ? ", …" : string.Empty;
+            return $"{m.MetricName}: [{string.Join(", ", preview)}{suffix}]";
+        }
+
+        return $"{m.MetricName}: (no value)";
+    }
+
+    private static string BuildStabilitySummary(AnalyzeIndicatorStabilityResponse r)
+    {
+        var top = r.Ranking.Take(3).Select(e =>
+        {
+            var comp = e.ComponentIndex is null ? "" : $".{e.ComponentIndex}";
+            var agg = string.IsNullOrWhiteSpace(e.Aggregation) ? "" : $"/{e.Aggregation}";
+            return $"{e.IndicatorName}{agg}{comp}={FormatNumber(e.StabilityScore)}";
+        });
+        return $"Stability (method={r.NormalizationMethod}) top: {string.Join(", ", top)}.";
+    }
+
+    private static string BuildCompositionSummary(ComposeIndicatorAnalysisResponse r)
+    {
+        var top = r.Ranking.Take(5).Select(e => $"{e.Dezena}#{e.Rank}({FormatNumber(e.Score)})");
+        return $"Composition {r.Target}/{r.Operator} top: {string.Join(", ", top)}.";
+    }
+
+    private static string BuildAssociationsSummary(AnalyzeIndicatorAssociationsResponse r)
+    {
+        var top = r.AssociationMagnitude.TopPairs.Take(3).Select(p =>
+        {
+            var a = string.IsNullOrWhiteSpace(p.AggregationA) ? p.IndicatorA : $"{p.IndicatorA}/{p.AggregationA}";
+            var b = string.IsNullOrWhiteSpace(p.AggregationB) ? p.IndicatorB : $"{p.IndicatorB}/{p.AggregationB}";
+            return $"{a}~{b}={FormatNumber(p.AssociationStrength)}";
+        });
+        return $"Associations (method={r.Method}) top: {string.Join(", ", top)}.";
+    }
+
+    private static string BuildPatternsSummary(SummarizeWindowPatternsResponse r)
+    {
+        var first = r.Summaries.FirstOrDefault();
+        if (first is null)
+        {
+            return $"Pattern summary: 0 features (range_method={r.RangeMethod}, coverage_threshold={FormatNumber(r.CoverageThreshold)}).";
+        }
+
+        return
+            $"Pattern {first.MetricName}: mode={FormatNumber(first.Mode)}, median={FormatNumber(first.Median)}, iqr={FormatNumber(first.Iqr)}, coverage={FormatNumber(first.CoverageObserved)} (threshold={FormatNumber(r.CoverageThreshold)}).";
+    }
+
+    private static string BuildAggregatesSummary(SummarizeWindowAggregatesResponse r)
+    {
+        var ids = r.Aggregates.Take(3).Select(a => a.Id);
+        var suffix = r.Aggregates.Count > 3 ? $", +{r.Aggregates.Count - 3} more" : string.Empty;
+        return $"Aggregates: {r.Aggregates.Count} item(s) [{string.Join(", ", ids)}{suffix}].";
+    }
+
+    private static string BuildGenerateCandidatesSummary(GenerateCandidateGamesResponse r, VerbosityLevel verbosity)
+    {
+        var maxGames = verbosity switch
+        {
+            VerbosityLevel.Minimal => 1,
+            VerbosityLevel.Full => 3,
+            _ => 2
+        };
+
+        var preview = r.CandidateGames.Take(maxGames)
+            .Select(g => FormatIntList(g.Numbers, maxItems: 15));
+
+        var suffix = r.CandidateGames.Count > maxGames ? $", +{r.CandidateGames.Count - maxGames} more" : string.Empty;
+        return $"Generated {r.CandidateGames.Count} candidate game(s), replay_guaranteed={r.ReplayGuaranteed}. Preview: {string.Join(" | ", preview)}{suffix}.";
+    }
+
+    private static string BuildExplainCandidatesSummary(ExplainCandidateGamesResponse r, VerbosityLevel verbosity)
+    {
+        var max = verbosity switch
+        {
+            VerbosityLevel.Minimal => 1,
+            VerbosityLevel.Full => 3,
+            _ => 2
+        };
+
+        var preview = r.Explanations.Take(max).Select(e =>
+        {
+            var top = e.CandidateStrategies.FirstOrDefault();
+            var topStrategy = top?.StrategyName ?? "(none)";
+            var topScore = top is null ? "(n/a)" : FormatNumber(top.Score);
+            return $"{FormatIntList(e.Game, maxItems: 15)} top_strategy={topStrategy} top_score={topScore}";
+        });
+
+        var suffix = r.Explanations.Count > max ? $", +{r.Explanations.Count - max} more" : string.Empty;
+        return $"Explained {r.Explanations.Count} game(s). Preview: {string.Join(" | ", preview)}{suffix}.";
+    }
+
+    private static string LimitSummary(string text, VerbosityLevel verbosity)
+    {
+        var maxChars = verbosity switch
+        {
+            VerbosityLevel.Minimal => 240,
+            VerbosityLevel.Full => 900,
+            _ => 600
+        };
+
+        if (string.IsNullOrEmpty(text) || text.Length <= maxChars)
+        {
+            return text;
+        }
+
+        // Truncação determinística e compacta.
+        return text[..(maxChars - 1)] + "…";
+    }
+
+    private static string FormatIntList(IReadOnlyList<int> values, int maxItems)
+    {
+        var take = Math.Min(values.Count, maxItems);
+        var head = values.Take(take);
+        var suffix = values.Count > take ? ", …" : string.Empty;
+        return $"[{string.Join(", ", head)}{suffix}]";
+    }
+
+    private static string FormatNumber(double x) =>
+        double.IsNaN(x) || double.IsInfinity(x) ? x.ToString("G", System.Globalization.CultureInfo.InvariantCulture) :
+        x % 1 == 0 ? x.ToString("0", System.Globalization.CultureInfo.InvariantCulture) :
+        x.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static IReadOnlyList<(int Dezena, double Value)> TopKDezenasByValue(IReadOnlyList<double> values, int k)
+    {
+        // values[0] => dezena 1, ... values[24] => dezena 25
+        return Enumerable.Range(1, Math.Min(25, values.Count))
+            .Select(d => (Dezena: d, Value: values[d - 1]))
+            .OrderByDescending(t => t.Value)
+            .ThenBy(t => t.Dezena)
+            .Take(k)
+            .ToArray();
+    }
+
+    private static string FormatDezenaValuePairs(IReadOnlyList<(int Dezena, double Value)> pairs) =>
+        $"[{string.Join(", ", pairs.Select(p => $"{p.Dezena}:{FormatNumber(p.Value)}"))}]";
 }
