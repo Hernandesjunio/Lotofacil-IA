@@ -51,13 +51,26 @@ public sealed class V0McpTools
         [Description("Concurso inicial inclusivo (alternativa a window_size+end, ADR 0008 D2).")]
         int? start_contest_id = null,
         [Description("Concurso final inclusivo da janela.")] int? end_contest_id = null,
+        [Description("Página 1-based para paginação determinística do payload (apenas em verbosity=full).")] int? page = null,
+        [Description("Tamanho da página (1..500). Default quando paginando: 200 (apenas em verbosity=full).")] int? page_size = null,
         [Description("Projeção server-side: lista de campos top-level a incluir no StructuredContent. Campos inválidos => INVALID_REQUEST com allowed_fields.")] IReadOnlyList<string>? fields = null,
         [Description("Controle de verbosidade do resumo humano no canal Content: minimal | standard | full.")] string? verbosity = null)
     {
+        if (ParseVerbosity(verbosity) != VerbosityLevel.Full && (page is not null || page_size is not null))
+        {
+            var err = new ContractErrorEnvelope(new ContractError(
+                "INVALID_REQUEST",
+                "Pagination requires verbosity=full.",
+                new Dictionary<string, object?> { ["constraint"] = "page/page_size are only allowed when verbosity=full" }));
+            return ToToolResult(err, isError: true, verbosity);
+        }
+
         var payload = tools.GetDrawWindow(new GetDrawWindowRequest(
             WindowSize: window_size,
             StartContestId: start_contest_id,
             EndContestId: end_contest_id,
+            Page: page,
+            PageSize: page_size,
             Fields: fields));
 
         return ToToolResult(payload, payload is ContractErrorEnvelope, verbosity);
@@ -72,16 +85,29 @@ public sealed class V0McpTools
         [Description("Concurso final inclusivo da janela.")] int? end_contest_id = null,
         [Description("Lista de métricas canônicas a calcular.")] IReadOnlyList<MetricRequest>? metrics = null,
         [Description("Permite opt-in para métricas pendentes de detalhamento.")] bool allow_pending = false,
+        [Description("Página 1-based para paginação determinística do payload (apenas em verbosity=full).")] int? page = null,
+        [Description("Tamanho da página (1..500). Default quando paginando: 200 (apenas em verbosity=full).")] int? page_size = null,
         [Description("Inclui campos explicativos (`explanation`) quando true. Default: true.")] bool include_explanations = true,
         [Description("Projeção server-side: lista de campos top-level a incluir no StructuredContent.")] IReadOnlyList<string>? fields = null,
         [Description("Controle de verbosidade do resumo humano no canal Content: minimal | standard | full.")] string? verbosity = null)
     {
+        if (ParseVerbosity(verbosity) != VerbosityLevel.Full && (page is not null || page_size is not null))
+        {
+            var err = new ContractErrorEnvelope(new ContractError(
+                "INVALID_REQUEST",
+                "Pagination requires verbosity=full.",
+                new Dictionary<string, object?> { ["constraint"] = "page/page_size are only allowed when verbosity=full" }));
+            return ToToolResult(err, isError: true, verbosity);
+        }
+
         var payload = tools.ComputeWindowMetrics(new ComputeWindowMetricsRequest(
             WindowSize: window_size,
             StartContestId: start_contest_id,
             EndContestId: end_contest_id,
             Metrics: metrics,
             AllowPending: allow_pending,
+            Page: page,
+            PageSize: page_size,
             Fields: fields,
             IncludeExplanations: include_explanations));
 
@@ -99,10 +125,21 @@ public sealed class V0McpTools
         [Description("Metodo de normalizacao de volatilidade.")] string? normalization_method = null,
         [Description("Quantidade maxima de itens no ranking final.")] int top_k = 5,
         [Description("Historico minimo necessario para calcular estabilidade.")] int min_history = 20,
+        [Description("Página 1-based para paginação determinística do payload (apenas em verbosity=full).")] int? page = null,
+        [Description("Tamanho da página (1..500). Default quando paginando: 200 (apenas em verbosity=full).")] int? page_size = null,
         [Description("Inclui campos explicativos (`explanation`) quando true. Default: true.")] bool include_explanations = true,
         [Description("Projeção server-side: lista de campos top-level a incluir no StructuredContent.")] IReadOnlyList<string>? fields = null,
         [Description("Controle de verbosidade do resumo humano no canal Content: minimal | standard | full.")] string? verbosity = null)
     {
+        if (ParseVerbosity(verbosity) != VerbosityLevel.Full && (page is not null || page_size is not null))
+        {
+            var err = new ContractErrorEnvelope(new ContractError(
+                "INVALID_REQUEST",
+                "Pagination requires verbosity=full.",
+                new Dictionary<string, object?> { ["constraint"] = "page/page_size are only allowed when verbosity=full" }));
+            return ToToolResult(err, isError: true, verbosity);
+        }
+
         var payload = tools.AnalyzeIndicatorStability(new AnalyzeIndicatorStabilityRequest(
             WindowSize: window_size,
             StartContestId: start_contest_id,
@@ -111,6 +148,8 @@ public sealed class V0McpTools
             NormalizationMethod: normalization_method,
             TopK: top_k,
             MinHistory: min_history,
+            Page: page,
+            PageSize: page_size,
             Fields: fields,
             IncludeExplanations: include_explanations));
 
@@ -128,10 +167,21 @@ public sealed class V0McpTools
         [Description("Operador (recorte: weighted_rank).")] string? @operator = null,
         [Description("Componentes com métrica, transform e peso.")] IReadOnlyList<ComposeIndicatorComponentRequest>? components = null,
         [Description("Limite do ranking.")] int top_k = 10,
+        [Description("Página 1-based para paginação determinística do payload (apenas em verbosity=full).")] int? page = null,
+        [Description("Tamanho da página (1..500). Default quando paginando: 200 (apenas em verbosity=full).")] int? page_size = null,
         [Description("Inclui campos explicativos (`explanation`) quando true. Default: true.")] bool include_explanations = true,
         [Description("Projeção server-side: lista de campos top-level a incluir no StructuredContent.")] IReadOnlyList<string>? fields = null,
         [Description("Controle de verbosidade do resumo humano no canal Content: minimal | standard | full.")] string? verbosity = null)
     {
+        if (ParseVerbosity(verbosity) != VerbosityLevel.Full && (page is not null || page_size is not null))
+        {
+            var err = new ContractErrorEnvelope(new ContractError(
+                "INVALID_REQUEST",
+                "Pagination requires verbosity=full.",
+                new Dictionary<string, object?> { ["constraint"] = "page/page_size are only allowed when verbosity=full" }));
+            return ToToolResult(err, isError: true, verbosity);
+        }
+
         var payload = tools.ComposeIndicatorAnalysis(new ComposeIndicatorAnalysisRequest(
             WindowSize: window_size,
             StartContestId: start_contest_id,
@@ -140,6 +190,8 @@ public sealed class V0McpTools
             Operator: @operator ?? string.Empty,
             Components: components ?? Array.Empty<ComposeIndicatorComponentRequest>(),
             TopK: top_k,
+            Page: page,
+            PageSize: page_size,
             Fields: fields,
             IncludeExplanations: include_explanations));
 
@@ -235,9 +287,20 @@ public sealed class V0McpTools
         [Description("Restricoes globais de unicidade e ordenacao.")] GenerateGlobalConstraintsRequest? global_constraints = null,
         [Description("Exclusoes estruturais globais para filtragem dos candidatos.")] GenerateStructuralExclusionsRequest? structural_exclusions = null,
         [Description("Modo normativo: random_unrestricted | behavior_filtered (omitir = legado com defaults conservadores).")] string? generation_mode = null,
+        [Description("Página 1-based para paginação determinística do payload (apenas em verbosity=full).")] int? page = null,
+        [Description("Tamanho da página (1..500). Default quando paginando: 200 (apenas em verbosity=full).")] int? page_size = null,
         [Description("Projeção server-side: lista de campos top-level a incluir no StructuredContent.")] IReadOnlyList<string>? fields = null,
         [Description("Controle de verbosidade do resumo humano no canal Content: minimal | standard | full.")] string? verbosity = null)
     {
+        if (ParseVerbosity(verbosity) != VerbosityLevel.Full && (page is not null || page_size is not null))
+        {
+            var err = new ContractErrorEnvelope(new ContractError(
+                "INVALID_REQUEST",
+                "Pagination requires verbosity=full.",
+                new Dictionary<string, object?> { ["constraint"] = "page/page_size are only allowed when verbosity=full" }));
+            return ToToolResult(err, isError: true, verbosity);
+        }
+
         var payload = tools.GenerateCandidateGames(new GenerateCandidateGamesRequest(
             WindowSize: window_size,
             StartContestId: start_contest_id,
@@ -247,6 +310,8 @@ public sealed class V0McpTools
             GlobalConstraints: global_constraints,
             StructuralExclusions: structural_exclusions,
             GenerationMode: generation_mode,
+            Page: page,
+            PageSize: page_size,
             Fields: fields));
 
         return ToToolResult(payload, payload is ContractErrorEnvelope, verbosity);
@@ -265,10 +330,21 @@ public sealed class V0McpTools
         [Description("Echo opcional: generation_mode alinhado a generate_candidate_games.")] string? generation_mode = null,
         [Description("Echo opcional: seed usada em geracao para auditar replay.")] ulong? seed = null,
         [Description("Echo opcional: replay_guaranteed devolvido na ultima geracao.")] bool? replay_guaranteed = null,
+        [Description("Página 1-based para paginação determinística do payload (apenas em verbosity=full).")] int? page = null,
+        [Description("Tamanho da página (1..500). Default quando paginando: 200 (apenas em verbosity=full).")] int? page_size = null,
         [Description("Inclui campos explicativos (`explanation`) quando true. Default: true.")] bool include_explanations = true,
         [Description("Projeção server-side: lista de campos top-level a incluir no StructuredContent.")] IReadOnlyList<string>? fields = null,
         [Description("Controle de verbosidade do resumo humano no canal Content: minimal | standard | full.")] string? verbosity = null)
     {
+        if (ParseVerbosity(verbosity) != VerbosityLevel.Full && (page is not null || page_size is not null))
+        {
+            var err = new ContractErrorEnvelope(new ContractError(
+                "INVALID_REQUEST",
+                "Pagination requires verbosity=full.",
+                new Dictionary<string, object?> { ["constraint"] = "page/page_size are only allowed when verbosity=full" }));
+            return ToToolResult(err, isError: true, verbosity);
+        }
+
         var payload = tools.ExplainCandidateGames(new ExplainCandidateGamesRequest(
             WindowSize: window_size,
             StartContestId: start_contest_id,
@@ -279,6 +355,8 @@ public sealed class V0McpTools
             GenerationMode: generation_mode,
             Seed: seed,
             ReplayGuaranteed: replay_guaranteed,
+            Page: page,
+            PageSize: page_size,
             Fields: fields,
             IncludeExplanations: include_explanations));
 

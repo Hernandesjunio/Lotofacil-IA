@@ -25,6 +25,8 @@ public sealed record ComputeWindowMetricsRequest(
     [property: JsonPropertyName("end_contest_id")] int? EndContestId = null,
     [property: JsonPropertyName("metrics")] IReadOnlyList<MetricRequest>? Metrics = null,
     [property: JsonPropertyName("allow_pending")] bool AllowPending = false,
+    [property: JsonPropertyName("page")] int? Page = null,
+    [property: JsonPropertyName("page_size")] int? PageSize = null,
     [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null,
     [property: JsonPropertyName("include_explanations")] bool IncludeExplanations = true);
 
@@ -32,6 +34,8 @@ public sealed record GetDrawWindowRequest(
     [property: JsonPropertyName("window_size")] int? WindowSize = null,
     [property: JsonPropertyName("start_contest_id")] int? StartContestId = null,
     [property: JsonPropertyName("end_contest_id")] int? EndContestId = null,
+    [property: JsonPropertyName("page")] int? Page = null,
+    [property: JsonPropertyName("page_size")] int? PageSize = null,
     [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null);
 
 public sealed record DiscoverCapabilitiesRequest();
@@ -48,6 +52,8 @@ public sealed record AnalyzeIndicatorStabilityRequest(
     [property: JsonPropertyName("normalization_method")] string? NormalizationMethod = null,
     [property: JsonPropertyName("top_k")] int TopK = 5,
     [property: JsonPropertyName("min_history")] int MinHistory = 20,
+    [property: JsonPropertyName("page")] int? Page = null,
+    [property: JsonPropertyName("page_size")] int? PageSize = null,
     [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null,
     [property: JsonPropertyName("include_explanations")] bool IncludeExplanations = true);
 
@@ -122,6 +128,8 @@ public sealed record ComposeIndicatorAnalysisRequest(
     [property: JsonPropertyName("operator")] string Operator = "",
     [property: JsonPropertyName("components")] IReadOnlyList<ComposeIndicatorComponentRequest>? Components = null,
     [property: JsonPropertyName("top_k")] int TopK = 10,
+    [property: JsonPropertyName("page")] int? Page = null,
+    [property: JsonPropertyName("page_size")] int? PageSize = null,
     [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null,
     [property: JsonPropertyName("include_explanations")] bool IncludeExplanations = true);
 
@@ -437,6 +445,8 @@ public sealed record GenerateCandidateGamesRequest(
     [property: JsonPropertyName("structural_exclusions")] GenerateStructuralExclusionsRequest? StructuralExclusions = null,
     [property: JsonPropertyName("generation_budget")] GenerateGenerationBudgetRequest? GenerationBudget = null,
     [property: JsonPropertyName("generation_mode")] string? GenerationMode = null,
+    [property: JsonPropertyName("page")] int? Page = null,
+    [property: JsonPropertyName("page_size")] int? PageSize = null,
     [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null);
 
 public sealed record AppliedConfigurationEnvelope(
@@ -475,6 +485,8 @@ public sealed record ExplainCandidateGamesRequest(
     ulong? Seed = null,
     [property: JsonPropertyName("replay_guaranteed"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     bool? ReplayGuaranteed = null,
+    [property: JsonPropertyName("page")] int? Page = null,
+    [property: JsonPropertyName("page_size")] int? PageSize = null,
     [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null,
     [property: JsonPropertyName("include_explanations")] bool IncludeExplanations = true);
 
@@ -579,6 +591,10 @@ public sealed class V0Tools
     private readonly HttpJsonDatasetSnapshotCache? _httpSnapshotCache;
     private const string HelpToolVersion = "1.0.0";
     private const string DiscoverCapabilitiesToolVersion = "1.1.0";
+    private const int DefaultPageSizeFull = 200;
+    private const int MaxPageSizeFull = 500;
+
+    private readonly record struct PaginationSpec(int Page, int PageSize);
 
     public V0Tools(string? drawsSourceUri, string? contentRootPath = null, HttpJsonDatasetSnapshotCache? httpSnapshotCache = null)
     {
@@ -809,6 +825,8 @@ public sealed class V0Tools
                     SupportedParameters: new Dictionary<string, IReadOnlyList<string>>
                     {
                         ["window_modes"] = ["window_size+end_contest_id", "start_contest_id+end_contest_id"],
+                        ["page"] = ["1.."],
+                        ["page_size"] = [$"1..{MaxPageSizeFull}"],
                         ["fields"] = ["dataset_version", "tool_version", "deterministic_hash", "window", "draws"]
                     },
                     Capabilities: "Returns a canonical draw window (ordered, deterministic) for the resolved window."),
@@ -821,6 +839,8 @@ public sealed class V0Tools
                         ["allow_pending"] = ["false", "true"],
                         ["metric_names"] = computeWindowAllowed,
                         ["include_explanations"] = ["false", "true"],
+                        ["page"] = ["1.."],
+                        ["page_size"] = [$"1..{MaxPageSizeFull}"],
                         ["fields"] = ["dataset_version", "tool_version", "deterministic_hash", "window", "metrics"]
                     },
                     Capabilities: "Computes cataloged metrics allowed in this build for a resolved window."),
@@ -832,6 +852,8 @@ public sealed class V0Tools
                         ["normalization_method"] = ["madn", "coefficient_of_variation"],
                         ["aggregation"] = ["identity", "mean", "max", "l2_norm", "per_component"],
                         ["include_explanations"] = ["false", "true"],
+                        ["page"] = ["1.."],
+                        ["page_size"] = [$"1..{MaxPageSizeFull}"],
                         ["fields"] = ["dataset_version", "tool_version", "deterministic_hash", "window", "normalization_method", "ranking"]
                     },
                     Capabilities: "Ranks indicator stability using scalarized series and supported normalization methods."),
@@ -853,6 +875,8 @@ public sealed class V0Tools
                         ],
                         ["metric_name"] = composeAllowedComponents,
                         ["include_explanations"] = ["false", "true"],
+                        ["page"] = ["1.."],
+                        ["page_size"] = [$"1..{MaxPageSizeFull}"],
                         ["fields"] = ["dataset_version", "tool_version", "deterministic_hash", "window", "target", "operator", "ranking"]
                     },
                     Capabilities: "Builds deterministic weighted compositions over supported dezena indicators."),
@@ -908,6 +932,8 @@ public sealed class V0Tools
                         ["plan.criteria"] = ["name", "value|range|allowed_values|typical_range", "mode"],
                         ["plan.weights"] = ["name", "weight"],
                         ["plan.filters"] = ["name", "value|min|max|range|allowed_values|typical_range", "mode", "version"],
+                        ["page"] = ["1.."],
+                        ["page_size"] = [$"1..{MaxPageSizeFull}"],
                         ["fields"] = ["dataset_version", "tool_version", "deterministic_hash", "replay_guaranteed", "window", "candidate_games"]
                     },
                     Capabilities: "Generates candidate games; max sum of plan count per request, generation modes, and seed policy follow generation envelope."),
@@ -920,6 +946,8 @@ public sealed class V0Tools
                         ["generation_mode"] = [GenerationModes.RandomUnrestricted, GenerationModes.BehaviorFiltered],
                         ["context_echo"] = ["seed", "replay_guaranteed"],
                         ["include_explanations"] = ["false", "true"],
+                        ["page"] = ["1.."],
+                        ["page_size"] = [$"1..{MaxPageSizeFull}"],
                         ["fields"] = ["dataset_version", "tool_version", "deterministic_hash", "window", "candidate_generation_audit", "explanations"]
                     },
                     Capabilities: "Explains candidate strategies, exclusion/constraint breakdowns, and auditable echo of generation mode, effective restriction composition (intersection when applicable), and seed/replay policy."),
@@ -1036,15 +1064,33 @@ public sealed class V0Tools
                 AllowPending: request.AllowPending,
                 FixturePath: fixturePath));
 
+            var hasPagination = TryResolvePagination(request.Page, request.PageSize, out var pagination, out var paginationError);
+            if (paginationError is not null)
+            {
+                return paginationError;
+            }
+
+            var hashInput = new Dictionary<string, object?>
+            {
+                ["core"] = result.DeterministicHashInput,
+                ["include_explanations"] = request.IncludeExplanations,
+                ["fields"] = requestedFields
+            };
+            if (hasPagination && pagination is not null)
+            {
+                hashInput["pagination"] = new { page = pagination.Value.Page, page_size = pagination.Value.PageSize };
+            }
+
             var deterministicHash = _deterministicHashService.Compute(
-                new
-                {
-                    core = result.DeterministicHashInput,
-                    include_explanations = request.IncludeExplanations,
-                    fields = requestedFields
-                },
+                hashInput,
                 result.DatasetVersion,
                 result.ToolVersion);
+
+            var metrics = result.Metrics.ToArray();
+            if (hasPagination && pagination is not null)
+            {
+                metrics = ApplyPagination(metrics, pagination.Value);
+            }
 
             var response = new ComputeWindowMetricsResponse(
                 DatasetVersion: result.DatasetVersion,
@@ -1054,7 +1100,7 @@ public sealed class V0Tools
                     result.Window.Size,
                     result.Window.StartContestId,
                     result.Window.EndContestId),
-                Metrics: result.Metrics
+                Metrics: metrics
                     .Select(metric => new MetricValueEnvelope(
                         metric.MetricName,
                         metric.Scope,
@@ -1166,14 +1212,32 @@ public sealed class V0Tools
                 EndContestId: endContestId,
                 FixturePath: fixturePath));
 
+            var hasPagination = TryResolvePagination(request.Page, request.PageSize, out var pagination, out var paginationError);
+            if (paginationError is not null)
+            {
+                return paginationError;
+            }
+
+            var hashInput = new Dictionary<string, object?>
+            {
+                ["core"] = result.DeterministicHashInput,
+                ["fields"] = requestedFields
+            };
+            if (hasPagination && pagination is not null)
+            {
+                hashInput["pagination"] = new { page = pagination.Value.Page, page_size = pagination.Value.PageSize };
+            }
+
             var deterministicHash = _deterministicHashService.Compute(
-                new
-                {
-                    core = result.DeterministicHashInput,
-                    fields = requestedFields
-                },
+                hashInput,
                 result.DatasetVersion,
                 result.ToolVersion);
+
+            var draws = result.Draws.ToArray();
+            if (hasPagination && pagination is not null)
+            {
+                draws = ApplyPagination(draws, pagination.Value);
+            }
 
             var response = new GetDrawWindowResponse(
                 DatasetVersion: result.DatasetVersion,
@@ -1183,7 +1247,7 @@ public sealed class V0Tools
                     result.Window.Size,
                     result.Window.StartContestId,
                     result.Window.EndContestId),
-                Draws: result.Draws
+                Draws: draws
                     .Select(draw => new DrawDto(draw.ContestId, draw.DrawDate, draw.Numbers.ToArray()))
                     .ToArray());
 
@@ -1253,15 +1317,33 @@ public sealed class V0Tools
                 MinHistory: request.MinHistory,
                 FixturePath: fixturePath));
 
+            var hasPagination = TryResolvePagination(request.Page, request.PageSize, out var pagination, out var paginationError);
+            if (paginationError is not null)
+            {
+                return paginationError;
+            }
+
+            var hashInput = new Dictionary<string, object?>
+            {
+                ["core"] = result.DeterministicHashInput,
+                ["include_explanations"] = request.IncludeExplanations,
+                ["fields"] = requestedFields
+            };
+            if (hasPagination && pagination is not null)
+            {
+                hashInput["pagination"] = new { page = pagination.Value.Page, page_size = pagination.Value.PageSize };
+            }
+
             var deterministicHash = _deterministicHashService.Compute(
-                new
-                {
-                    core = result.DeterministicHashInput,
-                    include_explanations = request.IncludeExplanations,
-                    fields = requestedFields
-                },
+                hashInput,
                 result.DatasetVersion,
                 result.ToolVersion);
+
+            var ranking = result.Ranking.ToArray();
+            if (hasPagination && pagination is not null)
+            {
+                ranking = ApplyPagination(ranking, pagination.Value);
+            }
 
             var response = new AnalyzeIndicatorStabilityResponse(
                 DatasetVersion: result.DatasetVersion,
@@ -1272,7 +1354,7 @@ public sealed class V0Tools
                     result.Window.StartContestId,
                     result.Window.EndContestId),
                 NormalizationMethod: result.NormalizationMethod,
-                Ranking: result.Ranking
+                Ranking: ranking
                     .Select(entry => new StabilityRankingEntryEnvelope(
                         entry.IndicatorName,
                         entry.Aggregation,
@@ -1363,15 +1445,33 @@ public sealed class V0Tools
                 TopK: request.TopK,
                 FixturePath: fixturePath));
 
+            var hasPagination = TryResolvePagination(request.Page, request.PageSize, out var pagination, out var paginationError);
+            if (paginationError is not null)
+            {
+                return paginationError;
+            }
+
+            var hashInput = new Dictionary<string, object?>
+            {
+                ["core"] = result.DeterministicHashInput,
+                ["include_explanations"] = request.IncludeExplanations,
+                ["fields"] = requestedFields
+            };
+            if (hasPagination && pagination is not null)
+            {
+                hashInput["pagination"] = new { page = pagination.Value.Page, page_size = pagination.Value.PageSize };
+            }
+
             var deterministicHash = _deterministicHashService.Compute(
-                new
-                {
-                    core = result.DeterministicHashInput,
-                    include_explanations = request.IncludeExplanations,
-                    fields = requestedFields
-                },
+                hashInput,
                 result.DatasetVersion,
                 result.ToolVersion);
+
+            var ranking = result.Ranking.ToArray();
+            if (hasPagination && pagination is not null)
+            {
+                ranking = ApplyPagination(ranking, pagination.Value);
+            }
 
             var response = new ComposeIndicatorAnalysisResponse(
                 DatasetVersion: result.DatasetVersion,
@@ -1383,7 +1483,7 @@ public sealed class V0Tools
                     result.Window.EndContestId),
                 Target: result.Target,
                 Operator: result.Operator,
-                Ranking: result.Ranking
+                Ranking: ranking
                     .Select(entry => new WeightedDezenaRankingEntryEnvelope(
                         entry.Dezena,
                         entry.Rank,
@@ -1920,14 +2020,32 @@ public sealed class V0Tools
                 GenerationMode: request.GenerationMode,
                 FixturePath: fixturePath));
 
+            var hasPagination = TryResolvePagination(request.Page, request.PageSize, out var pagination, out var paginationError);
+            if (paginationError is not null)
+            {
+                return paginationError;
+            }
+
+            var hashInput = new Dictionary<string, object?>
+            {
+                ["core"] = result.DeterministicHashInput,
+                ["fields"] = requestedFields
+            };
+            if (hasPagination && pagination is not null)
+            {
+                hashInput["pagination"] = new { page = pagination.Value.Page, page_size = pagination.Value.PageSize };
+            }
+
             var deterministicHash = _deterministicHashService.Compute(
-                new
-                {
-                    core = result.DeterministicHashInput,
-                    fields = requestedFields
-                },
+                hashInput,
                 result.DatasetVersion,
                 result.ToolVersion);
+
+            var candidateGames = result.CandidateGames.ToArray();
+            if (hasPagination && pagination is not null)
+            {
+                candidateGames = ApplyPagination(candidateGames, pagination.Value);
+            }
 
             var response = new GenerateCandidateGamesResponse(
                 DatasetVersion: result.DatasetVersion,
@@ -1938,7 +2056,7 @@ public sealed class V0Tools
                     result.Window.Size,
                     result.Window.StartContestId,
                     result.Window.EndContestId),
-                CandidateGames: result.CandidateGames
+                CandidateGames: candidateGames
                     .Select(game => new CandidateGameEnvelope(
                         game.Numbers.ToArray(),
                         game.StrategyName,
@@ -2079,15 +2197,33 @@ public sealed class V0Tools
                 ReplayGuaranteed: request.ReplayGuaranteed,
                 FixturePath: fixturePath));
 
+            var hasPagination = TryResolvePagination(request.Page, request.PageSize, out var pagination, out var paginationError);
+            if (paginationError is not null)
+            {
+                return paginationError;
+            }
+
+            var hashInput = new Dictionary<string, object?>
+            {
+                ["core"] = result.DeterministicHashInput,
+                ["include_explanations"] = request.IncludeExplanations,
+                ["fields"] = requestedFields
+            };
+            if (hasPagination && pagination is not null)
+            {
+                hashInput["pagination"] = new { page = pagination.Value.Page, page_size = pagination.Value.PageSize };
+            }
+
             var deterministicHash = _deterministicHashService.Compute(
-                new
-                {
-                    core = result.DeterministicHashInput,
-                    include_explanations = request.IncludeExplanations,
-                    fields = requestedFields
-                },
+                hashInput,
                 result.DatasetVersion,
                 result.ToolVersion);
+
+            var explanations = result.Explanations.ToArray();
+            if (hasPagination && pagination is not null)
+            {
+                explanations = ApplyPagination(explanations, pagination.Value);
+            }
 
             var generationAudit = result.GenerationAudit;
             var response = new ExplainCandidateGamesResponse(
@@ -2106,7 +2242,7 @@ public sealed class V0Tools
                     generationAudit.ReplayGuaranteed,
                     generationAudit.IntersectionAndRestrictions,
                     generationAudit.ReplayAndSeedPolicy),
-                Explanations: result.Explanations
+                Explanations: explanations
                     .Select(game => new GameExplanationEnvelope(
                         Game: game.Game.ToArray(),
                         CandidateStrategies: game.CandidateStrategies
@@ -2331,6 +2467,77 @@ public sealed class V0Tools
                 message: ex.Message,
                 source: _drawsSourceUri);
         }
+    }
+
+    private static bool TryResolvePagination(
+        int? page,
+        int? pageSize,
+        out PaginationSpec? spec,
+        out ContractErrorEnvelope? error)
+    {
+        spec = null;
+        error = null;
+
+        if (page is null && pageSize is null)
+        {
+            return false;
+        }
+
+        var resolvedPage = page ?? 1;
+        var resolvedPageSize = pageSize ?? DefaultPageSizeFull;
+
+        if (resolvedPage < 1)
+        {
+            error = ToContractError(
+                code: "INVALID_REQUEST",
+                message: "Invalid pagination parameter.",
+                details: new Dictionary<string, object?>
+                {
+                    ["field"] = "page",
+                    ["constraint"] = "page >= 1",
+                    ["value"] = resolvedPage
+                });
+            return false;
+        }
+
+        if (resolvedPageSize < 1 || resolvedPageSize > MaxPageSizeFull)
+        {
+            error = ToContractError(
+                code: "INVALID_REQUEST",
+                message: "Invalid pagination parameter.",
+                details: new Dictionary<string, object?>
+                {
+                    ["field"] = "page_size",
+                    ["constraint"] = $"1 <= page_size <= {MaxPageSizeFull}",
+                    ["value"] = resolvedPageSize
+                });
+            return false;
+        }
+
+        spec = new PaginationSpec(resolvedPage, resolvedPageSize);
+        return true;
+    }
+
+    private static T[] ApplyPagination<T>(IReadOnlyList<T> items, PaginationSpec spec)
+    {
+        if (items.Count == 0)
+        {
+            return Array.Empty<T>();
+        }
+
+        var offset = (long)(spec.Page - 1) * spec.PageSize;
+        if (offset >= items.Count)
+        {
+            return Array.Empty<T>();
+        }
+
+        var take = Math.Min(spec.PageSize, items.Count - (int)offset);
+        var pageItems = new T[take];
+        for (var i = 0; i < take; i++)
+        {
+            pageItems[i] = items[(int)offset + i];
+        }
+        return pageItems;
     }
 
     private static ContractErrorEnvelope ToDatasetUnavailable(string reason, string message, string? source)

@@ -308,6 +308,25 @@ Algumas tools podem devolver payloads grandes (listas, matrizes, breakdowns). Pa
 - **Defaults (quando omitido):** “sem projeção” (resposta completa conforme `verbosity/include_explanations`).
 - **Campos não reconhecidos:** se o consumidor pedir um campo inválido/inexistente para aquela tool, a tool deve falhar com `INVALID_REQUEST` (ou código mais específico quando existir) e incluir em `details` uma lista curta e fechada de `allowed_fields` (quando viável), para guiar o cliente sem tentativa/erro.
 
+#### Paginação determinística (`page` / `page_size`) — apenas para respostas grandes em `verbosity="full"` (ADR 0023 D4)
+
+- **Tipo:** dois inteiros opcionais:
+  - `page` (1‑based)
+  - `page_size`
+- **Quando aplicável:** tools cujo `StructuredContent` pode conter listas grandes em `verbosity="full"` (ex.: `draws`, `metrics`, `ranking`, `candidate_games`, `explanations`).
+- **Semântica normativa:**
+  - A ordenação de cada lista paginada deve ser **canônica e estável** (a mesma ordem do payload completo).
+  - O subconjunto retornado é o “slice” determinístico: itens \([(page-1)\cdot page\_size, \; page\cdot page\_size)\).
+  - Se `page` for grande demais para o total, a lista paginada devolvida pode ser vazia (sem erro).
+  - Se apenas um dos dois campos for fornecido:
+    - `page` omitido ⇒ assumir `page = 1`.
+    - `page_size` omitido ⇒ assumir `page_size = 200`.
+- **Limites:**
+  - `page >= 1`
+  - `1 <= page_size <= 500`
+- **Erros:**
+  - Valores fora das restrições ⇒ `INVALID_REQUEST` com `details.field` em `"page"` ou `"page_size"`.
+
 #### Regra de hash quando knobs alteram a apresentação
 
 Para evitar ambiguidade entre “hash da semântica” vs “hash da apresentação”, este contrato fecha:
@@ -316,7 +335,8 @@ Para evitar ambiguidade entre “hash da semântica” vs “hash da apresentaç
 - `input` deve ser o **pedido canônico efetivo** (request após validação e resolução determinística de defaults documentados), e **inclui**:
   - `verbosity` (valor efetivo),
   - `include_explanations` (valor efetivo),
-  - `fields`/`response_projection` (valor efetivo).
+  - `fields`/`response_projection` (valor efetivo),
+  - `page`/`page_size` (valores efetivos) quando a tool suportar paginação.
 - Consequência normativa: mudar qualquer um desses knobs (ou o default resolvido) **deve** mudar o `deterministic_hash`, mesmo que a mudança afete apenas:
   - o texto humano do canal `Content`, e/ou
   - a presença/ausência de explicações/breakdowns, e/ou

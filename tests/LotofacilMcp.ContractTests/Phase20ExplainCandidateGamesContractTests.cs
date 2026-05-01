@@ -161,4 +161,40 @@ public sealed class Phase20ExplainCandidateGamesContractTests
         Assert.True(audit.SeedDeclared);
         Assert.Contains("reprodut", audit.ReplayAndSeedPolicy, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void ExplainCandidateGames_Pagination_IsDeterministic_AndMatchesCanonicalSlice()
+    {
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
+
+        var games = Enumerable.Range(0, 25)
+            .Select(i =>
+            {
+                var start = (i % 11) + 1; // 1..11 => start+14 <= 25
+                return (IReadOnlyList<int>)Enumerable.Range(start, 15).ToArray();
+            })
+            .ToArray();
+
+        var baseRequest = new ExplainCandidateGamesRequest(
+            WindowSize: 5,
+            EndContestId: 1005,
+            Games: games,
+            IncludeMetricBreakdown: false,
+            IncludeExclusionBreakdown: false,
+            IncludeExplanations: true);
+
+        var full = Assert.IsType<ExplainCandidateGamesResponse>(sut.ExplainCandidateGames(baseRequest));
+        Assert.Equal(25, full.Explanations.Count);
+
+        var pagedRequest = baseRequest with { Page = 2, PageSize = 10 };
+        var pageA = Assert.IsType<ExplainCandidateGamesResponse>(sut.ExplainCandidateGames(pagedRequest));
+        var pageB = Assert.IsType<ExplainCandidateGamesResponse>(sut.ExplainCandidateGames(pagedRequest));
+
+        Assert.Equal(pageA.DeterministicHash, pageB.DeterministicHash);
+        Assert.Equal(10, pageA.Explanations.Count);
+
+        var expected = full.Explanations.Skip(10).Take(10).Select(e => string.Join(",", e.Game)).ToArray();
+        var actual = pageA.Explanations.Select(e => string.Join(",", e.Game)).ToArray();
+        Assert.Equal(expected, actual);
+    }
 }
