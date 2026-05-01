@@ -24,12 +24,15 @@ public sealed record ComputeWindowMetricsRequest(
     [property: JsonPropertyName("start_contest_id")] int? StartContestId = null,
     [property: JsonPropertyName("end_contest_id")] int? EndContestId = null,
     [property: JsonPropertyName("metrics")] IReadOnlyList<MetricRequest>? Metrics = null,
-    [property: JsonPropertyName("allow_pending")] bool AllowPending = false);
+    [property: JsonPropertyName("allow_pending")] bool AllowPending = false,
+    [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null,
+    [property: JsonPropertyName("include_explanations")] bool IncludeExplanations = true);
 
 public sealed record GetDrawWindowRequest(
     [property: JsonPropertyName("window_size")] int? WindowSize = null,
     [property: JsonPropertyName("start_contest_id")] int? StartContestId = null,
-    [property: JsonPropertyName("end_contest_id")] int? EndContestId = null);
+    [property: JsonPropertyName("end_contest_id")] int? EndContestId = null,
+    [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null);
 
 public sealed record DiscoverCapabilitiesRequest();
 
@@ -44,7 +47,9 @@ public sealed record AnalyzeIndicatorStabilityRequest(
     [property: JsonPropertyName("indicators")] IReadOnlyList<StabilityIndicatorRequestDto>? Indicators = null,
     [property: JsonPropertyName("normalization_method")] string? NormalizationMethod = null,
     [property: JsonPropertyName("top_k")] int TopK = 5,
-    [property: JsonPropertyName("min_history")] int MinHistory = 20);
+    [property: JsonPropertyName("min_history")] int MinHistory = 20,
+    [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null,
+    [property: JsonPropertyName("include_explanations")] bool IncludeExplanations = true);
 
 public sealed record ContractError(
     [property: JsonPropertyName("code")] string Code,
@@ -116,7 +121,9 @@ public sealed record ComposeIndicatorAnalysisRequest(
     [property: JsonPropertyName("target")] string Target = "",
     [property: JsonPropertyName("operator")] string Operator = "",
     [property: JsonPropertyName("components")] IReadOnlyList<ComposeIndicatorComponentRequest>? Components = null,
-    [property: JsonPropertyName("top_k")] int TopK = 10);
+    [property: JsonPropertyName("top_k")] int TopK = 10,
+    [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null,
+    [property: JsonPropertyName("include_explanations")] bool IncludeExplanations = true);
 
 public sealed record WeightedDezenaRankingEntryEnvelope(
     [property: JsonPropertyName("dezena")] int Dezena,
@@ -144,7 +151,9 @@ public sealed record AnalyzeIndicatorAssociationsRequest(
     [property: JsonPropertyName("items")] IReadOnlyList<AssociationItemRequest>? Items = null,
     [property: JsonPropertyName("method")] string Method = "",
     [property: JsonPropertyName("top_k")] int TopK = 5,
-    [property: JsonPropertyName("stability_check")] AssociationStabilityCheckRequest? StabilityCheck = null);
+    [property: JsonPropertyName("stability_check")] AssociationStabilityCheckRequest? StabilityCheck = null,
+    [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null,
+    [property: JsonPropertyName("include_explanations")] bool IncludeExplanations = true);
 
 public sealed record AssociationStabilityCheckRequest(
     [property: JsonPropertyName("method")] string Method = "",
@@ -209,7 +218,9 @@ public sealed record SummarizeWindowPatternsRequest(
     [property: JsonPropertyName("end_contest_id")] int? EndContestId = null,
     [property: JsonPropertyName("features")] IReadOnlyList<WindowPatternFeatureRequest>? Features = null,
     [property: JsonPropertyName("coverage_threshold")] double CoverageThreshold = 0.8,
-    [property: JsonPropertyName("range_method")] string RangeMethod = "iqr");
+    [property: JsonPropertyName("range_method")] string RangeMethod = "iqr",
+    [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null,
+    [property: JsonPropertyName("include_explanations")] bool IncludeExplanations = true);
 
 public sealed record WindowPatternSummaryEnvelope(
     [property: JsonPropertyName("metric_name")] string MetricName,
@@ -247,7 +258,8 @@ public sealed record SummarizeWindowAggregatesRequest(
     [property: JsonPropertyName("window_size")] int? WindowSize = null,
     [property: JsonPropertyName("start_contest_id")] int? StartContestId = null,
     [property: JsonPropertyName("end_contest_id")] int? EndContestId = null,
-    [property: JsonPropertyName("aggregates")] IReadOnlyList<WindowAggregateRequestDto>? Aggregates = null);
+    [property: JsonPropertyName("aggregates")] IReadOnlyList<WindowAggregateRequestDto>? Aggregates = null,
+    [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null);
 
 public sealed record HistogramBucketEnvelope(
     [property: JsonPropertyName("x")] double X,
@@ -424,7 +436,8 @@ public sealed record GenerateCandidateGamesRequest(
     [property: JsonPropertyName("global_constraints")] GenerateGlobalConstraintsRequest? GlobalConstraints = null,
     [property: JsonPropertyName("structural_exclusions")] GenerateStructuralExclusionsRequest? StructuralExclusions = null,
     [property: JsonPropertyName("generation_budget")] GenerateGenerationBudgetRequest? GenerationBudget = null,
-    [property: JsonPropertyName("generation_mode")] string? GenerationMode = null);
+    [property: JsonPropertyName("generation_mode")] string? GenerationMode = null,
+    [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null);
 
 public sealed record AppliedConfigurationEnvelope(
     [property: JsonPropertyName("criteria")] IReadOnlyList<GenerateCandidateCriterionRequest> Criteria,
@@ -461,7 +474,9 @@ public sealed record ExplainCandidateGamesRequest(
     [property: JsonPropertyName("seed"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     ulong? Seed = null,
     [property: JsonPropertyName("replay_guaranteed"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    bool? ReplayGuaranteed = null);
+    bool? ReplayGuaranteed = null,
+    [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null,
+    [property: JsonPropertyName("include_explanations")] bool IncludeExplanations = true);
 
 public sealed record MetricBreakdownEntryEnvelope(
     [property: JsonPropertyName("metric_name")] string MetricName,
@@ -789,13 +804,24 @@ public sealed class V0Tools
                     SupportedParameters: new Dictionary<string, IReadOnlyList<string>>(),
                     Capabilities: "Returns deterministic build-surface metadata without executing metrics."),
                 new ToolCapabilityEnvelope(
+                    Name: "get_draw_window",
+                    ToolVersion: GetDrawWindowUseCase.ToolVersion,
+                    SupportedParameters: new Dictionary<string, IReadOnlyList<string>>
+                    {
+                        ["window_modes"] = ["window_size+end_contest_id", "start_contest_id+end_contest_id"],
+                        ["fields"] = ["dataset_version", "tool_version", "deterministic_hash", "window", "draws"]
+                    },
+                    Capabilities: "Returns a canonical draw window (ordered, deterministic) for the resolved window."),
+                new ToolCapabilityEnvelope(
                     Name: "compute_window_metrics",
                     ToolVersion: ComputeWindowMetricsUseCase.ToolVersion,
                     SupportedParameters: new Dictionary<string, IReadOnlyList<string>>
                     {
                         ["window_modes"] = ["window_size+end_contest_id", "start_contest_id+end_contest_id"],
                         ["allow_pending"] = ["false", "true"],
-                        ["metric_names"] = computeWindowAllowed
+                        ["metric_names"] = computeWindowAllowed,
+                        ["include_explanations"] = ["false", "true"],
+                        ["fields"] = ["dataset_version", "tool_version", "deterministic_hash", "window", "metrics"]
                     },
                     Capabilities: "Computes cataloged metrics allowed in this build for a resolved window."),
                 new ToolCapabilityEnvelope(
@@ -804,7 +830,9 @@ public sealed class V0Tools
                     SupportedParameters: new Dictionary<string, IReadOnlyList<string>>
                     {
                         ["normalization_method"] = ["madn", "coefficient_of_variation"],
-                        ["aggregation"] = ["identity", "mean", "max", "l2_norm", "per_component"]
+                        ["aggregation"] = ["identity", "mean", "max", "l2_norm", "per_component"],
+                        ["include_explanations"] = ["false", "true"],
+                        ["fields"] = ["dataset_version", "tool_version", "deterministic_hash", "window", "normalization_method", "ranking"]
                     },
                     Capabilities: "Ranks indicator stability using scalarized series and supported normalization methods."),
                 new ToolCapabilityEnvelope(
@@ -823,7 +851,9 @@ public sealed class V0Tools
                             "one_minus_unit_interval",
                             "shift_scale_unit_interval"
                         ],
-                        ["metric_name"] = composeAllowedComponents
+                        ["metric_name"] = composeAllowedComponents,
+                        ["include_explanations"] = ["false", "true"],
+                        ["fields"] = ["dataset_version", "tool_version", "deterministic_hash", "window", "target", "operator", "ranking"]
                     },
                     Capabilities: "Builds deterministic weighted compositions over supported dezena indicators."),
                 new ToolCapabilityEnvelope(
@@ -835,7 +865,9 @@ public sealed class V0Tools
                         ["aggregation"] = ["identity", "mean", "max", "l2_norm", "per_component"],
                         ["indicator_name"] = associationAllowedIndicators,
                         ["stability_check.method"] = ["rolling_window"],
-                        ["stability_check.required_fields"] = ["subwindow_size", "stride", "min_subwindows"]
+                        ["stability_check.required_fields"] = ["subwindow_size", "stride", "min_subwindows"],
+                        ["include_explanations"] = ["false", "true"],
+                        ["fields"] = ["dataset_version", "tool_version", "deterministic_hash", "window", "method", "association_magnitude", "association_stability"]
                     },
                     Capabilities: "Computes association magnitude and optional deterministic subwindow stability for compatible scalarized series."),
                 new ToolCapabilityEnvelope(
@@ -845,7 +877,9 @@ public sealed class V0Tools
                     {
                         ["range_method"] = ["iqr"],
                         ["feature_metric_name"] = ["pares_no_concurso"],
-                        ["aggregation"] = ["identity"]
+                        ["aggregation"] = ["identity"],
+                        ["include_explanations"] = ["false", "true"],
+                        ["fields"] = ["dataset_version", "tool_version", "deterministic_hash", "window", "range_method", "coverage_threshold", "summaries"]
                     },
                     Capabilities: "Summarizes window pattern distributions with deterministic IQR statistics."),
                 new ToolCapabilityEnvelope(
@@ -859,7 +893,8 @@ public sealed class V0Tools
                             "topk_patterns_count_vector5_series",
                             "histogram_count_vector5_series_per_position_matrix"
                         ],
-                        ["source_metric_name"] = summarizeAllowedSources
+                        ["source_metric_name"] = summarizeAllowedSources,
+                        ["fields"] = ["dataset_version", "tool_version", "deterministic_hash", "window", "aggregates"]
                     },
                     Capabilities: "Builds canonical aggregate payloads over implemented source metrics."),
                 new ToolCapabilityEnvelope(
@@ -872,7 +907,8 @@ public sealed class V0Tools
                         ["generation_mode"] = [GenerationModes.RandomUnrestricted, GenerationModes.BehaviorFiltered],
                         ["plan.criteria"] = ["name", "value|range|allowed_values|typical_range", "mode"],
                         ["plan.weights"] = ["name", "weight"],
-                        ["plan.filters"] = ["name", "value|min|max|range|allowed_values|typical_range", "mode", "version"]
+                        ["plan.filters"] = ["name", "value|min|max|range|allowed_values|typical_range", "mode", "version"],
+                        ["fields"] = ["dataset_version", "tool_version", "deterministic_hash", "replay_guaranteed", "window", "candidate_games"]
                     },
                     Capabilities: "Generates candidate games; max sum of plan count per request, generation modes, and seed policy follow generation envelope."),
                 new ToolCapabilityEnvelope(
@@ -882,7 +918,9 @@ public sealed class V0Tools
                     {
                         ["flags"] = ["include_metric_breakdown", "include_exclusion_breakdown"],
                         ["generation_mode"] = [GenerationModes.RandomUnrestricted, GenerationModes.BehaviorFiltered],
-                        ["context_echo"] = ["seed", "replay_guaranteed"]
+                        ["context_echo"] = ["seed", "replay_guaranteed"],
+                        ["include_explanations"] = ["false", "true"],
+                        ["fields"] = ["dataset_version", "tool_version", "deterministic_hash", "window", "candidate_generation_audit", "explanations"]
                     },
                     Capabilities: "Explains candidate strategies, exclusion/constraint breakdowns, and auditable echo of generation mode, effective restriction composition (intersection when applicable), and seed/replay policy."),
                 new ToolCapabilityEnvelope(
@@ -958,6 +996,29 @@ public sealed class V0Tools
     {
         return ExecuteWithDatasetHandling(() =>
         {
+            var requestedFields = ResponseTransforms.NormalizeFields(request.Fields);
+            var allowedFields = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "dataset_version",
+                "tool_version",
+                "deterministic_hash",
+                "window",
+                "metrics"
+            };
+            var requiredFields = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "dataset_version",
+                "tool_version",
+                "deterministic_hash",
+                "window"
+            };
+
+            var fieldsError = ResponseTransforms.ValidateFields("compute_window_metrics", requestedFields, allowedFields);
+            if (fieldsError is not null)
+            {
+                return fieldsError;
+            }
+
             if (!TryGetFixturePath(out var fixturePath, out var datasetError))
             {
                 return datasetError!;
@@ -976,11 +1037,16 @@ public sealed class V0Tools
                 FixturePath: fixturePath));
 
             var deterministicHash = _deterministicHashService.Compute(
-                result.DeterministicHashInput,
+                new
+                {
+                    core = result.DeterministicHashInput,
+                    include_explanations = request.IncludeExplanations,
+                    fields = requestedFields
+                },
                 result.DatasetVersion,
                 result.ToolVersion);
 
-            return new ComputeWindowMetricsResponse(
+            var response = new ComputeWindowMetricsResponse(
                 DatasetVersion: result.DatasetVersion,
                 ToolVersion: result.ToolVersion,
                 DeterministicHash: deterministicHash,
@@ -1002,6 +1068,59 @@ public sealed class V0Tools
                         metric.Value.ToArray(),
                         metric.Explanation))
                     .ToArray());
+
+            if (requestedFields is null && request.IncludeExplanations)
+            {
+                return response;
+            }
+
+            if (requestedFields is null && request.IncludeExplanations)
+            {
+                return response;
+            }
+
+            if (requestedFields is null && request.IncludeExplanations)
+            {
+                return response;
+            }
+
+            if (requestedFields is null && request.IncludeExplanations)
+            {
+                return response;
+            }
+
+            if (requestedFields is null && request.IncludeExplanations)
+            {
+                return response;
+            }
+
+            if (requestedFields is null && request.IncludeExplanations)
+            {
+                return response;
+            }
+
+            if (requestedFields is null && request.IncludeExplanations)
+            {
+                return response;
+            }
+
+            var element = JsonSerializer.SerializeToElement(response);
+            if (!request.IncludeExplanations)
+            {
+                element = ResponseTransforms.StripExplanations(element);
+            }
+
+            if (requestedFields is not null)
+            {
+                var keep = new HashSet<string>(requiredFields, StringComparer.Ordinal);
+                foreach (var f in requestedFields)
+                {
+                    keep.Add(f);
+                }
+                element = ResponseTransforms.ProjectTopLevel(element, keep);
+            }
+
+            return element;
         });
     }
 
@@ -1009,6 +1128,29 @@ public sealed class V0Tools
     {
         return ExecuteWithDatasetHandling(() =>
         {
+            var requestedFields = ResponseTransforms.NormalizeFields(request.Fields);
+            var allowedFields = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "dataset_version",
+                "tool_version",
+                "deterministic_hash",
+                "window",
+                "draws"
+            };
+            var requiredFields = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "dataset_version",
+                "tool_version",
+                "deterministic_hash",
+                "window"
+            };
+
+            var fieldsError = ResponseTransforms.ValidateFields("get_draw_window", requestedFields, allowedFields);
+            if (fieldsError is not null)
+            {
+                return fieldsError;
+            }
+
             if (!TryGetFixturePath(out var fixturePath, out var datasetError))
             {
                 return datasetError!;
@@ -1025,11 +1167,15 @@ public sealed class V0Tools
                 FixturePath: fixturePath));
 
             var deterministicHash = _deterministicHashService.Compute(
-                result.DeterministicHashInput,
+                new
+                {
+                    core = result.DeterministicHashInput,
+                    fields = requestedFields
+                },
                 result.DatasetVersion,
                 result.ToolVersion);
 
-            return new GetDrawWindowResponse(
+            var response = new GetDrawWindowResponse(
                 DatasetVersion: result.DatasetVersion,
                 ToolVersion: result.ToolVersion,
                 DeterministicHash: deterministicHash,
@@ -1040,6 +1186,20 @@ public sealed class V0Tools
                 Draws: result.Draws
                     .Select(draw => new DrawDto(draw.ContestId, draw.DrawDate, draw.Numbers.ToArray()))
                     .ToArray());
+
+            if (requestedFields is null)
+            {
+                return response;
+            }
+
+            var element = JsonSerializer.SerializeToElement(response);
+            var keep = new HashSet<string>(requiredFields, StringComparer.Ordinal);
+            foreach (var f in requestedFields)
+            {
+                keep.Add(f);
+            }
+            element = ResponseTransforms.ProjectTopLevel(element, keep);
+            return element;
         });
     }
 
@@ -1047,6 +1207,31 @@ public sealed class V0Tools
     {
         return ExecuteWithDatasetHandling(() =>
         {
+            var requestedFields = ResponseTransforms.NormalizeFields(request.Fields);
+            var allowedFields = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "dataset_version",
+                "tool_version",
+                "deterministic_hash",
+                "window",
+                "normalization_method",
+                "ranking"
+            };
+            var requiredFields = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "dataset_version",
+                "tool_version",
+                "deterministic_hash",
+                "window",
+                "normalization_method"
+            };
+
+            var fieldsError = ResponseTransforms.ValidateFields("analyze_indicator_stability", requestedFields, allowedFields);
+            if (fieldsError is not null)
+            {
+                return fieldsError;
+            }
+
             if (!TryGetFixturePath(out var fixturePath, out var datasetError))
             {
                 return datasetError!;
@@ -1069,11 +1254,16 @@ public sealed class V0Tools
                 FixturePath: fixturePath));
 
             var deterministicHash = _deterministicHashService.Compute(
-                result.DeterministicHashInput,
+                new
+                {
+                    core = result.DeterministicHashInput,
+                    include_explanations = request.IncludeExplanations,
+                    fields = requestedFields
+                },
                 result.DatasetVersion,
                 result.ToolVersion);
 
-            return new AnalyzeIndicatorStabilityResponse(
+            var response = new AnalyzeIndicatorStabilityResponse(
                 DatasetVersion: result.DatasetVersion,
                 ToolVersion: result.ToolVersion,
                 DeterministicHash: deterministicHash,
@@ -1092,6 +1282,29 @@ public sealed class V0Tools
                         entry.StabilityScore,
                         entry.Explanation))
                     .ToArray());
+
+            if (requestedFields is null && request.IncludeExplanations)
+            {
+                return response;
+            }
+
+            var element = JsonSerializer.SerializeToElement(response);
+            if (!request.IncludeExplanations)
+            {
+                element = ResponseTransforms.StripExplanations(element);
+            }
+
+            if (requestedFields is not null)
+            {
+                var keep = new HashSet<string>(requiredFields, StringComparer.Ordinal);
+                foreach (var f in requestedFields)
+                {
+                    keep.Add(f);
+                }
+                element = ResponseTransforms.ProjectTopLevel(element, keep);
+            }
+
+            return element;
         });
     }
 
@@ -1099,6 +1312,33 @@ public sealed class V0Tools
     {
         return ExecuteWithDatasetHandling(() =>
         {
+            var requestedFields = ResponseTransforms.NormalizeFields(request.Fields);
+            var allowedFields = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "dataset_version",
+                "tool_version",
+                "deterministic_hash",
+                "window",
+                "target",
+                "operator",
+                "ranking"
+            };
+            var requiredFields = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "dataset_version",
+                "tool_version",
+                "deterministic_hash",
+                "window",
+                "target",
+                "operator"
+            };
+
+            var fieldsError = ResponseTransforms.ValidateFields("compose_indicator_analysis", requestedFields, allowedFields);
+            if (fieldsError is not null)
+            {
+                return fieldsError;
+            }
+
             if (!TryGetFixturePath(out var fixturePath, out var datasetError))
             {
                 return datasetError!;
@@ -1124,11 +1364,16 @@ public sealed class V0Tools
                 FixturePath: fixturePath));
 
             var deterministicHash = _deterministicHashService.Compute(
-                result.DeterministicHashInput,
+                new
+                {
+                    core = result.DeterministicHashInput,
+                    include_explanations = request.IncludeExplanations,
+                    fields = requestedFields
+                },
                 result.DatasetVersion,
                 result.ToolVersion);
 
-            return new ComposeIndicatorAnalysisResponse(
+            var response = new ComposeIndicatorAnalysisResponse(
                 DatasetVersion: result.DatasetVersion,
                 ToolVersion: result.ToolVersion,
                 DeterministicHash: deterministicHash,
@@ -1145,6 +1390,29 @@ public sealed class V0Tools
                         entry.Score,
                         entry.Explanation))
                     .ToArray());
+
+            if (requestedFields is null && request.IncludeExplanations)
+            {
+                return response;
+            }
+
+            var element = JsonSerializer.SerializeToElement(response);
+            if (!request.IncludeExplanations)
+            {
+                element = ResponseTransforms.StripExplanations(element);
+            }
+
+            if (requestedFields is not null)
+            {
+                var keep = new HashSet<string>(requiredFields, StringComparer.Ordinal);
+                foreach (var f in requestedFields)
+                {
+                    keep.Add(f);
+                }
+                element = ResponseTransforms.ProjectTopLevel(element, keep);
+            }
+
+            return element;
         });
     }
 
@@ -1152,6 +1420,33 @@ public sealed class V0Tools
     {
         return ExecuteWithDatasetHandling(() =>
         {
+            var requestedFields = ResponseTransforms.NormalizeFields(request.Fields);
+            var allowedFields = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "dataset_version",
+                "tool_version",
+                "deterministic_hash",
+                "window",
+                "method",
+                "association_magnitude",
+                "association_stability"
+            };
+            var requiredFields = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "dataset_version",
+                "tool_version",
+                "deterministic_hash",
+                "window",
+                "method",
+                "association_magnitude"
+            };
+
+            var fieldsError = ResponseTransforms.ValidateFields("analyze_indicator_associations", requestedFields, allowedFields);
+            if (fieldsError is not null)
+            {
+                return fieldsError;
+            }
+
             if (!TryGetFixturePath(out var fixturePath, out var datasetError))
             {
                 return datasetError!;
@@ -1180,11 +1475,16 @@ public sealed class V0Tools
                 FixturePath: fixturePath));
 
             var deterministicHash = _deterministicHashService.Compute(
-                result.DeterministicHashInput,
+                new
+                {
+                    core = result.DeterministicHashInput,
+                    include_explanations = request.IncludeExplanations,
+                    fields = requestedFields
+                },
                 result.DatasetVersion,
                 result.ToolVersion);
 
-            return new AnalyzeIndicatorAssociationsResponse(
+            var response = new AnalyzeIndicatorAssociationsResponse(
                 DatasetVersion: result.DatasetVersion,
                 ToolVersion: result.ToolVersion,
                 DeterministicHash: deterministicHash,
@@ -1231,6 +1531,29 @@ public sealed class V0Tools
                                 entry.StdDev,
                                 entry.SignConsistencyRatio))
                             .ToArray()));
+
+            if (requestedFields is null && request.IncludeExplanations)
+            {
+                return response;
+            }
+
+            var element = JsonSerializer.SerializeToElement(response);
+            if (!request.IncludeExplanations)
+            {
+                element = ResponseTransforms.StripExplanations(element);
+            }
+
+            if (requestedFields is not null)
+            {
+                var keep = new HashSet<string>(requiredFields, StringComparer.Ordinal);
+                foreach (var f in requestedFields)
+                {
+                    keep.Add(f);
+                }
+                element = ResponseTransforms.ProjectTopLevel(element, keep);
+            }
+
+            return element;
         });
     }
 
@@ -1238,6 +1561,33 @@ public sealed class V0Tools
     {
         return ExecuteWithDatasetHandling(() =>
         {
+            var requestedFields = ResponseTransforms.NormalizeFields(request.Fields);
+            var allowedFields = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "dataset_version",
+                "tool_version",
+                "deterministic_hash",
+                "window",
+                "range_method",
+                "coverage_threshold",
+                "summaries"
+            };
+            var requiredFields = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "dataset_version",
+                "tool_version",
+                "deterministic_hash",
+                "window",
+                "range_method",
+                "coverage_threshold"
+            };
+
+            var fieldsError = ResponseTransforms.ValidateFields("summarize_window_patterns", requestedFields, allowedFields);
+            if (fieldsError is not null)
+            {
+                return fieldsError;
+            }
+
             if (!TryGetFixturePath(out var fixturePath, out var datasetError))
             {
                 return datasetError!;
@@ -1259,11 +1609,16 @@ public sealed class V0Tools
                 FixturePath: fixturePath));
 
             var deterministicHash = _deterministicHashService.Compute(
-                result.DeterministicHashInput,
+                new
+                {
+                    core = result.DeterministicHashInput,
+                    include_explanations = request.IncludeExplanations,
+                    fields = requestedFields
+                },
                 result.DatasetVersion,
                 result.ToolVersion);
 
-            return new SummarizeWindowPatternsResponse(
+            var response = new SummarizeWindowPatternsResponse(
                 DatasetVersion: result.DatasetVersion,
                 ToolVersion: result.ToolVersion,
                 DeterministicHash: deterministicHash,
@@ -1291,6 +1646,29 @@ public sealed class V0Tools
                         summary.CoverageThresholdMet,
                         summary.Explanation))
                     .ToArray());
+
+            if (requestedFields is null && request.IncludeExplanations)
+            {
+                return response;
+            }
+
+            var element = JsonSerializer.SerializeToElement(response);
+            if (!request.IncludeExplanations)
+            {
+                element = ResponseTransforms.StripExplanations(element);
+            }
+
+            if (requestedFields is not null)
+            {
+                var keep = new HashSet<string>(requiredFields, StringComparer.Ordinal);
+                foreach (var f in requestedFields)
+                {
+                    keep.Add(f);
+                }
+                element = ResponseTransforms.ProjectTopLevel(element, keep);
+            }
+
+            return element;
         });
     }
 
@@ -1298,6 +1676,29 @@ public sealed class V0Tools
     {
         return ExecuteWithDatasetHandling(() =>
         {
+            var requestedFields = ResponseTransforms.NormalizeFields(request.Fields);
+            var allowedFields = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "dataset_version",
+                "tool_version",
+                "deterministic_hash",
+                "window",
+                "aggregates"
+            };
+            var requiredFields = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "dataset_version",
+                "tool_version",
+                "deterministic_hash",
+                "window"
+            };
+
+            var fieldsError = ResponseTransforms.ValidateFields("summarize_window_aggregates", requestedFields, allowedFields);
+            if (fieldsError is not null)
+            {
+                return fieldsError;
+            }
+
             if (!TryGetFixturePath(out var fixturePath, out var datasetError))
             {
                 return datasetError!;
@@ -1323,11 +1724,15 @@ public sealed class V0Tools
                 FixturePath: fixturePath));
 
             var deterministicHash = _deterministicHashService.Compute(
-                result.DeterministicHashInput,
+                new
+                {
+                    core = result.DeterministicHashInput,
+                    fields = requestedFields
+                },
                 result.DatasetVersion,
                 result.ToolVersion);
 
-            return new SummarizeWindowAggregatesResponse(
+            var response = new SummarizeWindowAggregatesResponse(
                 DatasetVersion: result.DatasetVersion,
                 ToolVersion: result.ToolVersion,
                 DeterministicHash: deterministicHash,
@@ -1354,6 +1759,20 @@ public sealed class V0Tools
                             .ToArray(),
                         Matrix: aggregate.Matrix))
                     .ToArray());
+
+            if (requestedFields is null)
+            {
+                return response;
+            }
+
+            var element = JsonSerializer.SerializeToElement(response);
+            var keep = new HashSet<string>(requiredFields, StringComparer.Ordinal);
+            foreach (var f in requestedFields)
+            {
+                keep.Add(f);
+            }
+            element = ResponseTransforms.ProjectTopLevel(element, keep);
+            return element;
         });
     }
 
@@ -1361,6 +1780,31 @@ public sealed class V0Tools
     {
         return ExecuteWithDatasetHandling(() =>
         {
+            var requestedFields = ResponseTransforms.NormalizeFields(request.Fields);
+            var allowedFields = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "dataset_version",
+                "tool_version",
+                "deterministic_hash",
+                "replay_guaranteed",
+                "window",
+                "candidate_games"
+            };
+            var requiredFields = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "dataset_version",
+                "tool_version",
+                "deterministic_hash",
+                "replay_guaranteed",
+                "window"
+            };
+
+            var fieldsError = ResponseTransforms.ValidateFields("generate_candidate_games", requestedFields, allowedFields);
+            if (fieldsError is not null)
+            {
+                return fieldsError;
+            }
+
             if (!TryGetFixturePath(out var fixturePath, out var datasetError))
             {
                 return datasetError!;
@@ -1477,11 +1921,15 @@ public sealed class V0Tools
                 FixturePath: fixturePath));
 
             var deterministicHash = _deterministicHashService.Compute(
-                result.DeterministicHashInput,
+                new
+                {
+                    core = result.DeterministicHashInput,
+                    fields = requestedFields
+                },
                 result.DatasetVersion,
                 result.ToolVersion);
 
-            return new GenerateCandidateGamesResponse(
+            var response = new GenerateCandidateGamesResponse(
                 DatasetVersion: result.DatasetVersion,
                 ToolVersion: result.ToolVersion,
                 DeterministicHash: deterministicHash,
@@ -1565,6 +2013,20 @@ public sealed class V0Tools
                                 .ToArray(),
                             ResolvedDefaults: game.AppliedConfiguration.ResolvedDefaults)))
                     .ToArray());
+
+            if (requestedFields is null)
+            {
+                return response;
+            }
+
+            var element = JsonSerializer.SerializeToElement(response);
+            var keep = new HashSet<string>(requiredFields, StringComparer.Ordinal);
+            foreach (var f in requestedFields)
+            {
+                keep.Add(f);
+            }
+            element = ResponseTransforms.ProjectTopLevel(element, keep);
+            return element;
         });
     }
 
@@ -1572,6 +2034,30 @@ public sealed class V0Tools
     {
         return ExecuteWithDatasetHandling(() =>
         {
+            var requestedFields = ResponseTransforms.NormalizeFields(request.Fields);
+            var allowedFields = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "dataset_version",
+                "tool_version",
+                "deterministic_hash",
+                "window",
+                "candidate_generation_audit",
+                "explanations"
+            };
+            var requiredFields = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "dataset_version",
+                "tool_version",
+                "deterministic_hash",
+                "window"
+            };
+
+            var fieldsError = ResponseTransforms.ValidateFields("explain_candidate_games", requestedFields, allowedFields);
+            if (fieldsError is not null)
+            {
+                return fieldsError;
+            }
+
             if (!TryGetFixturePath(out var fixturePath, out var datasetError))
             {
                 return datasetError!;
@@ -1594,12 +2080,17 @@ public sealed class V0Tools
                 FixturePath: fixturePath));
 
             var deterministicHash = _deterministicHashService.Compute(
-                result.DeterministicHashInput,
+                new
+                {
+                    core = result.DeterministicHashInput,
+                    include_explanations = request.IncludeExplanations,
+                    fields = requestedFields
+                },
                 result.DatasetVersion,
                 result.ToolVersion);
 
             var generationAudit = result.GenerationAudit;
-            return new ExplainCandidateGamesResponse(
+            var response = new ExplainCandidateGamesResponse(
                 DatasetVersion: result.DatasetVersion,
                 ToolVersion: result.ToolVersion,
                 DeterministicHash: deterministicHash,
@@ -1679,6 +2170,29 @@ public sealed class V0Tools
                                     .ToArray()))
                             .ToArray()))
                     .ToArray());
+
+            if (requestedFields is null && request.IncludeExplanations)
+            {
+                return response;
+            }
+
+            var element = JsonSerializer.SerializeToElement(response);
+            if (!request.IncludeExplanations)
+            {
+                element = ResponseTransforms.StripExplanations(element);
+            }
+
+            if (requestedFields is not null)
+            {
+                var keep = new HashSet<string>(requiredFields, StringComparer.Ordinal);
+                foreach (var f in requestedFields)
+                {
+                    keep.Add(f);
+                }
+                element = ResponseTransforms.ProjectTopLevel(element, keep);
+            }
+
+            return element;
         });
     }
 
