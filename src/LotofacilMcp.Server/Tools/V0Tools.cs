@@ -166,7 +166,8 @@ public sealed record AnalyzeIndicatorAssociationsRequest(
     [property: JsonPropertyName("top_k")] int TopK = 5,
     [property: JsonPropertyName("stability_check")] AssociationStabilityCheckRequest? StabilityCheck = null,
     [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null,
-    [property: JsonPropertyName("include_explanations")] bool IncludeExplanations = true);
+    [property: JsonPropertyName("include_explanations")] bool IncludeExplanations = true,
+    [property: JsonPropertyName("verbosity"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Verbosity = null);
 
 public sealed record AssociationStabilityCheckRequest(
     [property: JsonPropertyName("method")] string Method = "",
@@ -233,7 +234,8 @@ public sealed record SummarizeWindowPatternsRequest(
     [property: JsonPropertyName("coverage_threshold")] double CoverageThreshold = 0.8,
     [property: JsonPropertyName("range_method")] string RangeMethod = "iqr",
     [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null,
-    [property: JsonPropertyName("include_explanations")] bool IncludeExplanations = true);
+    [property: JsonPropertyName("include_explanations")] bool IncludeExplanations = true,
+    [property: JsonPropertyName("verbosity"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Verbosity = null);
 
 public sealed record WindowPatternSummaryEnvelope(
     [property: JsonPropertyName("metric_name")] string MetricName,
@@ -272,7 +274,8 @@ public sealed record SummarizeWindowAggregatesRequest(
     [property: JsonPropertyName("start_contest_id")] int? StartContestId = null,
     [property: JsonPropertyName("end_contest_id")] int? EndContestId = null,
     [property: JsonPropertyName("aggregates")] IReadOnlyList<WindowAggregateRequestDto>? Aggregates = null,
-    [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null);
+    [property: JsonPropertyName("fields"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? Fields = null,
+    [property: JsonPropertyName("verbosity"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Verbosity = null);
 
 public sealed record HistogramBucketEnvelope(
     [property: JsonPropertyName("x")] double X,
@@ -1753,6 +1756,7 @@ public sealed class V0Tools
                 new
                 {
                     core = result.DeterministicHashInput,
+                    verbosity = ResolveVerbosity(request.Verbosity),
                     include_explanations = request.IncludeExplanations,
                     fields = requestedFields
                 },
@@ -1907,6 +1911,7 @@ public sealed class V0Tools
                 new
                 {
                     core = result.DeterministicHashInput,
+                    verbosity = ResolveVerbosity(request.Verbosity),
                     include_explanations = request.IncludeExplanations,
                     fields = requestedFields
                 },
@@ -2039,6 +2044,7 @@ public sealed class V0Tools
                 new
                 {
                     core = result.DeterministicHashInput,
+                    verbosity = ResolveVerbosity(request.Verbosity),
                     fields = requestedFields
                 },
                 result.DatasetVersion,

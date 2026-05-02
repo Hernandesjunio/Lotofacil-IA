@@ -14,6 +14,7 @@ namespace LotofacilMcp.ContractTests;
 public sealed class Hotfix236EfficiencyEvidenceContractTests : IAsyncLifetime
 {
     private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
+    private Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program>? _httpFactory;
     private HttpClient _httpClient = default!;
     private McpClient _mcp = default!;
 
@@ -22,7 +23,7 @@ public sealed class Hotfix236EfficiencyEvidenceContractTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        (_httpClient, _mcp) = await CreateHttpMcpClientAsync(_defaultFixturePath);
+        (_httpFactory, _httpClient, _mcp) = await CreateHttpMcpClientAsync(_defaultFixturePath);
     }
 
     public async Task DisposeAsync()
@@ -33,6 +34,10 @@ public sealed class Hotfix236EfficiencyEvidenceContractTests : IAsyncLifetime
         }
 
         _httpClient?.Dispose();
+        if (_httpFactory is not null)
+        {
+            await _httpFactory.DisposeAsync();
+        }
     }
 
     // Hotfix 23.6.1 — utilidade factual (get_draw_window)
@@ -190,7 +195,7 @@ public sealed class Hotfix236EfficiencyEvidenceContractTests : IAsyncLifetime
         {
             ["window_size"] = 5,
             ["end_contest_id"] = 1005,
-            ["features"] = new object[] { new Dictionary<string, object?> { ["name"] = "pares_no_concurso" } },
+            ["features"] = new object[] { new Dictionary<string, object?> { ["metric_name"] = "pares_no_concurso" } },
             ["coverage_threshold"] = 0.8,
             ["range_method"] = "iqr",
             ["verbosity"] = "full"
@@ -323,7 +328,7 @@ public sealed class Hotfix236EfficiencyEvidenceContractTests : IAsyncLifetime
         return Path.Combine(repoRoot, repoRelative.Replace('/', Path.DirectorySeparatorChar));
     }
 
-    private static async Task<(HttpClient httpClient, McpClient mcp)> CreateHttpMcpClientAsync(string datasetFixturePath)
+    private static async Task<(Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program> factory, HttpClient httpClient, McpClient mcp)> CreateHttpMcpClientAsync(string datasetFixturePath)
     {
         // We use HTTP MCP transport here to test Content/StructuredContent split (ADR 0023) via MCP result.
         // WebApplicationFactory is already used across contract tests; we keep it simple by hosting per suite.
@@ -354,7 +359,7 @@ public sealed class Hotfix236EfficiencyEvidenceContractTests : IAsyncLifetime
 
         // Ensure factory lives as long as http client; attach to handler lifetime via Dispose of http.
         // (WebApplicationFactory is disposed implicitly when process ends; for hotfix suite this is acceptable.)
-        return (http, mcp);
+        return (factory, http, mcp);
     }
 
     private static async Task<McpClient> CreateStdioMcpClientAsync(string datasetFixturePath)
@@ -449,9 +454,29 @@ public sealed class Hotfix236EfficiencyEvidenceContractTests : IAsyncLifetime
                     continue;
                 }
 
-                Assert.Matches(@"\b" + System.Text.RegularExpressions.Regex.Escape(s) + @"\b", content);
+                if (IsWordLikeToken(s))
+                {
+                    Assert.Matches(@"\b" + System.Text.RegularExpressions.Regex.Escape(s) + @"\b", content);
+                }
+                else
+                {
+                    Assert.Contains(s, content, StringComparison.Ordinal);
+                }
             }
         }
+    }
+
+    private static bool IsWordLikeToken(string token)
+    {
+        foreach (var c in token)
+        {
+            if (!(char.IsLetterOrDigit(c) || c == '_'))
+            {
+                return false;
+            }
+        }
+
+        return token.Length > 0;
     }
 
     private static void AssertDoesNotContainPhrases(string content, JsonElement phrases)
@@ -564,7 +589,7 @@ public sealed class Hotfix236EfficiencyEvidenceContractTests : IAsyncLifetime
         {
             ["window_size"] = 5,
             ["end_contest_id"] = 1005,
-            ["features"] = new object[] { new Dictionary<string, object?> { ["name"] = "pares_no_concurso" } },
+            ["features"] = new object[] { new Dictionary<string, object?> { ["metric_name"] = "pares_no_concurso" } },
             ["coverage_threshold"] = 0.8,
             ["range_method"] = "iqr",
             ["verbosity"] = "minimal"
@@ -592,7 +617,7 @@ public sealed class Hotfix236EfficiencyEvidenceContractTests : IAsyncLifetime
         {
             ["window_size"] = 5,
             ["end_contest_id"] = 1005,
-            ["features"] = new object[] { new Dictionary<string, object?> { ["name"] = "pares_no_concurso" } },
+            ["features"] = new object[] { new Dictionary<string, object?> { ["metric_name"] = "pares_no_concurso" } },
             ["coverage_threshold"] = 0.8,
             ["range_method"] = "iqr",
             ["verbosity"] = "full"

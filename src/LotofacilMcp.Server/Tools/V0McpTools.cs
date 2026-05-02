@@ -242,7 +242,8 @@ public sealed class V0McpTools
             TopK: top_k,
             StabilityCheck: stability_check,
             Fields: fields,
-            IncludeExplanations: include_explanations));
+            IncludeExplanations: include_explanations,
+            Verbosity: verbosity));
 
         return ToToolResult(payload, payload is ContractErrorEnvelope, verbosity);
     }
@@ -269,7 +270,8 @@ public sealed class V0McpTools
             CoverageThreshold: coverage_threshold,
             RangeMethod: range_method ?? string.Empty,
             Fields: fields,
-            IncludeExplanations: include_explanations));
+            IncludeExplanations: include_explanations,
+            Verbosity: verbosity));
 
         return ToToolResult(payload, payload is ContractErrorEnvelope, verbosity);
     }
@@ -290,7 +292,8 @@ public sealed class V0McpTools
             StartContestId: start_contest_id,
             EndContestId: end_contest_id,
             Aggregates: aggregates,
-            Fields: fields));
+            Fields: fields,
+            Verbosity: verbosity));
 
         return ToToolResult(payload, payload is ContractErrorEnvelope, verbosity);
     }
@@ -426,14 +429,28 @@ public sealed class V0McpTools
             DiscoverCapabilitiesResponse r => verbosity switch
             {
                 VerbosityLevel.Minimal => $"Capabilities: build={r.BuildProfile}, tools={r.Tools.Count}, metrics={r.Metrics.ImplementedMetricNames.Count}.",
-                VerbosityLevel.Full => LimitSummary($"Capabilities: build={r.BuildProfile}, tool_version={r.ToolVersion}, tools={r.Tools.Count}, implemented_metrics={r.Metrics.ImplementedMetricNames.Count}, generation_strategies={r.Generation.Strategies.Count}.", verbosity),
-                _ => $"Capabilities: build={r.BuildProfile}, tools={r.Tools.Count}, implemented_metrics={r.Metrics.ImplementedMetricNames.Count}."
+                VerbosityLevel.Full => LimitSummary(
+                    "Capabilities: use get_draw_window with window_size > 0. "
+                    + "Quickstart: window_size=1 anchors latest contest when end_contest_id is omitted. "
+                    + "Constraints: start_contest_id requires end_contest_id; window_size/start/end coherence must hold. "
+                    + $"build={r.BuildProfile}, tool_version={r.ToolVersion}, tools={r.Tools.Count}.",
+                    verbosity),
+                _ => "Capabilities: get_draw_window requires window_size > 0; "
+                     + "window_size=1 anchors latest contest; "
+                     + "start_contest_id requires end_contest_id; "
+                     + "window_size/start/end coherence is enforced."
             },
             HelpResponse r => verbosity switch
             {
                 VerbosityLevel.Minimal => $"Help: templates={r.Templates.Count}, index={r.IndexResourceUri}.",
-                VerbosityLevel.Full => LimitSummary($"Help: templates={r.Templates.Count}, index={r.IndexResourceUri}, getting_started={r.GettingStartedResourceUri ?? "(none)"}.", verbosity),
-                _ => $"Help: templates={r.Templates.Count}, index={r.IndexResourceUri}."
+                VerbosityLevel.Full => LimitSummary(
+                    "Help quickstart: get_draw_window(window_size=1) to anchor latest contest; "
+                    + "start with compute_window_metrics(window_size=5, metrics=[{\"name\":\"frequencia_por_dezena\"}]). "
+                    + "Preserve dataset_version, tool_version, deterministic_hash, window. "
+                    + $"templates={r.Templates.Count}, index={r.IndexResourceUri}, getting_started={r.GettingStartedResourceUri ?? "(none)"}.",
+                    verbosity),
+                _ => "Help quickstart: get_draw_window(window_size=1); compute_window_metrics(window_size=5, metrics=[{\"name\":\"frequencia_por_dezena\"}]); "
+                     + "preserve dataset_version, tool_version, deterministic_hash, window."
             },
             GetDrawWindowResponse r => verbosity switch
             {
@@ -562,6 +579,12 @@ public sealed class V0McpTools
         if (string.Equals(m.Shape, "scalar", StringComparison.OrdinalIgnoreCase) && m.Value.Count >= 1)
         {
             return $"{m.MetricName}: {FormatNumber(m.Value[0])}";
+        }
+
+        if (string.Equals(m.Shape, "dezena_list[10]", StringComparison.OrdinalIgnoreCase) && m.Value.Count == 10)
+        {
+            var top10 = m.Value.Select(v => ((int)Math.Round(v)).ToString(System.Globalization.CultureInfo.InvariantCulture));
+            return $"{m.MetricName}: [{string.Join(", ", top10)}]";
         }
 
         if (m.Value.Count > 0)

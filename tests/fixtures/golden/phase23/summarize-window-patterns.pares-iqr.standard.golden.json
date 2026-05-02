@@ -5,7 +5,7 @@
   "request": {
     "window_size": 5,
     "end_contest_id": 1005,
-    "features": [{ "name": "pares_no_concurso" }],
+    "features": [{ "metric_name": "pares_no_concurso" }],
     "coverage_threshold": 0.8,
     "range_method": "iqr",
     "verbosity": "standard"
