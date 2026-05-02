@@ -768,7 +768,11 @@ public sealed class V0Tools
                 "## Comece por aqui\n\n" +
                 "1) Chame `help`\n" +
                 "2) Escolha um caminho (comece pelo **Painel geral**)\n" +
-                "3) Escolha o período (se não souber o último concurso, peça para ancorar no mais recente)\n\n" +
+                "3) Escolha o período (se não souber o último concurso, use `get_draw_window(window_size=1)` para ancorar no mais recente)\n\n" +
+                "### Quickstart operacional (sem tentativa/erro)\n\n" +
+                "- **Último concurso**: peça `get_draw_window(window_size=1)`.\n" +
+                "- **Primeiras métricas**: comece com `compute_window_metrics(window_size=5, metrics=[{\"name\":\"frequencia_por_dezena\"}])` e ajuste a janela conforme o objetivo.\n" +
+                "- **Campos mínimos de rastreabilidade** (preserve sempre): `dataset_version`, `tool_version`, `deterministic_hash`, `window`.\n\n" +
                 "### Modo econômico vs detalhado (sem tentativa/erro)\n\n" +
                 "Quando você disser algo como **\"modo econômico\"**, o cliente/agente deve mapear isso para knobs de economia:\n\n" +
                 "- `verbosity`: `minimal` | `standard` | `full`\n" +
@@ -860,6 +864,17 @@ public sealed class V0Tools
             }
         };
 
+        static IReadOnlyDictionary<string, IReadOnlyList<string>> WithWindowOperationalConstraints(
+            Dictionary<string, IReadOnlyList<string>> supportedParameters)
+        {
+            supportedParameters["window_size.constraint"] = ["window_size > 0"];
+            supportedParameters["window_size.quickstart"] = ["window_size=1 anchors the latest available contest when end_contest_id is omitted"];
+            supportedParameters["start_contest_id.constraint"] = ["start_contest_id requires end_contest_id"];
+            supportedParameters["start_end.constraint"] = ["start_contest_id must be <= end_contest_id"];
+            supportedParameters["window_size_start_end.coherence"] = ["if start_contest_id/end_contest_id are provided, window_size must be omitted/0 or equal to (end-start+1)"];
+            return supportedParameters;
+        }
+
         var response = new DiscoverCapabilitiesResponse(
             ToolVersion: DiscoverCapabilitiesToolVersion,
             DeterministicHash: string.Empty,
@@ -896,7 +911,7 @@ public sealed class V0Tools
                 new ToolCapabilityEnvelope(
                     Name: "get_draw_window",
                     ToolVersion: GetDrawWindowUseCase.ToolVersion,
-                    SupportedParameters: new Dictionary<string, IReadOnlyList<string>>
+                    SupportedParameters: WithWindowOperationalConstraints(new Dictionary<string, IReadOnlyList<string>>
                     {
                         ["verbosity"] = ["minimal", "standard", "full"],
                         ["verbosity.default_recommended"] = ["standard"],
@@ -905,12 +920,12 @@ public sealed class V0Tools
                         ["page_size"] = [$"1..{MaxPageSizeFull}"],
                         ["page_page_size.constraint"] = ["pagination requires verbosity=full"],
                         ["fields"] = ["dataset_version", "tool_version", "deterministic_hash", "window", "draws"]
-                    },
+                    }),
                     Capabilities: "Returns a canonical draw window (ordered, deterministic) for the resolved window."),
                 new ToolCapabilityEnvelope(
                     Name: "compute_window_metrics",
                     ToolVersion: ComputeWindowMetricsUseCase.ToolVersion,
-                    SupportedParameters: new Dictionary<string, IReadOnlyList<string>>
+                    SupportedParameters: WithWindowOperationalConstraints(new Dictionary<string, IReadOnlyList<string>>
                     {
                         ["verbosity"] = ["minimal", "standard", "full"],
                         ["verbosity.default_recommended"] = ["standard"],
@@ -922,12 +937,12 @@ public sealed class V0Tools
                         ["page_size"] = [$"1..{MaxPageSizeFull}"],
                         ["page_page_size.constraint"] = ["pagination requires verbosity=full"],
                         ["fields"] = ["dataset_version", "tool_version", "deterministic_hash", "window", "metrics"]
-                    },
+                    }),
                     Capabilities: "Computes cataloged metrics allowed in this build for a resolved window."),
                 new ToolCapabilityEnvelope(
                     Name: "analyze_indicator_stability",
                     ToolVersion: AnalyzeIndicatorStabilityUseCase.ToolVersion,
-                    SupportedParameters: new Dictionary<string, IReadOnlyList<string>>
+                    SupportedParameters: WithWindowOperationalConstraints(new Dictionary<string, IReadOnlyList<string>>
                     {
                         ["verbosity"] = ["minimal", "standard", "full"],
                         ["verbosity.default_recommended"] = ["standard"],
@@ -939,12 +954,12 @@ public sealed class V0Tools
                         ["page_size"] = [$"1..{MaxPageSizeFull}"],
                         ["page_page_size.constraint"] = ["pagination requires verbosity=full"],
                         ["fields"] = ["dataset_version", "tool_version", "deterministic_hash", "window", "normalization_method", "ranking"]
-                    },
+                    }),
                     Capabilities: "Ranks indicator stability using scalarized series and supported normalization methods."),
                 new ToolCapabilityEnvelope(
                     Name: "compose_indicator_analysis",
                     ToolVersion: ComposeIndicatorAnalysisUseCase.ToolVersion,
-                    SupportedParameters: new Dictionary<string, IReadOnlyList<string>>
+                    SupportedParameters: WithWindowOperationalConstraints(new Dictionary<string, IReadOnlyList<string>>
                     {
                         ["verbosity"] = ["minimal", "standard", "full"],
                         ["verbosity.default_recommended"] = ["standard"],
@@ -966,12 +981,12 @@ public sealed class V0Tools
                         ["page_size"] = [$"1..{MaxPageSizeFull}"],
                         ["page_page_size.constraint"] = ["pagination requires verbosity=full"],
                         ["fields"] = ["dataset_version", "tool_version", "deterministic_hash", "window", "target", "operator", "ranking"]
-                    },
+                    }),
                     Capabilities: "Builds deterministic weighted compositions over supported dezena indicators."),
                 new ToolCapabilityEnvelope(
                     Name: "analyze_indicator_associations",
                     ToolVersion: AnalyzeIndicatorAssociationsUseCase.ToolVersion,
-                    SupportedParameters: new Dictionary<string, IReadOnlyList<string>>
+                    SupportedParameters: WithWindowOperationalConstraints(new Dictionary<string, IReadOnlyList<string>>
                     {
                         ["verbosity"] = ["minimal", "standard", "full"],
                         ["verbosity.default_recommended"] = ["standard"],
@@ -983,12 +998,12 @@ public sealed class V0Tools
                         ["include_explanations"] = ["false", "true"],
                         ["include_explanations.default_recommended"] = ["true (standard/full)", "false (minimal)"],
                         ["fields"] = ["dataset_version", "tool_version", "deterministic_hash", "window", "method", "association_magnitude", "association_stability"]
-                    },
+                    }),
                     Capabilities: "Computes association magnitude and optional deterministic subwindow stability for compatible scalarized series."),
                 new ToolCapabilityEnvelope(
                     Name: "summarize_window_patterns",
                     ToolVersion: SummarizeWindowPatternsUseCase.ToolVersion,
-                    SupportedParameters: new Dictionary<string, IReadOnlyList<string>>
+                    SupportedParameters: WithWindowOperationalConstraints(new Dictionary<string, IReadOnlyList<string>>
                     {
                         ["verbosity"] = ["minimal", "standard", "full"],
                         ["verbosity.default_recommended"] = ["standard"],
@@ -998,12 +1013,12 @@ public sealed class V0Tools
                         ["include_explanations"] = ["false", "true"],
                         ["include_explanations.default_recommended"] = ["true (standard/full)", "false (minimal)"],
                         ["fields"] = ["dataset_version", "tool_version", "deterministic_hash", "window", "range_method", "coverage_threshold", "summaries"]
-                    },
+                    }),
                     Capabilities: "Summarizes window pattern distributions with deterministic IQR statistics."),
                 new ToolCapabilityEnvelope(
                     Name: "summarize_window_aggregates",
                     ToolVersion: SummarizeWindowAggregatesUseCase.ToolVersion,
-                    SupportedParameters: new Dictionary<string, IReadOnlyList<string>>
+                    SupportedParameters: WithWindowOperationalConstraints(new Dictionary<string, IReadOnlyList<string>>
                     {
                         ["verbosity"] = ["minimal", "standard", "full"],
                         ["verbosity.default_recommended"] = ["standard"],
@@ -1015,12 +1030,12 @@ public sealed class V0Tools
                         ],
                         ["source_metric_name"] = summarizeAllowedSources,
                         ["fields"] = ["dataset_version", "tool_version", "deterministic_hash", "window", "aggregates"]
-                    },
+                    }),
                     Capabilities: "Builds canonical aggregate payloads over implemented source metrics."),
                 new ToolCapabilityEnvelope(
                     Name: "generate_candidate_games",
                     ToolVersion: GenerateCandidateGamesUseCase.ToolVersion,
-                    SupportedParameters: new Dictionary<string, IReadOnlyList<string>>
+                    SupportedParameters: WithWindowOperationalConstraints(new Dictionary<string, IReadOnlyList<string>>
                     {
                         ["verbosity"] = ["minimal", "standard", "full"],
                         ["verbosity.default_recommended"] = ["standard"],
@@ -1034,12 +1049,12 @@ public sealed class V0Tools
                         ["page_size"] = [$"1..{MaxPageSizeFull}"],
                         ["page_page_size.constraint"] = ["pagination requires verbosity=full"],
                         ["fields"] = ["dataset_version", "tool_version", "deterministic_hash", "replay_guaranteed", "window", "candidate_games"]
-                    },
+                    }),
                     Capabilities: "Generates candidate games; max sum of plan count per request, generation modes, and seed policy follow generation envelope."),
                 new ToolCapabilityEnvelope(
                     Name: "explain_candidate_games",
                     ToolVersion: ExplainCandidateGamesUseCase.ToolVersion,
-                    SupportedParameters: new Dictionary<string, IReadOnlyList<string>>
+                    SupportedParameters: WithWindowOperationalConstraints(new Dictionary<string, IReadOnlyList<string>>
                     {
                         ["verbosity"] = ["minimal", "standard", "full"],
                         ["verbosity.default_recommended"] = ["standard"],
@@ -1052,7 +1067,7 @@ public sealed class V0Tools
                         ["page_size"] = [$"1..{MaxPageSizeFull}"],
                         ["page_page_size.constraint"] = ["pagination requires verbosity=full"],
                         ["fields"] = ["dataset_version", "tool_version", "deterministic_hash", "window", "candidate_generation_audit", "explanations"]
-                    },
+                    }),
                     Capabilities: "Explains candidate strategies, exclusion/constraint breakdowns, and auditable echo of generation mode, effective restriction composition (intersection when applicable), and seed/replay policy."),
                 new ToolCapabilityEnvelope(
                     Name: "help",

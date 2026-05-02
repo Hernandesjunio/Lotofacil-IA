@@ -50,4 +50,47 @@ public sealed class Phase23DiscoverCapabilitiesContractTests
         Assert.True(root.TryGetProperty("metrics", out _));
         Assert.True(root.TryGetProperty("generation", out _));
     }
+
+    [Fact]
+    public void DiscoverCapabilities_DeclaresChatSafeDefaultAndWindowOperationalConstraints()
+    {
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
+        var payload = Assert.IsType<DiscoverCapabilitiesResponse>(sut.DiscoverCapabilities(new DiscoverCapabilitiesRequest()));
+
+        Assert.Contains(payload.ContentChannelRules, rule =>
+            rule.Contains("resultado principal", StringComparison.OrdinalIgnoreCase) &&
+            rule.Contains("Content", StringComparison.Ordinal));
+
+        var getDrawWindow = Assert.Single(payload.Tools, tool => tool.Name is "get_draw_window");
+        Assert.Equal(["standard"], getDrawWindow.SupportedParameters["verbosity.default_recommended"]);
+        Assert.Equal(["window_size > 0"], getDrawWindow.SupportedParameters["window_size.constraint"]);
+        Assert.Equal(["start_contest_id requires end_contest_id"], getDrawWindow.SupportedParameters["start_contest_id.constraint"]);
+        Assert.Equal(["start_contest_id must be <= end_contest_id"], getDrawWindow.SupportedParameters["start_end.constraint"]);
+        Assert.Equal(
+            ["if start_contest_id/end_contest_id are provided, window_size must be omitted/0 or equal to (end-start+1)"],
+            getDrawWindow.SupportedParameters["window_size_start_end.coherence"]);
+        Assert.Equal(
+            ["window_size=1 anchors the latest available contest when end_contest_id is omitted"],
+            getDrawWindow.SupportedParameters["window_size.quickstart"]);
+    }
+
+    [Fact]
+    public void Help_QuickStart_ExplainsMinimalFullFlowAndTraceabilityFields()
+    {
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
+        var payload = Assert.IsType<HelpResponse>(sut.Help());
+        var quickStart = Assert.IsType<string>(payload.QuickStartMarkdown);
+
+        Assert.Contains("get_draw_window(window_size=1)", quickStart, StringComparison.Ordinal);
+        Assert.Contains("compute_window_metrics", quickStart, StringComparison.Ordinal);
+        Assert.Contains("verbosity=\"minimal\"", quickStart, StringComparison.Ordinal);
+        Assert.Contains("verbosity=\"standard\"", quickStart, StringComparison.Ordinal);
+        Assert.Contains("verbosity=\"full\"", quickStart, StringComparison.Ordinal);
+        Assert.Contains("dataset_version", quickStart, StringComparison.Ordinal);
+        Assert.Contains("tool_version", quickStart, StringComparison.Ordinal);
+        Assert.Contains("deterministic_hash", quickStart, StringComparison.Ordinal);
+        Assert.Contains("window", quickStart, StringComparison.Ordinal);
+        Assert.Contains("fields", quickStart, StringComparison.Ordinal);
+        Assert.Contains("paginação", quickStart, StringComparison.OrdinalIgnoreCase);
+    }
 }
