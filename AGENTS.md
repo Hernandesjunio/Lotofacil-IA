@@ -8,9 +8,9 @@ Este arquivo resume **intenção, limites e fontes normativas** do repositório 
 
 ## O que é o projeto
 
-Sistema **educacional** para engenharia de IA aplicada à **Lotofácil**: indicadores estatísticos **determinísticos**, exposição via **MCP/HTTP** em JSON, composição declarativa de análises e geração **reproduzível** de jogos candidatos, com **explicabilidade** (critérios, janela, pesos, filtros, versões).
+Sistema **exclusivamente educacional** para engenharia de IA aplicada à **Lotofácil**: demonstrar **métricas e comportamentos observados no histórico** através de indicadores estatísticos **determinísticos**, exposição via **MCP/HTTP** em JSON, composição declarativa de análises e geração **reproduzível** de jogos candidatos apenas como **ilustração** de critérios declarados, com **explicabilidade** (critérios, janela, pesos, filtros, versões).
 
-**Não é:** previsão de resultados, promessa de maior chance, recomendação comercial de apostas, nem “IA embarcada” no servidor que interprete linguagem natural em substituição do contrato.
+**Não é:** previsão de resultados, sugestão de “o que vai sair”, promessa de maior chance ou vantagem no sorteio, recomendação comercial de apostas, nem “IA embarcada” no servidor que interprete linguagem natural em substituição do contrato. Parâmetros como `verbosity=full` (e projeção/paginação, ADR 0023) controlam **completude e formato** da resposta para auditoria/ensino — **não** aumentam validade preditiva nem “precisão” sobre sorteios futuros.
 
 ---
 
@@ -92,7 +92,9 @@ A documentação descreve camadas alvo (`LotofacilMcp.Domain`, `Application`, `I
 
 ## Lembrete de linguagem e produto
 
-Em texto voltado ao utilizador final, evitar linguagem de **garantia de acerto** ou **previsão**. Indicadores são **descritivos** e **condicionados à janela**; “persistência” e “estabilidade” referem-se a padrões no histórico analisado, não a promessa futura.
+Em texto voltado ao utilizador final, evitar linguagem de **garantia de acerto**, **previsão**, **melhoria de chances** no sorteio, “dica do que jogar” ou sinónimos (ex.: *dizer o próximo*, *números fortes*, *tendência a sair*). Indicadores são **descritivos** e **condicionados à janela**; “persistência” e “estabilidade” referem-se a padrões no histórico analisado, não a promessa futura. O jogo é **azar**; no modelo usual, **cada combinação simples tem a mesma probabilidade** — o produto descreve o passado e ensina métricas, não classifica combinações como “mais prováveis de ganhar”.
+
+**Checklist (docs, `Content`, resources, descrições de tools):** educacional; métricas sobre sorteios passados; sem objectivo preditivo; sem promessa de retorno ou acerto.
 
 ---
 

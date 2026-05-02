@@ -237,8 +237,9 @@ public sealed class ExplainCandidateGamesUseCase
         {
             return "Restricoes efetivas: o conjunto admissivel e a interseccao (conjunçao) de cada restricao declarada no pedido " +
                 "de geracao (criterios por faixa, filtros, exclusoes estruturais e plano de estrategias), salvo semantica " +
-                "alternativa documentada. O jogo e avaliado adiante em relacao a varias perspectivas de aderencia descritiva; " +
-                "isso nao implica maior chance no sorteio oficial e continua condicionado a janela.";
+                "alternativa documentada. O jogo e avaliado adiante em relacao a varias perspectivas de aderencia descritiva " +
+                "(pedagogico; sem pretensao preditiva); no sorteio oficial as combinacoes permanecem equiprovaveis no modelo " +
+                "do jogo; a leitura abaixo continua condicionada a janela.";
         }
 
         if (string.Equals(effectiveGenerationMode, GenerationModes.RandomUnrestricted, StringComparison.Ordinal))

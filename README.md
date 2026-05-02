@@ -1,6 +1,6 @@
 # Lotofacil-IA
 
-Projeto para análise e políticas relacionadas à Lotofácil.
+Projeto **educacional**: calcula e expõe **métricas determinísticas** sobre sorteios da Lotofácil (histórico), via MCP/HTTP, com **objetivo exclusivamente descritivo** — demonstrar indicadores e explicabilidade, **sem** previsão de resultados nem promessa de melhoria de chances no jogo.
 
 ## Metodologia de desenvolvimento
 

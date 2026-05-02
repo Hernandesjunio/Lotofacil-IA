@@ -35,6 +35,8 @@ Proposto.
 - `standard`: mantém comportamento atual (ou próximo), com explicações curtas.
 - `full`: inclui detalhamento completo, podendo exigir paginação (D4).
 
+**Consequência de produto (não-predição):** `full` (e projeção/paginação associada) existe para **completude** do contrato, explicabilidade, ensino e auditoria — **não** para sugerir que “mais dados” impliquem melhor previsão de sorteio, vantagem estatística no jogo ou recomendação de apostas. O posicionamento do repositório permanece [brief.md](../brief.md) (educacional, descritivo na janela).
+
 **Regra de determinismo:** se `deterministic_hash` for hash do payload canônico, mudanças de `verbosity/fields` devem ser refletidas no input hashed **ou** o contrato deve definir que o hash é da semântica e não da apresentação. A decisão específica de hashing por tool deve ser fechada no contrato quando estes parâmetros forem implementados.
 
 ### D2 — Separar canais: `StructuredContent` como fonte canônica; `Content` como resumo humano útil (nunca duplicar JSON)

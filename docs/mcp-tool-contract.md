@@ -280,7 +280,7 @@ Algumas tools podem devolver payloads grandes (listas, matrizes, breakdowns). Pa
 - **Semântica normativa:**
   - **`minimal`**: deve **omitir** explicações longas e campos redundantes; deve priorizar **dados mínimos auditáveis**. O texto em `Content` (quando presente) deve ser curto e não deve repetir o JSON completo do `StructuredContent`.
   - **`standard`**: comportamento padrão recomendado (compatível com o comportamento atual ou próximo), com explicações curtas quando disponíveis.
-  - **`full`**: inclui detalhamento completo; quando o volume crescer, a tool deve oferecer mecanismos determinísticos de contenção como **projeção** (`fields`/`response_projection`) e/ou paginação determinística (ADR 0023 D4).
+  - **`full`**: inclui detalhamento completo; quando o volume crescer, a tool deve oferecer mecanismos determinísticos de contenção como **projeção** (`fields`/`response_projection`) e/ou paginação determinística (ADR 0023 D4). **Semântica de produto:** `full` significa **completude** do payload canônico, explicabilidade e suporte a auditoria/ensino (ver ADR 0023); **não** significa resposta “mais preditiva”, “com mais vantagem no sorteio” nem recomendação implícita. O escopo continua **descritivo e educacional** (regularidades amostrais na janela), alinhado ao [brief](brief.md).
 - **Default (quando omitido):** `"standard"`.
 
 #### `include_explanations`

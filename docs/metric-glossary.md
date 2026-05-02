@@ -8,7 +8,7 @@ Documento pedagógico complementar ao catálogo técnico em [metric-catalog.md](
 
 **Nota de alinhamento com onboarding/discovery:** definições curtas usadas em `help`, `getting-started@1.0.0` e resumos operacionais devem ser tratadas como portas de entrada leigo-first para este glossário e para o catálogo, não como fonte alternativa de semântica.
 
-**Nota sobre predição:** todas descrevem padrões no histórico ou estrutura de um jogo; nenhuma implica acerto futuro.
+**Escopo descritivo (não preditivo):** as métricas descrevem padrões no histórico ou a estrutura de um jogo *face* a uma janela; **nenhuma** implica acerto futuro, “número a jogar” ou vantagem no sorteio oficial. Uso pedagógico: ensinar o que cada indicador mede, não prever resultados.
 
 **Nota sobre metadados do concurso (não métricas):** campos como `winners_15` e `has_winner_15` (ganhadores de 15 acertos no concurso histórico) pertencem ao `Draw` e são expostos em consultas de janela quando solicitados; não são `MetricValue` e não entram neste glossário de métricas (ver [ADR 0022](adrs/0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md)).
 

@@ -3,10 +3,10 @@
 Este guia é para quem está começando no MCP `lotofacil-ia`.
 
 ## O que é (em uma frase)
-Ele te ajuda a **entender padrões do histórico** e a **montar análises/jogos candidatos de forma reproduzível**, sem prometer resultados.
+Ferramenta **educacional**: mostra **métricas e recortes** do histórico (e jogos **candidatos** só para ilustrar critérios), de forma **reproduzível** e rastreável. O modo `full` (e respostas completas) serve para **transparência e estudo** — não para “acertar mais” no sorteio.
 
 ## O que não é
-Não é “previsão” nem “garantia”. Evite frases como “vai sair”, “mais provável”, “aumenta a chance”.
+Não é previsão nem dica de aposta. Evite frases como “vai sair”, “mais provável”, “aumenta a chance”, “número forte”. No sorteio oficial, **cada combinação simples tem a mesma probabilidade**; o que vês aqui são **regularidades no passado** condicionadas à janela que escolheres.
 
 ## Como começar (3 passos)
 1) **Peça ajuda**: chame `help`.

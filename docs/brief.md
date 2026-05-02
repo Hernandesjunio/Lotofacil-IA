@@ -6,6 +6,8 @@ Este arquivo é o **índice** da pasta `docs/`: a seção **Referências** (no f
 
 ## Objetivo
 
+**Finalidade exclusivamente educacional:** demonstrar, sobre dados de sorteios da Lotofácil, **métricas e recortes históricos reproduzíveis** (indicadores determinísticos explicados em documentação normativa). O sistema não tem objetivo preditivo nem de orientação para apostar.
+
 Construir um sistema educacional para engenharia de IA aplicado a Lotofácil, capaz de:
 - calcular indicadores estatísticos determinísticos;
 - estruturar dados para consumo por IA via MCP;
@@ -13,7 +15,7 @@ Construir um sistema educacional para engenharia de IA aplicado a Lotofácil, ca
 - gerar jogos candidatos por heurísticas descritivas e explicáveis (com replay opcional);
 - explicar como cada análise, ranking, filtro ou jogo foi produzido.
 
-O sistema existe para apoiar estudo, análise e tomada de decisão assistida. Ele não deve prometer aumento de chance, acerto futuro ou previsão de resultado.
+O sistema existe para apoiar **estudo** e leitura **descritiva** do histórico (incl. **regularidades amostrais** condicionadas à janela escolhida). Não deve sugerir previsão de resultado, melhoria de chances relativamente ao sorteio oficial, garantia de acerto nem recomendação comercial de apostas.
 
 ## Escopo
 
