@@ -177,6 +177,37 @@ sem quebrar invariantes do contrato e do dataset.
 
 ---
 
+### Fase 23.7 — Descoberta sem tentativa-erro para métricas de janela
+
+**Objetivo:** tornar `discover_capabilities` suficiente para um cliente distinguir, sem leitura de código nem trial-and-error, o que `compute_window_metrics` aceita nesta build.
+
+- Publicar classificação **estruturada e determinística** para métricas conhecidas do catálogo, distinguindo ao menos:
+  - aceite agora em `compute_window_metrics` com `allow_pending=false`;
+  - aceite apenas com opt-in (`allow_pending=true`);
+  - conhecida, mas não exposta nesta rota/build;
+  - fora do escopo desta rota por desenho (ex.: requer candidato ou outra tool).
+- Garantir que a classificação deriva do registro único (`MetricAvailabilityCatalog`) e não de listas paralelas mantidas manualmente.
+- Alinhar a discovery com os erros de validação/runtime (`UNKNOWN_METRIC`, `allowed_metrics`, `reason=pending_requires_opt_in`) para evitar drift semântico entre “o que discovery diz” e “o que a tool rejeita”.
+- Não introduzir nesta fase atalho implícito para “todas as métricas”; o pedido de `compute_window_metrics` continua declarativo via `metrics[]` até contrato explícito em fase própria.
+
+**Pronto quando:** em até 2 chamadas (`discover_capabilities` + `compute_window_metrics`), um consumidor consegue montar um request válido para métricas de janela sem ler `MetricAvailabilityCatalog.cs`.
+
+### Fase 23.8 — Qualidade e evidências da discovery/relatório de janela
+
+**Objetivo:** travar por testes a discovery de métricas, o comportamento de `allow_pending` e a ausência de fallback implícito de dataset.
+
+- Adicionar fixture/golden multi-métrica para request único em `compute_window_metrics`.
+- Cobrir por teste:
+  - classificação de discovery para métricas suportadas / pendentes / fora da rota / fora do escopo;
+  - `allow_pending=false` vs `allow_pending=true` para métricas `pending`;
+  - dataset ausente/inválido sem `Dataset__DrawsSourceUri`, com erro canônico/documentado e sem fallback implícito.
+- Verificar que `discover_capabilities` e `compute_window_metrics` permanecem coerentes entre si para a mesma build.
+- Materializar cenários de regressão com massa estática e auditável (fixtures/goldens), sem depender de dataset vivo.
+
+**Pronto quando:** regressões de discovery, `allow_pending` ou dataset quebram testes de contrato/integracão antes de chegar ao utilizador.
+
+---
+
 ## Fases (ADR 0024 — Distribuição ZIP self-contained para MCP STDIO)
 
 ### Fase 24.1 — Fechar o contrato operacional de distribuição (sem repo)

@@ -21,6 +21,8 @@ Objetivo: alinhar a superfície de tools com a estratégia **spec-driven** do re
 
 ## Problemas observados (do consumo real)
 
+Issue consolidada no repositório (backlog, critérios de aceite e mapa para ADRs existentes): [issues/issue-mcp-relatorio-completo-metricas-fluidez.md](issues/issue-mcp-relatorio-completo-metricas-fluidez.md).
+
 ## Anexo A — especificação anti-ambiguidade (UI, agentes e contrato)
 
 Este anexo explicita **representações**, **layouts**, **índices** e **agregações** para reduzir ambiguidade e evitar que um agente “invente” interpretações.

@@ -71,6 +71,8 @@ lotofacil-mcp/
   docs/
     brief.md
     project-guide.md
+    issues/
+      issue-mcp-relatorio-completo-metricas-fluidez.md
     metric-catalog.md
     mcp-tool-contract.md
     generation-strategies.md
@@ -294,6 +296,21 @@ Mantenedor, revisores, IA consumidora que precise justificar comportamento do co
 O projeto reabre a mesma discussao varias vezes, perde coerencia a cada iteracao com IA e acumula drift silencioso entre catalogo, estrategias e contrato.
 - `Em que cenario isso seria desnecessario ou poderia ser removido?`
 Se as decisoes pararem de ter impacto estrutural (apenas ajustes taticos).
+
+### `docs/issues/`
+
+- `Qual problema isso resolve?`
+Recebe **issues documentadas no repositório** (backlog, critérios de aceite, ligação a ADRs e ao contrato) **sem** confundir com ADR: uma issue descreve trabalho pendente ou melhoria operacional; um ADR registra **decisão** já tomada com impacto estrutural.
+- `Em que momento do projeto isso se torna necessario?`
+Quando houver iniciativas multi-fase (ex.: fluidez MCP, discovery, relatório completo de métricas de janela) que precisam de um **âncora** estável no Git, referenciável pelo [brief.md](brief.md) e por PRs.
+- `Quem consome isso?`
+Mantenedor, agentes de IA orquestrando implementação, revisores que ligam PRs a critérios de aceite explícitos.
+- `Qual o risco de NAO ter isso?`
+O backlog fica apenas em chat ou em ferramenta externa opaca; o repositório deixa de ser a fonte única para “o que falta” e porquê.
+- `Em que cenario isso seria desnecessario ou poderia ser removido?`
+Se o projeto usar exclusivamente issues do GitHub/GitLab com o mesmo conteúdo e links estáveis — a pasta `docs/issues/` continua opcional, mas é a convenção **neste** repo para issues normativas textuais junto do spec.
+
+Exemplo atual: [issues/issue-mcp-relatorio-completo-metricas-fluidez.md](issues/issue-mcp-relatorio-completo-metricas-fluidez.md).
 
 ## 2. Evolutivo
 

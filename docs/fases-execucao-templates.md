@@ -194,6 +194,60 @@ Gate adicional:
 
 ---
 
+## Fase 23.7 — Descoberta sem tentativa-erro para métricas de janela
+
+```md
+Implemente apenas a descoberta sem tentativa-erro para `compute_window_metrics`:
+
+- Estender `discover_capabilities` para classificar métricas conhecidas do catálogo em, pelo menos:
+  - aceites agora em `compute_window_metrics` com `allow_pending=false`,
+  - aceites apenas com opt-in (`allow_pending=true`),
+  - conhecidas, mas não expostas nesta rota/build,
+  - fora do escopo desta rota por desenho (ex.: requer candidato ou outra tool).
+- Derivar essa classificação do registro único (`MetricAvailabilityCatalog`), sem listas paralelas mantidas manualmente.
+- Alinhar discovery e erros canônicos (`UNKNOWN_METRIC`, `allowed_metrics`, `reason=pending_requires_opt_in`) para reduzir drift semântico.
+- Não introduzir nesta fase atalho implícito para “todas as métricas”; `compute_window_metrics` continua declarativo via `metrics[]`.
+
+Referências obrigatórias:
+- docs/issues/issue-mcp-relatorio-completo-metricas-fluidez.md
+- docs/adrs/0011-tool-de-discovery-de-capacidades-por-build-v1.md
+- docs/adrs/0012-registro-unico-de-metricas-e-disponibilidade-por-rota-v1.md
+- docs/adrs/0014-semantica-real-de-allow-pending-v1.md
+- docs/mcp-tool-contract.md
+
+Critério de pronto:
+- `discover_capabilities` permite ao cliente distinguir, sem ler código, o que `compute_window_metrics` aceita agora, o que exige `allow_pending`, e o que está fora da rota/escopo.
+- A resposta é determinística para a mesma build.
+- A taxonomia publicada em discovery não contradiz os erros reais da tool.
+```
+
+## Fase 23.8 — Qualidade e evidências da discovery/relatório de janela
+
+```md
+Implemente apenas a qualidade/evidências para a discovery e o relatório de janela:
+
+- Adicionar fixture/golden multi-métrica para uma chamada única de `compute_window_metrics`.
+- Cobrir por teste:
+  - classificação da discovery para métricas suportadas / pendentes / fora da rota / fora do escopo,
+  - `allow_pending=false` vs `allow_pending=true` para métricas `pending`,
+  - dataset ausente/inválido sem `Dataset__DrawsSourceUri`, com erro canônico/documentado e sem fallback implícito.
+- Verificar que `discover_capabilities` e `compute_window_metrics` permanecem coerentes entre si para a mesma build.
+- Usar massa estática e auditável (fixtures/goldens), sem dataset vivo.
+
+Referências obrigatórias:
+- docs/issues/issue-mcp-relatorio-completo-metricas-fluidez.md
+- docs/adrs/0014-semantica-real-de-allow-pending-v1.md
+- docs/adrs/0022-fonte-de-dados-e-metadados-de-ganhadores-v1.md
+- docs/contract-test-plan.md
+- docs/test-plan.md
+
+Critério de pronto:
+- Regressões de discovery, `allow_pending` ou dataset quebram testes antes de chegar ao utilizador.
+- Existe evidência revisável (fixture/golden/asserts fechados) para os cenários principais da fase.
+```
+
+---
+
 ## Fase 24.1 — Fechar o contrato operacional de distribuição (sem repo)
 
 ```md
