@@ -1,0 +1,30 @@
+{
+  "id": "HF23-M07",
+  "tool": "help",
+  "fixture": null,
+  "request": {},
+  "expected_structured": {
+    "required_fields": [
+      "getting_started_resource_uri",
+      "index_resource_uri",
+      "quick_start_markdown",
+      "templates"
+    ]
+  },
+  "required_content": {
+    "must_include": [
+      "get_draw_window(window_size=1)",
+      "compute_window_metrics",
+      "dataset_version",
+      "tool_version",
+      "deterministic_hash",
+      "window"
+    ],
+    "must_not_include_phrases": [
+      "see structured",
+      "See structured",
+      "structured payload",
+      "StructuredContent"
+    ]
+  }
+}

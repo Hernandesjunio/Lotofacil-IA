@@ -1,0 +1,32 @@
+{
+  "id": "HF23-M08",
+  "tool": "discover_capabilities",
+  "fixture": null,
+  "request": {
+    "verbosity": "standard"
+  },
+  "expected_structured": {
+    "tool_name": "get_draw_window",
+    "required_operational_constraints": [
+      "window_size > 0",
+      "window_size=1 anchors the latest available contest when end_contest_id is omitted",
+      "start_contest_id requires end_contest_id",
+      "if start_contest_id/end_contest_id are provided, window_size must be omitted/0 or equal to (end-start+1)"
+    ]
+  },
+  "required_content": {
+    "must_include": [
+      "window_size",
+      "start_contest_id",
+      "end_contest_id",
+      "window_size=1",
+      "coherence"
+    ],
+    "must_not_include_phrases": [
+      "see structured",
+      "See structured",
+      "structured payload",
+      "StructuredContent"
+    ]
+  }
+}

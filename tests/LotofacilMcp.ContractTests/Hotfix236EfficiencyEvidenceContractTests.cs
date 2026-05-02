@@ -217,6 +217,65 @@ public sealed class Hotfix236EfficiencyEvidenceContractTests : IAsyncLifetime
         Assert.Contains("11", t3, StringComparison.Ordinal);
     }
 
+    // Hotfix 23.6.7 — meta-tools com onboarding verificável (help)
+    [Fact]
+    public async Task HF23_M07_Help_QuickstartOperational_ContentIncludesAuditableQuickstart_NotAdministrativeOnly()
+    {
+        var golden = LoadGolden("help.quickstart-operational.standard.golden.json");
+        var request = golden.GetProperty("request");
+
+        var response = await _mcp.CallToolAsync("help", ToArgs(request));
+        Assert.False(response.IsError);
+
+        var structured = ReadStructured(response);
+        Assert.True(structured.TryGetProperty("getting_started_resource_uri", out _));
+        Assert.True(structured.TryGetProperty("index_resource_uri", out _));
+        Assert.True(structured.TryGetProperty("quick_start_markdown", out _));
+        Assert.True(structured.TryGetProperty("templates", out _));
+
+        var text = ReadText(response);
+        AssertContentUtilityAndNoDup(text, structured, mustContainTokens: golden.GetProperty("required_content").GetProperty("must_include"));
+        AssertDoesNotContainPhrases(text, golden.GetProperty("required_content").GetProperty("must_not_include_phrases"));
+    }
+
+    // Hotfix 23.6.8 — discover_capabilities com constraints verificáveis de janela
+    [Fact]
+    public async Task HF23_M08_DiscoverCapabilities_WindowConstraints_AreExplicitInStructuredAndContent()
+    {
+        var golden = LoadGolden("discover-capabilities.window-constraints.standard.golden.json");
+        var request = golden.GetProperty("request");
+
+        var response = await _mcp.CallToolAsync("discover_capabilities", ToArgs(request));
+        Assert.False(response.IsError);
+
+        var structured = ReadStructured(response);
+        var tools = structured.GetProperty("tools");
+        var getDrawWindow = tools.EnumerateArray()
+            .First(t => string.Equals(t.GetProperty("name").GetString(), "get_draw_window", StringComparison.Ordinal));
+        var supported = getDrawWindow.GetProperty("supported_parameters");
+
+        AssertContainsOperationalConstraint(
+            supported,
+            "window_size.constraint",
+            "window_size > 0");
+        AssertContainsOperationalConstraint(
+            supported,
+            "window_size.quickstart",
+            "window_size=1 anchors the latest available contest when end_contest_id is omitted");
+        AssertContainsOperationalConstraint(
+            supported,
+            "start_contest_id.constraint",
+            "start_contest_id requires end_contest_id");
+        AssertContainsOperationalConstraint(
+            supported,
+            "window_size_start_end.coherence",
+            "if start_contest_id/end_contest_id are provided, window_size must be omitted/0 or equal to (end-start+1)");
+
+        var text = ReadText(response);
+        AssertContentUtilityAndNoDup(text, structured, mustContainTokens: golden.GetProperty("required_content").GetProperty("must_include"));
+        AssertDoesNotContainPhrases(text, golden.GetProperty("required_content").GetProperty("must_not_include_phrases"));
+    }
+
     // Contract coverage: at least minimal and full for target tools.
     [Theory]
     [InlineData("get_draw_window", "tests/fixtures/synthetic_min_window.json")]
@@ -414,6 +473,12 @@ public sealed class Hotfix236EfficiencyEvidenceContractTests : IAsyncLifetime
         Assert.DoesNotContain("see structured", content, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("structured payload", content, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("structuredcontent", content, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void AssertContainsOperationalConstraint(JsonElement supportedParameters, string key, string expectedValue)
+    {
+        var values = supportedParameters.GetProperty(key).EnumerateArray().Select(x => x.GetString()).Where(x => x is not null).ToArray();
+        Assert.Contains(expectedValue, values, StringComparer.Ordinal);
     }
 
     private static void AssertWindow(JsonElement structured, int size, int start, int end)
