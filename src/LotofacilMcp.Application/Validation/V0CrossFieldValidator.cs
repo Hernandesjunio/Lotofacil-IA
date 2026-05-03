@@ -149,10 +149,15 @@ public sealed class V0CrossFieldValidator
 
             if (!MetricAvailabilityCatalog.IsExposedInComputeWindowMetrics(metric.Name))
             {
+                var reason = MetricAvailabilityCatalog.IsOutOfScopeForComputeWindowMetricsRoute(metric.Name)
+                    ? "out_of_scope_for_compute_window_route"
+                    : "not_on_route_in_this_build";
+
                 throw CreateUnknownMetricForRoute(
                     metric.Name,
                     "requested metric is known in the catalog but unavailable in this compute_window_metrics build.",
-                    MetricAvailabilityCatalog.GetComputeWindowMetricsAllowedMetrics());
+                    MetricAvailabilityCatalog.GetComputeWindowMetricsAllowedMetrics(),
+                    reason: reason);
             }
 
             if (MetricAvailabilityCatalog.IsPendingMetric(metric.Name) && !input.AllowPending)

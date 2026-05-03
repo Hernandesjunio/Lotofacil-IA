@@ -544,6 +544,12 @@ Expor a superfície real da build e as regras operacionais necessárias para red
 #### Semântica e validação
 
 - **Output mínimo esperado:** `tool_version`, `build_profile`, `dataset_requirements`, `window_modes_supported`, `tools`, `metrics`, `generation`.
+- **`metrics.compute_window_metrics_surface` (ADR 0012):** partição determinística dos nomes registados nesta build para a rota `compute_window_metrics`, derivada do registro único (`MetricAvailabilityCatalog`), sem listas paralelas:
+  - `accepted_allow_pending_false` — aceites com `allow_pending=false` (equivale a `metrics.compute_window_metrics_allowed`);
+  - `accepted_pending_opt_in_only` — só aceites com `allow_pending=true` (métricas `pending` na build);
+  - `known_not_on_route` — conhecidas no registo, mas sem exposição nesta rota/build (ex.: ainda não ligadas a `compute_window_metrics`);
+  - `out_of_scope` — fora do desenho desta rota na build (nesta implementação: `scope = candidate_game`; outra superfície/tool).
+  A união ordenada destas quatro listas coincide com o conjunto de métricas conhecidas no registo da build.
 - **Para `get_draw_window`, `supported_parameters` deve tornar explícito ao menos:**
   - `window_size` como inteiro `> 0`;
   - que `window_size` é obrigatório quando `start_contest_id` não vier;
@@ -637,7 +643,8 @@ Calcular métricas canônicas para uma janela.
 
 #### Disponibilidade em `compute_window_metrics` (D1, ADR 0006)
 
-- A tool pode recusar uma métrica cujo **nome** está no [metric-catalog.md](metric-catalog.md) com `UNKNOWN_METRIC` quando a **implementação** da build ainda não expuser essa métrica nesta rota; nesse caso `details.metric_name` identifica o pedido e, quando possível, `details` inclui a lista de nomes **efetivamente** aceites.  
+- A tool pode recusar uma métrica cujo **nome** está no [metric-catalog.md](metric-catalog.md) com `UNKNOWN_METRIC` quando a **implementação** da build ainda não expuser essa métrica nesta rota; nesse caso `details.metric_name` identifica o pedido e, quando possível, `details` inclui a lista de nomes **efetivamente** aceites (`allowed_metrics`, união estável+pendentes expostos nesta rota).  
+- Quando `details.metric_name` está no catálogo/registo mas o pedido falha nesta rota, `details.reason` pode discriminar (alinhado a `discover_capabilities.metrics.compute_window_metrics_surface`): `pending_requires_opt_in` (métrica pending sem `allow_pending`), `not_on_route_in_this_build` (registada, não exposta nesta rota), `out_of_scope_for_compute_window_route` (ex.: métrica de jogo candidato — outra superfície).  
 - O recorte mínimo documentado em [vertical-slice.md](vertical-slice.md) exige, para fechamento da V0, apenas `frequencia_por_dezena@1.0.0` em sucesso; outras entradas seguem a matriz em [metric-catalog.md](metric-catalog.md) e a decisão [ADR 0006 D1](adrs/0006-inter-tool-fluidez-pipeline-e-disponibilidade-v1.md).  
 - **Coesão com geração/explicar:** se `explain_candidate_games` ou estratégias referem internamente `repeticao_concurso_anterior` (ou outra), mas `compute_window_metrics` a rejeita nesta build, o teste de coerência cruzada em [test-plan.md](test-plan.md) aplica-se até a métrica ser promovida (ver *GAPS*, [contract-test-plan.md](contract-test-plan.md)).
 - **Deprecação (compatibilidade temporária):** durante a janela de migração, uma build pode aceitar nomes equivalentes (ex.: `frequencia_por_dezena` e `total_de_presencas_na_janela_por_dezena`) e retornar ambos normalmente. Após o sunset definido no catálogo, a build pode recusar o nome antigo com `UNKNOWN_METRIC` e `details.replacement_metric_name` (ver “Catálogo vs. `compute_window_metrics`” acima).

@@ -1,4 +1,6 @@
+using System.Linq;
 using System.Text.Json;
+using LotofacilMcp.Application.Validation;
 using LotofacilMcp.Server.Tools;
 
 namespace LotofacilMcp.ContractTests;
@@ -49,6 +51,41 @@ public sealed class Phase23DiscoverCapabilitiesContractTests
         Assert.True(root.TryGetProperty("tools", out _));
         Assert.True(root.TryGetProperty("metrics", out _));
         Assert.True(root.TryGetProperty("generation", out _));
+
+        var metricsEl = root.GetProperty("metrics");
+        Assert.True(metricsEl.TryGetProperty("compute_window_metrics_surface", out var surfaceEl));
+        Assert.True(surfaceEl.TryGetProperty("accepted_allow_pending_false", out _));
+        Assert.True(surfaceEl.TryGetProperty("accepted_pending_opt_in_only", out _));
+        Assert.True(surfaceEl.TryGetProperty("known_not_on_route", out _));
+        Assert.True(surfaceEl.TryGetProperty("out_of_scope", out _));
+    }
+
+    [Fact]
+    public void DiscoverCapabilities_ComputeWindowMetricsSurface_ClassifiesMetricsDeterministically_FromRegistry()
+    {
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
+        var payload = Assert.IsType<DiscoverCapabilitiesResponse>(sut.DiscoverCapabilities(new DiscoverCapabilitiesRequest()));
+        var surface = payload.Metrics.ComputeWindowMetricsSurface;
+        var expected = MetricAvailabilityCatalog.GetComputeWindowMetricsDiscoverySurface();
+
+        Assert.Equal(expected.AcceptedAllowPendingFalse, surface.AcceptedAllowPendingFalse);
+        Assert.Equal(expected.AcceptedPendingOptInOnly, surface.AcceptedPendingOptInOnly);
+        Assert.Equal(expected.KnownNotOnComputeWindowRoute, surface.KnownNotOnRoute);
+        Assert.Equal(expected.OutOfScopeForComputeWindowRoute, surface.OutOfScope);
+
+        Assert.Equal(payload.Metrics.ComputeWindowMetricsAllowed, surface.AcceptedAllowPendingFalse);
+
+        var union = surface.AcceptedAllowPendingFalse
+            .Concat(surface.AcceptedPendingOptInOnly)
+            .Concat(surface.KnownNotOnRoute)
+            .Concat(surface.OutOfScope)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        Assert.Equal(MetricAvailabilityCatalog.GetKnownMetricNames(), union);
+
+        Assert.Contains("pares_impares", surface.OutOfScope);
+        Assert.Contains("repeticao_concurso_anterior", surface.AcceptedPendingOptInOnly);
+        Assert.Contains("divergencia_kl", surface.KnownNotOnRoute);
     }
 
     [Fact]

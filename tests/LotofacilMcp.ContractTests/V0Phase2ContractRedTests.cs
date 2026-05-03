@@ -146,4 +146,34 @@ public sealed class V0Phase6ContractTests
             request.Metrics!.Select(metric => metric.Name).ToArray(),
             payload.Metrics.Select(metric => metric.MetricName).ToArray());
     }
+
+    [Fact]
+    public void ComputeWindowMetrics_WithCandidateScopedMetric_ReturnsUnknownMetricReasonOutOfScope()
+    {
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
+        var response = sut.ComputeWindowMetrics(new ComputeWindowMetricsRequest(
+            WindowSize: 3,
+            EndContestId: 1003,
+            Metrics: [new MetricRequest("pares_impares")]));
+
+        var error = Assert.IsType<ContractErrorEnvelope>(response).Error;
+        Assert.Equal("UNKNOWN_METRIC", error.Code);
+        Assert.Equal("pares_impares", error.Details["metric_name"]);
+        Assert.Equal("out_of_scope_for_compute_window_route", error.Details["reason"]);
+    }
+
+    [Fact]
+    public void ComputeWindowMetrics_WithKnownMetricNotOnRoute_ReturnsUnknownMetricReasonNotOnRoute()
+    {
+        var sut = new V0Tools(ContractTestFixturePaths.SyntheticMinWindowJson());
+        var response = sut.ComputeWindowMetrics(new ComputeWindowMetricsRequest(
+            WindowSize: 3,
+            EndContestId: 1003,
+            Metrics: [new MetricRequest("divergencia_kl")]));
+
+        var error = Assert.IsType<ContractErrorEnvelope>(response).Error;
+        Assert.Equal("UNKNOWN_METRIC", error.Code);
+        Assert.Equal("divergencia_kl", error.Details["metric_name"]);
+        Assert.Equal("not_on_route_in_this_build", error.Details["reason"]);
+    }
 }

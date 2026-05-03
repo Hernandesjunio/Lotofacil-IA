@@ -332,10 +332,17 @@ public sealed record ToolCapabilityEnvelope(
     [property: JsonPropertyName("supported_parameters")] IReadOnlyDictionary<string, IReadOnlyList<string>> SupportedParameters,
     [property: JsonPropertyName("capabilities")] string Capabilities);
 
+public sealed record ComputeWindowMetricsSurfaceEnvelope(
+    [property: JsonPropertyName("accepted_allow_pending_false")] IReadOnlyList<string> AcceptedAllowPendingFalse,
+    [property: JsonPropertyName("accepted_pending_opt_in_only")] IReadOnlyList<string> AcceptedPendingOptInOnly,
+    [property: JsonPropertyName("known_not_on_route")] IReadOnlyList<string> KnownNotOnRoute,
+    [property: JsonPropertyName("out_of_scope")] IReadOnlyList<string> OutOfScope);
+
 public sealed record MetricsCapabilitiesEnvelope(
     [property: JsonPropertyName("implemented_metric_names")] IReadOnlyList<string> ImplementedMetricNames,
     [property: JsonPropertyName("pending_metric_names")] IReadOnlyList<string> PendingMetricNames,
     [property: JsonPropertyName("compute_window_metrics_allowed")] IReadOnlyList<string> ComputeWindowMetricsAllowed,
+    [property: JsonPropertyName("compute_window_metrics_surface")] ComputeWindowMetricsSurfaceEnvelope ComputeWindowMetricsSurface,
     [property: JsonPropertyName("summarize_window_aggregates_allowed_sources")] IReadOnlyList<string> SummarizeWindowAggregatesAllowedSources,
     [property: JsonPropertyName("association_allowed_indicators")] IReadOnlyList<string> AssociationAllowedIndicators);
 
@@ -603,7 +610,7 @@ public sealed class V0Tools
     private readonly string _contentRootPath;
     private readonly HttpJsonDatasetSnapshotCache? _httpSnapshotCache;
     private const string HelpToolVersion = "1.0.0";
-    private const string DiscoverCapabilitiesToolVersion = "1.1.0";
+    private const string DiscoverCapabilitiesToolVersion = "1.2.0";
     private const int DefaultPageSizeFull = 200;
     private const int MaxPageSizeFull = 500;
 
@@ -826,6 +833,12 @@ public sealed class V0Tools
         var computeWindowAllowed = MetricAvailabilityCatalog.GetComputeWindowMetricsAllowedMetrics(allowPending: false)
             .OrderBy(static metric => metric, StringComparer.Ordinal)
             .ToArray();
+        var computeWindowSurface = MetricAvailabilityCatalog.GetComputeWindowMetricsDiscoverySurface();
+        var computeWindowSurfaceEnvelope = new ComputeWindowMetricsSurfaceEnvelope(
+            AcceptedAllowPendingFalse: computeWindowSurface.AcceptedAllowPendingFalse,
+            AcceptedPendingOptInOnly: computeWindowSurface.AcceptedPendingOptInOnly,
+            KnownNotOnRoute: computeWindowSurface.KnownNotOnComputeWindowRoute,
+            OutOfScope: computeWindowSurface.OutOfScopeForComputeWindowRoute);
         var summarizeAllowedSources = MetricAvailabilityCatalog.GetSummarizeWindowAggregatesAllowedSources()
             .OrderBy(static metric => metric, StringComparer.Ordinal)
             .ToArray();
@@ -1086,6 +1099,7 @@ public sealed class V0Tools
                 ImplementedMetricNames: implementedMetricNames,
                 PendingMetricNames: pendingMetricNames,
                 ComputeWindowMetricsAllowed: computeWindowAllowed,
+                ComputeWindowMetricsSurface: computeWindowSurfaceEnvelope,
                 SummarizeWindowAggregatesAllowedSources: summarizeAllowedSources,
                 AssociationAllowedIndicators: associationAllowedIndicators),
             Generation: new GenerationCapabilitiesEnvelope(

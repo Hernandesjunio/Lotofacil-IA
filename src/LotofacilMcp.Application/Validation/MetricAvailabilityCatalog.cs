@@ -100,6 +100,49 @@ public static class MetricAvailabilityCatalog
         .OrderBy(static name => name, StringComparer.Ordinal)
         .ToArray();
 
+    /// <summary>
+    /// Deterministic partition of every registry metric for <c>compute_window_metrics</c> discovery (ADR 0012).
+    /// </summary>
+    private static readonly ComputeWindowMetricsDiscoverySurface ComputeWindowMetricsDiscovery =
+        BuildComputeWindowMetricsDiscoverySurface();
+
+    private static ComputeWindowMetricsDiscoverySurface BuildComputeWindowMetricsDiscoverySurface()
+    {
+        var acceptedAllowPendingFalse = new List<string>();
+        var pendingOptInOnly = new List<string>();
+        var knownNotOnRoute = new List<string>();
+        var outOfScope = new List<string>();
+
+        foreach (var entry in Registry.OrderBy(static e => e.MetricName, StringComparer.Ordinal))
+        {
+            if (entry.ComputeWindowMetrics)
+            {
+                if (string.Equals(entry.Status, "pending", StringComparison.Ordinal))
+                {
+                    pendingOptInOnly.Add(entry.MetricName);
+                }
+                else
+                {
+                    acceptedAllowPendingFalse.Add(entry.MetricName);
+                }
+            }
+            else if (string.Equals(entry.Scope, "candidate_game", StringComparison.Ordinal))
+            {
+                outOfScope.Add(entry.MetricName);
+            }
+            else
+            {
+                knownNotOnRoute.Add(entry.MetricName);
+            }
+        }
+
+        return new ComputeWindowMetricsDiscoverySurface(
+            AcceptedAllowPendingFalse: acceptedAllowPendingFalse.ToArray(),
+            AcceptedPendingOptInOnly: pendingOptInOnly.ToArray(),
+            KnownNotOnComputeWindowRoute: knownNotOnRoute.ToArray(),
+            OutOfScopeForComputeWindowRoute: outOfScope.ToArray());
+    }
+
     public static bool IsKnownMetric(string metricName)
     {
         return RegistryByName.ContainsKey(metricName);
@@ -190,6 +233,30 @@ public static class MetricAvailabilityCatalog
     {
         return Registry;
     }
+
+    /// <summary>
+    /// Surfaced by <c>discover_capabilities</c>; derived only from <see cref="Registry"/>.
+    /// </summary>
+    public static ComputeWindowMetricsDiscoverySurface GetComputeWindowMetricsDiscoverySurface()
+    {
+        return ComputeWindowMetricsDiscovery;
+    }
+
+    /// <summary>
+    /// True when the metric is registered, not on <c>compute_window_metrics</c>, and scoped to a candidate game (another surface/tool).
+    /// </summary>
+    public static bool IsOutOfScopeForComputeWindowMetricsRoute(string metricName)
+    {
+        return RegistryByName.TryGetValue(metricName, out var entry) &&
+               !entry.ComputeWindowMetrics &&
+               string.Equals(entry.Scope, "candidate_game", StringComparison.Ordinal);
+    }
+
+    public sealed record ComputeWindowMetricsDiscoverySurface(
+        IReadOnlyList<string> AcceptedAllowPendingFalse,
+        IReadOnlyList<string> AcceptedPendingOptInOnly,
+        IReadOnlyList<string> KnownNotOnComputeWindowRoute,
+        IReadOnlyList<string> OutOfScopeForComputeWindowRoute);
 
     public sealed record MetricCapability(
         string MetricName,
