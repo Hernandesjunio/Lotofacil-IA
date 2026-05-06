@@ -58,8 +58,27 @@ sem quebrar invariantes do contrato e do dataset.
 2. **Hotfix 23.2.2 — Definir comportamento chat-safe de `standard`:** exigir que `standard` responda consultas humanas comuns sem inspeção manual do `StructuredContent`.
 3. **Hotfix 23.2.3 — Diferenciar classes de tool:** tools factuais devem expor fatos principais; tools analíticas devem expor nomes e resultados salientes.
 4. **Hotfix 23.2.4 — Conter efeitos colaterais:** garantir que o hotfix não introduza inferência implícita de intenção, nem aumente `Content` para dump disfarçado em janelas grandes.
+5. **Hotfix 23.2.5 — Anti-esvaziamento em multi-métrica (`compute_window_metrics`):** garantir que `verbosity="standard"` preserve um resumo mínimo no `Content` mesmo quando `metrics[]` contém 2+ itens (incluindo `include_explanations=false`), evitando respostas “administrativas”/vazias ou dependência de inspeção manual do `StructuredContent` para o caso comum de chat.
 
 **Pronto quando:** em `minimal`, `Content` é curto e não contém JSON completo; em `standard`, continua útil por si só para chat.
+
+### Fase 23.2.5 — Fix de utilidade do `Content` em `compute_window_metrics` (multi-métrica + `standard`)
+
+**Objetivo:** eliminar o caso em que o `Content` deixa de ser útil em `verbosity="standard"` quando `compute_window_metrics` é chamado com 2+ métricas.
+
+- O comportamento deve ser **determinístico** e **chat-safe**:
+  - `verbosity="standard"`: `Content` menciona a janela e lista as métricas pedidas com um “highlight” determinístico por métrica.
+  - `include_explanations=false` remove apenas `explanation`, não o resumo mínimo em `Content`.
+- O ajuste **não** autoriza duplicar JSON completo no `Content`; permanece válido o princípio da Fase 23.2.
+- Critério de evidência: adicionar teste(s) de contrato que travem o comportamento.
+
+**Referências obrigatórias:**
+
+- [ADR 0023](adrs/0023-controle-de-verbosidade-projecao-e-canais-mcp-para-eficiencia-v1.md)
+- [mcp-tool-contract.md](mcp-tool-contract.md)
+- `docs/issues/issue-mcp-compute-window-metrics-standard-multi-metric-jsonelement.md`
+
+**Pronto quando:** para `compute_window_metrics`, `verbosity="standard"` com 2+ métricas não resulta em `Content` vazio/genérico; e regressões quebram testes.
 
 ### Fase 23.3 — Projeção (`fields`) e explicações opt-in
 

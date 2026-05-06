@@ -40,6 +40,7 @@ Subetapas Hotfix:
 2. **Hotfix 23.2.2** — Tornar `standard` o modo chat-safe: ele deve responder consultas humanas comuns sem inspeção manual do `StructuredContent`.
 3. **Hotfix 23.2.3** — Diferenciar classes de tool: tools factuais expõem fatos principais; tools analíticas expõem nomes e resultados salientes.
 4. **Hotfix 23.2.4** — Conter efeitos colaterais: o hotfix não autoriza dump disfarçado em `standard`, nem inferência implícita de intenção, janela ou paginação.
+5. **Hotfix 23.2.5** — Anti-esvaziamento em multi-métrica (`compute_window_metrics`): `verbosity="standard"` deve continuar útil em `Content` quando `metrics[]` tiver 2+ itens (incluindo `include_explanations=false`).
 
 Referências obrigatórias:
 - docs/adrs/0023-controle-de-verbosidade-projecao-e-canais-mcp-para-eficiencia-v1.md
@@ -49,6 +50,29 @@ Critério de pronto:
 - Em `verbosity="minimal"`, `Content` não contém JSON completo e segue útil como resumo.
 - Em `verbosity="standard"`, `Content` continua suficiente para chat nas consultas mais comuns da tool.
 - Em respostas extensas, `Content` continua compacto e deterministicamente limitado.
+```
+
+## Fase 23.2.5 — Fix de utilidade do `Content` em `compute_window_metrics` (multi-métrica + `standard`)
+
+```md
+Implemente apenas o fix de utilidade do `Content` para `compute_window_metrics` em requests multi-métrica:
+
+- Garantir que `verbosity="standard"` **sempre** produza um `Content` mínimo útil quando `metrics[]` tiver 2+ itens:
+  - mencionar a janela (`start..end`);
+  - listar as métricas pedidas por nome;
+  - incluir um “highlight” determinístico por métrica (ex.: escalares completos; listas curtas completas; vetores grandes resumidos com truncamento explícito).
+- Garantir que `include_explanations=false` remova apenas `explanation` do payload estruturado — não deve “zerar” o resumo do `Content`.
+- Proibir dump do JSON completo no `Content` (preservar o princípio da Fase 23.2).
+
+Repro/caso de referência:
+- docs/issues/issue-mcp-compute-window-metrics-standard-multi-metric-jsonelement.md
+
+Referências obrigatórias:
+- docs/adrs/0023-controle-de-verbosidade-projecao-e-canais-mcp-para-eficiencia-v1.md
+- docs/mcp-tool-contract.md
+
+Critério de pronto:
+- Existe teste de contrato cobrindo `compute_window_metrics` com 2+ métricas, `verbosity="standard"` e `include_explanations=false`, e que falha se o `Content` estiver vazio/genérico.
 ```
 
 ## Fase 23.3 — Projeção (`fields`) e explicações opt-in

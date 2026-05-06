@@ -117,6 +117,8 @@ Esses templates **não** substituem tools nem mudam o contrato: são conteúdo d
 ## Referências
 
 - [issues/issue-mcp-relatorio-completo-metricas-fluidez.md](issues/issue-mcp-relatorio-completo-metricas-fluidez.md) — backlog: relatório completo de métricas de janela, descoberta (`discover_capabilities`) e fluidez MCP (liga a ADRs 0011/0012/0023 e ao plano [mcp-tools-melhorias-planejamento.md](mcp-tools-melhorias-planejamento.md))
+- [roadmap-evolucao-ampla-e-piloto-controlado.md](roadmap-evolucao-ampla-e-piloto-controlado.md) — roadmap técnico para evolução ampla pós‑piloto (governança, riscos, fases, gates; não substitui contrato/ADRs)
+- [piloto-checklist-testers.md](piloto-checklist-testers.md) — checklist curto para testers do piloto (smoke MCP, verbosidade, casos negativos; não substitui contrato/ADRs)
 - [metric-catalog.md](metric-catalog.md) — métricas utilizadas (tipagem, fórmulas, consumidores)
 - [metric-glossary.md](metric-glossary.md) — definição em linguagem simples, o que cada métrica observa e exemplos de uso (complemento pedagógico)
 - [mcp-tool-contract.md](mcp-tool-contract.md) — contrato das ferramentas MCP
