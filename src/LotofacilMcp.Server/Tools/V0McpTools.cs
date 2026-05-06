@@ -420,6 +420,14 @@ public sealed class V0McpTools
         // Hotfix 23.2.x: "minimal" segue útil, "standard" é chat-safe, e "full" não degrada para aviso genérico.
         return payload switch
         {
+            JsonElement e => TryBuildComputeWindowMetricsSummaryFromJson(e, verbosity, out var summary)
+                ? summary
+                : verbosity switch
+                {
+                    VerbosityLevel.Minimal => LimitSummary($"OK: JsonElement.", verbosity),
+                    VerbosityLevel.Full => LimitSummary($"OK: JsonElement.", verbosity),
+                    _ => LimitSummary($"OK: JsonElement.", verbosity)
+                },
             ContractErrorEnvelope e => verbosity switch
             {
                 VerbosityLevel.Minimal => $"Error {e.Error.Code}: {e.Error.Message}",
@@ -541,60 +549,147 @@ public sealed class V0McpTools
             return $"Computed 0 metrics for window {r.Window.Size} ({r.Window.StartContestId}..{r.Window.EndContestId}).";
         }
 
-        // Hotfix 23.2.3: tool analítica => expor nomes + resultados salientes.
-        var maxMetrics = verbosity switch
-        {
-            VerbosityLevel.Minimal => 1,
-            VerbosityLevel.Full => 3,
-            _ => 2
-        };
-
-        var parts = new List<string>(capacity: 1 + maxMetrics)
-        {
-            $"Window {r.Window.Size} ({r.Window.StartContestId}..{r.Window.EndContestId}):"
-        };
-
-        foreach (var m in r.Metrics.Take(maxMetrics))
-        {
-            parts.Add(FormatMetricSalient(m));
-        }
-
-        if (r.Metrics.Count > maxMetrics)
-        {
-            parts.Add($"+{r.Metrics.Count - maxMetrics} more");
-        }
-
-        return string.Join(' ', parts);
+        return BuildComputeWindowMetricsSummaryCore(
+            windowSize: r.Window.Size,
+            windowStart: r.Window.StartContestId,
+            windowEnd: r.Window.EndContestId,
+            metrics: r.Metrics.Select(m => (m.MetricName, m.Shape, m.Value)).ToArray(),
+            verbosity: verbosity);
     }
 
-    private static string FormatMetricSalient(MetricValueEnvelope m)
+    private static string BuildComputeWindowMetricsSummaryCore(
+        int windowSize,
+        int windowStart,
+        int windowEnd,
+        IReadOnlyList<(string MetricName, string Shape, IReadOnlyList<double> Value)> metrics,
+        VerbosityLevel verbosity)
+    {
+        if (metrics.Count == 0)
+        {
+            return $"Computed 0 metrics for window {windowSize} ({windowStart}..{windowEnd}).";
+        }
+
+        // ADR 0023 + issue fix: em standard, multi-métrica precisa listar nomes e trazer highlight determinístico
+        // por métrica (sem dump de JSON). Truncamentos devem ser explícitos.
+        var header = $"Window {windowSize} ({windowStart}..{windowEnd}).";
+        var metricNames = metrics.Select(m => m.MetricName).ToArray();
+        var namesPart = $" metrics=[{string.Join(", ", metricNames)}].";
+
+        // minimal: ainda útil; standard/full: sempre mostrar highlights de todas as métricas pedidas.
+        // Para manter o Content compacto, os highlights são curtos por métrica e o LimitSummary do chamador
+        // aplica truncação determinística quando necessário.
+        var highlightParts = verbosity == VerbosityLevel.Minimal
+            ? new[] { FormatMetricHighlight(metrics[0].MetricName, metrics[0].Shape, metrics[0].Value) }
+            : metrics.Select(m => FormatMetricHighlight(m.MetricName, m.Shape, m.Value)).ToArray();
+
+        return $"{header}{namesPart} {string.Join(" ", highlightParts)}";
+    }
+
+    private static string FormatMetricHighlight(string metricName, string shape, IReadOnlyList<double> value)
     {
         // Determinístico e compacto; nunca retorna JSON.
-        if (string.Equals(m.Shape, "vector_by_dezena", StringComparison.OrdinalIgnoreCase) && m.Value.Count == 25)
+        if (string.Equals(shape, "vector_by_dezena", StringComparison.OrdinalIgnoreCase) && value.Count == 25)
         {
-            var top = TopKDezenasByValue(m.Value, k: 5);
-            return $"{m.MetricName}: top5={FormatDezenaValuePairs(top)}";
+            var top = TopKDezenasByValue(value, k: 5);
+            return $"{metricName}: top5={FormatDezenaValuePairs(top)} …(n=25)";
         }
 
-        if (string.Equals(m.Shape, "scalar", StringComparison.OrdinalIgnoreCase) && m.Value.Count >= 1)
+        if (string.Equals(shape, "scalar", StringComparison.OrdinalIgnoreCase) && value.Count >= 1)
         {
-            return $"{m.MetricName}: {FormatNumber(m.Value[0])}";
+            return $"{metricName}: {FormatNumber(value[0])}.";
         }
 
-        if (string.Equals(m.Shape, "dezena_list[10]", StringComparison.OrdinalIgnoreCase) && m.Value.Count == 10)
+        if (string.Equals(shape, "dezena_list[10]", StringComparison.OrdinalIgnoreCase) && value.Count == 10)
         {
-            var top10 = m.Value.Select(v => ((int)Math.Round(v)).ToString(System.Globalization.CultureInfo.InvariantCulture));
-            return $"{m.MetricName}: [{string.Join(", ", top10)}]";
+            var top10 = value.Select(v => ((int)Math.Round(v)).ToString(System.Globalization.CultureInfo.InvariantCulture));
+            return $"{metricName}: [{string.Join(", ", top10)}].";
         }
 
-        if (m.Value.Count > 0)
+        if (value.Count > 0)
         {
-            var preview = m.Value.Take(5).Select(FormatNumber).ToArray();
-            var suffix = m.Value.Count > 5 ? ", …" : string.Empty;
-            return $"{m.MetricName}: [{string.Join(", ", preview)}{suffix}]";
+            var previewCount = Math.Min(5, value.Count);
+            var preview = value.Take(previewCount).Select(FormatNumber).ToArray();
+            var suffix = value.Count > previewCount ? $", …(+{value.Count - previewCount})" : string.Empty;
+            return $"{metricName}: [{string.Join(", ", preview)}{suffix}].";
         }
 
-        return $"{m.MetricName}: (no value)";
+        return $"{metricName}: (no value).";
+    }
+
+    private static bool TryBuildComputeWindowMetricsSummaryFromJson(
+        JsonElement element,
+        VerbosityLevel verbosity,
+        out string summary)
+    {
+        summary = string.Empty;
+
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        // compute_window_metrics responses (incl. projected / stripped explanations) always carry `window` and `metrics`.
+        if (!element.TryGetProperty("window", out var windowEl) || windowEl.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+        if (!element.TryGetProperty("metrics", out var metricsEl) || metricsEl.ValueKind != JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        if (!TryGetInt(windowEl, "size", out var windowSize)
+            || !TryGetInt(windowEl, "start_contest_id", out var windowStart)
+            || !TryGetInt(windowEl, "end_contest_id", out var windowEnd))
+        {
+            return false;
+        }
+
+        var metrics = new List<(string MetricName, string Shape, IReadOnlyList<double> Value)>();
+        foreach (var m in metricsEl.EnumerateArray())
+        {
+            if (m.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            var metricName = m.TryGetProperty("metric_name", out var nEl) && nEl.ValueKind == JsonValueKind.String
+                ? (nEl.GetString() ?? "(unknown_metric)")
+                : "(unknown_metric)";
+
+            var shape = m.TryGetProperty("shape", out var sEl) && sEl.ValueKind == JsonValueKind.String
+                ? (sEl.GetString() ?? "(unknown_shape)")
+                : "(unknown_shape)";
+
+            var values = Array.Empty<double>();
+            if (m.TryGetProperty("value", out var vEl) && vEl.ValueKind == JsonValueKind.Array)
+            {
+                var tmp = new List<double>();
+                foreach (var v in vEl.EnumerateArray())
+                {
+                    if (v.ValueKind == JsonValueKind.Number && v.TryGetDouble(out var d))
+                    {
+                        tmp.Add(d);
+                    }
+                }
+                values = tmp.ToArray();
+            }
+
+            metrics.Add((metricName, shape, values));
+        }
+
+        summary = BuildComputeWindowMetricsSummaryCore(windowSize, windowStart, windowEnd, metrics, verbosity);
+        return true;
+    }
+
+    private static bool TryGetInt(JsonElement obj, string propertyName, out int value)
+    {
+        value = default;
+        if (!obj.TryGetProperty(propertyName, out var el))
+        {
+            return false;
+        }
+        return el.ValueKind == JsonValueKind.Number && el.TryGetInt32(out value);
     }
 
     private static string BuildStabilitySummary(AnalyzeIndicatorStabilityResponse r)

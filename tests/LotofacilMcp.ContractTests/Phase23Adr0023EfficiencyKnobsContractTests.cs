@@ -208,6 +208,83 @@ public sealed class Phase23Adr0023EfficiencyKnobsContractTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ComputeWindowMetrics_MultiMetric_Standard_NoExplanations_ContentIsUseful()
+    {
+        // Repro da issue: multi-métrica + verbosity=standard + include_explanations=false não pode zerar Content.
+        var response = await _httpMcpClient.CallToolAsync("compute_window_metrics", new Dictionary<string, object?>
+        {
+            ["window_size"] = 3,
+            ["end_contest_id"] = 1003,
+            ["metrics"] = new object[]
+            {
+                new Dictionary<string, object?> { ["name"] = "frequencia_por_dezena" },
+                new Dictionary<string, object?> { ["name"] = "atraso_por_dezena" }
+            },
+            ["verbosity"] = "standard",
+            ["include_explanations"] = false
+        });
+
+        Assert.False(response.IsError);
+
+        var summaryText = response.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? string.Empty;
+
+        // ADR 0023 + critério de pronto: Content não pode ser vazio/genérico e deve mencionar janela + métricas pedidas.
+        Assert.False(string.IsNullOrWhiteSpace(summaryText));
+        Assert.Contains("1001..1003", summaryText, StringComparison.Ordinal);
+        Assert.Contains("frequencia_por_dezena", summaryText, StringComparison.Ordinal);
+        Assert.Contains("atraso_por_dezena", summaryText, StringComparison.Ordinal);
+
+        // Proibir dump do JSON no Content (Fase 23.2 / ADR 0023 D2).
+        Assert.False(summaryText.TrimStart().StartsWith('{'));
+        Assert.DoesNotContain("\"dataset_version\"", summaryText, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"deterministic_hash\"", summaryText, StringComparison.Ordinal);
+
+        // include_explanations=false deve afetar apenas o payload estruturado: explanation ausente.
+        var structured = ReadStructured(response);
+        var metrics = structured.GetProperty("metrics");
+        Assert.True(metrics.GetArrayLength() >= 2);
+        foreach (var m in metrics.EnumerateArray())
+        {
+            Assert.False(m.TryGetProperty("explanation", out _));
+        }
+    }
+
+    [Fact]
+    public async Task ComputeWindowMetrics_MultiMetric_Standard_NoExplanations_ContentIsUseful_OnStdioMcp()
+    {
+        // Smoke/contract via STDIO MCP (o mesmo transporte usado pelo host em chat).
+        var response = await _stdioMcpClient.CallToolAsync("compute_window_metrics", new Dictionary<string, object?>
+        {
+            ["window_size"] = 3,
+            ["end_contest_id"] = 1003,
+            ["metrics"] = new object[]
+            {
+                new Dictionary<string, object?> { ["name"] = "frequencia_por_dezena" },
+                new Dictionary<string, object?> { ["name"] = "atraso_por_dezena" }
+            },
+            ["verbosity"] = "standard",
+            ["include_explanations"] = false
+        });
+
+        Assert.False(response.IsError);
+
+        var summaryText = response.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? string.Empty;
+        Assert.False(string.IsNullOrWhiteSpace(summaryText));
+        Assert.Contains("1001..1003", summaryText, StringComparison.Ordinal);
+        Assert.Contains("frequencia_por_dezena", summaryText, StringComparison.Ordinal);
+        Assert.Contains("atraso_por_dezena", summaryText, StringComparison.Ordinal);
+        Assert.False(summaryText.TrimStart().StartsWith('{'));
+
+        var structured = ReadStructured(response);
+        var metrics = structured.GetProperty("metrics");
+        Assert.True(metrics.GetArrayLength() >= 2);
+        foreach (var m in metrics.EnumerateArray())
+        {
+            Assert.False(m.TryGetProperty("explanation", out _));
+        }
+    }
+
+    [Fact]
     public async Task Pagination_IsRejected_WhenVerbosityIsNotFull()
     {
         // ADR 0023 / mcp-tool-contract: page/page_size only allowed for responses large in verbosity="full".
